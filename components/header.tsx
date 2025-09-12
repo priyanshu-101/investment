@@ -77,9 +77,11 @@ const styles = StyleSheet.create({
   },
   goButton: {
     backgroundColor: '#4A90E2',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    borderRadius: 8,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   goText: {
     color: 'white',

@@ -69,7 +69,6 @@ export function HomeScreen() {
       
       <Header />
       
-      {/* Important Notice */}
       <View style={styles.noticeContainer}>
         <Text style={styles.noticeText}>
           Dear users, due to some technical issue from meta,{'\n'}
@@ -80,7 +79,9 @@ export function HomeScreen() {
       </View>
 
       <Animated.View style={[styles.mainContent, { opacity: fadeAnim }]}>
-        <View style={styles.illustrationContainer}>
+        
+        <View style={styles.cardContainer}>
+          <View style={styles.illustrationContainer}>
           <View style={styles.handsContainer}>
             <View style={styles.leftHand}>
               <View style={styles.hand} />
@@ -195,6 +196,7 @@ export function HomeScreen() {
             <Text style={styles.addButtonText}>+ Add Broker</Text>
           </TouchableOpacity>
         </Animated.View>
+        </View>
       </Animated.View>
     </View>
   );
@@ -203,7 +205,7 @@ export function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1f71',
+    backgroundColor: 'white',
   },
   noticeContainer: {
     backgroundColor: 'white',
@@ -212,22 +214,37 @@ const styles = StyleSheet.create({
   },
   noticeText: {
     color: '#FF9500',
-    fontSize: 14,
+    fontSize: 16,
     lineHeight: 20,
   },
   mainContent: {
     flex: 1,
-    backgroundColor: '#1a1f71',
+    backgroundColor: 'white',
     paddingHorizontal: 32, 
     paddingTop: 40, 
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   greeting: {
-    color: 'white',
+    color: '#1a1f71',
     fontSize: 28,
     fontWeight: '600',
     alignSelf: 'flex-start',
-    marginBottom: 50,
+    marginBottom: 30,
+  },
+  cardContainer: {
+    backgroundColor: '#1a1f71',
+    borderRadius: 24,
+    padding: 32,
+    width: '100%',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
   },
   illustrationContainer: {
     marginBottom: 60,
