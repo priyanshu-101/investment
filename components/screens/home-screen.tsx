@@ -1,7 +1,67 @@
-import React from 'react';
-import { StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export function HomeScreen() {
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const floatAnim1 = useRef(new Animated.Value(0)).current;
+  const floatAnim2 = useRef(new Animated.Value(0)).current;
+  const floatAnim3 = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const titleAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 1000,
+      useNativeDriver: true,
+    }).start();
+
+    Animated.timing(titleAnim, {
+      toValue: 1,
+      duration: 800,
+      delay: 500,
+      useNativeDriver: true,
+    }).start();
+
+    const createFloatingAnimation = (animValue: Animated.Value, delay: number) => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(animValue, {
+            toValue: 1,
+            duration: 2000,
+            delay,
+            useNativeDriver: true,
+          }),
+          Animated.timing(animValue, {
+            toValue: 0,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    };
+
+    createFloatingAnimation(floatAnim1, 0);
+    createFloatingAnimation(floatAnim2, 300);
+    createFloatingAnimation(floatAnim3, 600);
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.05,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  });
+
   return (
     <View style={styles.container}>
       <StatusBar backgroundColor="#FF9500" barStyle="light-content" />
@@ -15,7 +75,7 @@ export function HomeScreen() {
         </Text>
       </View>
 
-      <View style={styles.mainContent}>
+      <Animated.View style={[styles.mainContent, { opacity: fadeAnim }]}>
         <View style={styles.illustrationContainer}>
           <View style={styles.handsContainer}>
             <View style={styles.leftHand}>
@@ -24,9 +84,57 @@ export function HomeScreen() {
             </View>
             
             <View style={styles.papersContainer}>
-              <View style={[styles.paper, styles.redPaper]} />
-              <View style={[styles.paper, styles.whitePaper]} />
-              <View style={[styles.paper, styles.orangePaper]} />
+              <Animated.View 
+                style={[
+                  styles.paper, 
+                  styles.redPaper,
+                  {
+                    transform: [
+                      { rotate: '-12deg' },
+                      { 
+                        translateY: floatAnim1.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, -10],
+                        })
+                      }
+                    ]
+                  }
+                ]} 
+              />
+              <Animated.View 
+                style={[
+                  styles.paper, 
+                  styles.whitePaper,
+                  {
+                    transform: [
+                      { rotate: '2deg' },
+                      { 
+                        translateY: floatAnim2.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, -8],
+                        })
+                      }
+                    ]
+                  }
+                ]} 
+              />
+              <Animated.View 
+                style={[
+                  styles.paper, 
+                  styles.orangePaper,
+                  {
+                    transform: [
+                      { rotate: '18deg' },
+                      { 
+                        translateY: floatAnim3.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, -12],
+                        })
+                      }
+                    ]
+                  }
+                ]} 
+              />
             </View>
             
             <View style={styles.rightHand}>
@@ -36,13 +144,54 @@ export function HomeScreen() {
           </View>
         </View>
 
-        <Text style={styles.title}>Add new Broker</Text>
-        <Text style={styles.subtitle}>No brokers added at the moment</Text>
+        <Animated.Text 
+          style={[
+            styles.title,
+            {
+              opacity: titleAnim,
+              transform: [
+                {
+                  translateY: titleAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [30, 0],
+                  })
+                }
+              ]
+            }
+          ]}
+        >
+          Add new Broker
+        </Animated.Text>
+        
+        <Animated.Text 
+          style={[
+            styles.subtitle,
+            {
+              opacity: titleAnim,
+              transform: [
+                {
+                  translateY: titleAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [20, 0],
+                  })
+                }
+              ]
+            }
+          ]}
+        >
+          No brokers added at the moment
+        </Animated.Text>
 
-        <TouchableOpacity style={styles.addButton}>
-          <Text style={styles.addButtonText}>+ Add Broker</Text>
-        </TouchableOpacity>
-      </View>
+        <Animated.View 
+          style={{
+            transform: [{ scale: pulseAnim }]
+          }}
+        >
+          <TouchableOpacity style={styles.addButton}>
+            <Text style={styles.addButtonText}>+ Add Broker</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </Animated.View>
     </View>
   );
 }
