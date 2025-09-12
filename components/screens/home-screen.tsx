@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Header } from '../header';
 
 export function HomeScreen() {
   // Animation values
@@ -64,10 +65,13 @@ export function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor="#FF9500" barStyle="light-content" />
+      <StatusBar backgroundColor="#4A90E2" barStyle="light-content" />
       
-      <View style={styles.header}>
-        <Text style={styles.headerText}>
+      <Header />
+      
+      {/* Important Notice */}
+      <View style={styles.noticeContainer}>
+        <Text style={styles.noticeText}>
           Dear users, due to some technical issue from meta,{'\n'}
           whatsapp support is not available for today. Please{'\n'}
           share your queries on different number +91-{'\n'}
@@ -200,15 +204,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1a1f71',
-    marginTop: 40
   },
-  header: {
+  noticeContainer: {
     backgroundColor: 'white',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingTop: 40,
   },
-  headerText: {
+  noticeText: {
     color: '#FF9500',
     fontSize: 14,
     lineHeight: 20,
