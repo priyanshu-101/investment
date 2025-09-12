@@ -1,36 +1,60 @@
-import { ThemedText } from '@/components/themed-text';
+import { BottomNavigation } from '@/components/bottom-navigation';
+import {
+    BacktestScreen,
+    BrokersScreen,
+    HomeScreen,
+    ReportsScreen,
+    StrategiesScreen
+} from '@/components/screens';
 import { ThemedView } from '@/components/themed-view';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import React from 'react';
 import { StyleSheet } from 'react-native';
 
 const Stack = createNativeStackNavigator();
 
-function HelloWorldScreen() {
+function MainScreen() {
+  const [activeTab, setActiveTab] = React.useState<'Home' | 'Brokers' | 'Strategies' | 'Backtest' | 'Reports'>('Home');
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'Home':
+        return <HomeScreen />;
+      case 'Brokers':
+        return <BrokersScreen />;
+      case 'Strategies':
+        return <StrategiesScreen />;
+      case 'Backtest':
+        return <BacktestScreen />;
+      case 'Reports':
+        return <ReportsScreen />;
+      default:
+        return <HomeScreen />;
+    }
+  };
+
   return (
-    <ThemedView style={styles.container}>
-      <ThemedText type="title" style={styles.helloText}>
-        Hello World
-      </ThemedText>
+    <ThemedView style={[styles.mainContainer, styles.whiteBackground]}>
+      {renderContent()}
+      <BottomNavigation activeTab={activeTab} onTabPress={setActiveTab} />
     </ThemedView>
   );
 }
 
-export default function HomeScreen() {
+export default function App() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="HelloWorld" component={HelloWorldScreen} />
+      <Stack.Screen name="Main" component={MainScreen} />
     </Stack.Navigator>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  mainContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
   },
-  helloText: {
-    fontSize: 24,
-    fontWeight: 'bold',
+  whiteBackground: {
+    backgroundColor: '#FFFFFF',
   },
 });
