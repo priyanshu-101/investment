@@ -4,41 +4,48 @@ import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 interface ProfileMenuProps {
   visible: boolean;
   onClose: () => void;
+  onNavigate: (screen: string) => void;
 }
 
-export function ProfileMenu({ visible, onClose }: ProfileMenuProps) {
+export function ProfileMenu({ visible, onClose, onNavigate }: ProfileMenuProps) {
   const menuItems = [
     { 
       icon: '👤', 
       title: 'Profile', 
-      color: '#4A90E2' 
+      color: '#4A90E2',
+      screen: 'Profile'
     },
     { 
       icon: '💳', 
       title: 'Wallet', 
       value: '₹ 0.00',
-      color: '#4A90E2' 
+      color: '#4A90E2',
+      screen: 'Wallet'
     },
     { 
       icon: '📊', 
       title: 'Backtest', 
       value: '50.00',
-      color: '#4A90E2' 
+      color: '#4A90E2',
+      screen: 'Backtest'
     },
     { 
       icon: '📱', 
       title: 'Subscriptions', 
-      color: '#4A90E2' 
+      color: '#4A90E2',
+      screen: 'Subscriptions'
     },
     { 
       icon: '🔑', 
       title: 'Change password', 
-      color: '#4A90E2' 
+      color: '#4A90E2',
+      screen: 'ChangePassword'
     },
     { 
       icon: '🚪', 
       title: 'Logout', 
-      color: '#4A90E2' 
+      color: '#4A90E2',
+      screen: 'Logout'
     },
   ];
 
@@ -46,19 +53,27 @@ export function ProfileMenu({ visible, onClose }: ProfileMenuProps) {
     {
       icon: '▶️',
       title: 'How to use?',
-      color: '#FF0000'
+      color: '#FF0000',
+      screen: 'Tutorial'
     },
     {
       icon: '💬',
       title: 'Join Community',
-      color: '#00BFFF'
+      color: '#00BFFF',
+      screen: 'Community'
     },
     {
       icon: '💚',
       title: 'Help Desk',
-      color: '#25D366'
+      color: '#25D366',
+      screen: 'HelpDesk'
     }
   ];
+
+  const handleMenuItemPress = (screen: string) => {
+    onClose(); // Close the menu first
+    onNavigate(screen); // Then navigate to the screen
+  };
 
   return (
     <Modal
@@ -75,7 +90,11 @@ export function ProfileMenu({ visible, onClose }: ProfileMenuProps) {
         <View style={styles.menuContainer}>
           <View style={styles.menuContent}>
             {menuItems.map((item, index) => (
-              <TouchableOpacity key={index} style={styles.menuItem}>
+              <TouchableOpacity 
+                key={index} 
+                style={styles.menuItem}
+                onPress={() => handleMenuItemPress(item.screen)}
+              >
                 <View style={styles.menuItemLeft}>
                   <View style={[styles.iconContainer, { backgroundColor: item.color }]}>
                     <Text style={styles.iconText}>{item.icon}</Text>
@@ -91,7 +110,11 @@ export function ProfileMenu({ visible, onClose }: ProfileMenuProps) {
             <View style={styles.separator} />
             
             {bottomItems.map((item, index) => (
-              <TouchableOpacity key={index} style={styles.menuItem}>
+              <TouchableOpacity 
+                key={index} 
+                style={styles.menuItem}
+                onPress={() => handleMenuItemPress(item.screen)}
+              >
                 <View style={styles.menuItemLeft}>
                   <View style={[styles.iconContainer, { backgroundColor: item.color }]}>
                     <Text style={styles.iconText}>{item.icon}</Text>
