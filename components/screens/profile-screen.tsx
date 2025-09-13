@@ -123,7 +123,7 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
-  header: { paddingHorizontal: 20, paddingVertical: 15, backgroundColor: 'white' },
+  header: { paddingHorizontal: 20, paddingTop: 60, paddingBottom: 10, paddingVertical: 15 },
   title: { fontSize: 24, fontWeight: 'bold', color: '#333' },
   content: { padding: 20 },
   profileSection: {
