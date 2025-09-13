@@ -1,7 +1,14 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import React, { useState } from 'react';
-import { StyleSheet, TouchableOpacity, View, Text } from 'react-native';
+import {
+  StyleSheet,
+  TouchableOpacity,
+  View,
+  Text,
+  Image,
+  ScrollView,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export function BacktestScreen() {
@@ -25,96 +32,112 @@ export function BacktestScreen() {
 
   return (
     <ThemedView style={[styles.container, styles.whiteBackground]}>
-      <ThemedText type="title" style={[styles.titleText, styles.blackText]}>
-        Choose Strategy to Backtest
-      </ThemedText>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <ThemedText type="title" style={[styles.titleText, styles.blackText]}>
+          Choose Strategy to Backtest
+        </ThemedText>
 
-      <View style={styles.dropdownContainer}>
-        <TouchableOpacity
-          style={styles.dropdown}
-          onPress={() => setIsDropdownOpen(!isDropdownOpen)}
-        >
-          <Text style={styles.dropdownText}>
-            {selectedStrategy || 'Select Strategy'}
-          </Text>
-          <Ionicons
-            name={isDropdownOpen ? 'chevron-up' : 'chevron-down'}
-            size={20}
-            color="#666"
-          />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.timeframeContainer}>
-        {timeframes.map((timeframe) => (
+        {/* Dropdown */}
+        <View style={styles.dropdownContainer}>
           <TouchableOpacity
-            key={timeframe}
-            style={[
-              styles.timeframeButton,
-              selectedTimeframe === timeframe &&
-                styles.selectedTimeframeButton,
-            ]}
-            onPress={() => handleTimeframeSelect(timeframe)}
+            style={styles.dropdown}
+            onPress={() => setIsDropdownOpen(!isDropdownOpen)}
           >
-            <Text
-              style={[
-                styles.timeframeText,
-                selectedTimeframe === timeframe &&
-                  styles.selectedTimeframeText,
-              ]}
-            >
-              {timeframe}
+            <Text style={styles.dropdownText}>
+              {selectedStrategy || 'Select Strategy'}
             </Text>
+            <Ionicons
+              name={isDropdownOpen ? 'chevron-up' : 'chevron-down'}
+              size={20}
+              color="#666"
+            />
           </TouchableOpacity>
-        ))}
-      </View>
+        </View>
 
-      <View style={styles.cardContainer}>
-        <TouchableOpacity
-          style={styles.creditContainer}
-          onPress={() => setShowInfo(!showInfo)}
-        >
-          <View style={styles.creditRow}>
+        {/* Timeframes */}
+        <View style={styles.timeframeContainer}>
+          {timeframes.map((timeframe) => (
+            <TouchableOpacity
+              key={timeframe}
+              style={[
+                styles.timeframeButton,
+                selectedTimeframe === timeframe &&
+                  styles.selectedTimeframeButton,
+              ]}
+              onPress={() => handleTimeframeSelect(timeframe)}
+            >
+              <Text
+                style={[
+                  styles.timeframeText,
+                  selectedTimeframe === timeframe &&
+                    styles.selectedTimeframeText,
+                ]}
+              >
+                {timeframe}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Card */}
+        <View style={styles.cardContainer}>
+          <TouchableOpacity
+            style={styles.creditContainer}
+            onPress={() => setShowInfo(!showInfo)}
+          >
             <Text style={styles.creditText}>Backtest credit : 50 / 50</Text>
-          </View>
-          <Ionicons
-            name={showInfo ? 'chevron-up' : 'chevron-down'}
-            size={20}
-            color="#666"
-          />
-        </TouchableOpacity>
+            <Ionicons
+              name={showInfo ? 'chevron-up' : 'chevron-down'}
+              size={20}
+              color="#666"
+            />
+          </TouchableOpacity>
 
-        <TouchableOpacity style={styles.exportButton}>
-          <Text style={styles.exportText}>Export to PDF</Text>
-          <Ionicons
-            name="document-outline"
-            size={16}
-            color="#666"
-            style={styles.exportIcon}
-          />
-        </TouchableOpacity>
+          <TouchableOpacity style={styles.exportButton}>
+            <Text style={styles.exportText}>Export to PDF</Text>
+            <Ionicons
+              name="document-outline"
+              size={16}
+              color="#666"
+              style={styles.exportIcon}
+            />
+          </TouchableOpacity>
 
-        {showInfo && (
-          <View style={styles.infoContainer}>
-            <Text style={styles.bulletBlack}>
-              • 12 months backtest will utilize 12 backtest credits, with each
-              month consuming one credit.
-            </Text>
-            <Text style={styles.bulletOrange}>
-              • Backtest results are hypothetical results and generated based on
-              the conditions used on historical data, and don't represent actual
-              returns or future returns.
-            </Text>
-            <Text style={styles.bulletOrange}>
-              • Export backtest once generated as it is not saved anywhere.
-            </Text>
-            <Text style={styles.bulletOrange}>
-              • Export Transaction Details into the excel once generated as it
-              is not saved anywhere.
-            </Text>
-          </View>
-        )}
-      </View>
+          {showInfo && (
+            <View style={styles.infoContainer}>
+              <Text style={styles.bulletBlack}>
+                • 12 months backtest will utilize 12 backtest credits, with each
+                month consuming one credit.
+              </Text>
+              <Text style={styles.bulletOrange}>
+                • Backtest results are hypothetical results and generated based
+                on the conditions used on historical data, and don’t represent
+                actual returns or future returns.
+              </Text>
+              <Text style={styles.bulletOrange}>
+                • Export backtest once generated as it is not saved anywhere.
+              </Text>
+              <Text style={styles.bulletOrange}>
+                • Export Transaction Details into the excel once generated as it
+                is not saved anywhere.
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* No Data */}
+        <View style={styles.noDataContainer}>
+          <Image
+            source={require('@/assets/images/backtest.png')}
+            style={styles.noDataImage}
+            resizeMode="contain"
+          />
+          <Text style={styles.noDataText}>No backtest data.</Text>
+        </View>
+      </ScrollView>
     </ThemedView>
   );
 }
@@ -122,12 +145,15 @@ export function BacktestScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 60,
     backgroundColor: '#FFFFFF',
   },
   whiteBackground: {
     backgroundColor: '#FFFFFF',
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 40,
   },
   titleText: {
     fontSize: 20,
@@ -160,7 +186,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
-    marginBottom: 40,
+    marginBottom: 30,
   },
   timeframeButton: {
     backgroundColor: '#F0F4FF',
@@ -188,6 +214,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E9ECEF',
     alignItems: 'center',
+    marginBottom: 30,
   },
   creditContainer: {
     flexDirection: 'row',
@@ -196,14 +223,26 @@ const styles = StyleSheet.create({
     width: '100%',
     marginBottom: 15,
   },
-  creditRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   creditText: {
     fontSize: 16,
     color: '#6C757D',
-    marginRight: 10,
+  },
+  exportButton: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+  },
+  exportText: {
+    fontSize: 14,
+    color: '#666',
+    marginRight: 8,
+  },
+  exportIcon: {
+    marginLeft: 4,
   },
   infoContainer: {
     marginTop: 15,
@@ -219,22 +258,16 @@ const styles = StyleSheet.create({
     color: '#FF8C00',
     marginBottom: 8,
   },
-  exportButton: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
+  noDataContainer: {
+    alignItems: 'center',
+  },
+  noDataImage: {
+    width: 180,
+    height: 140,
     marginBottom: 10,
   },
-  exportText: {
-    fontSize: 14,
-    color: '#666',
-    marginRight: 8,
-  },
-  exportIcon: {
-    marginLeft: 4,
+  noDataText: {
+    fontSize: 16,
+    color: '#6C757D',
   },
 });
