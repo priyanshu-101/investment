@@ -1,9 +1,33 @@
+import { NavigationProp, ParamListBase, useNavigation } from '@react-navigation/native';
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ProfileMenu } from './profile-menu';
 
 export function Header() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const navigation = useNavigation<NavigationProp<ParamListBase>>();
+
+  const handleNavigation = (screen: string) => {
+    switch (screen) {
+      case 'Backtest':
+        navigation.navigate('Backtest');
+        break;
+      case 'Wallet':
+        navigation.navigate('Wallet');
+        break;
+      case 'Profile':
+        navigation.navigate('Profile');
+        break;
+      case 'Subscriptions':
+        navigation.navigate('Subscriptions');
+        break;
+      case 'Logout':
+        console.log('Logging out user');
+        break;
+      default:
+        console.log(`Screen ${screen} not implemented yet`);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -43,6 +67,7 @@ export function Header() {
       <ProfileMenu 
         visible={showProfileMenu} 
         onClose={() => setShowProfileMenu(false)} 
+        onNavigate={handleNavigation}
       />
     </View>
   );
@@ -63,7 +88,6 @@ const styles = StyleSheet.create({
       height: 2,
     },
     shadowOpacity: 0.1,
-
   },
   nameButton: {
     paddingHorizontal: 8,
