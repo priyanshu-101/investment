@@ -67,102 +67,118 @@ export function ReportsScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.dateRow}>
-            <View style={styles.dateBox}>
-              <Text style={styles.dateLabel}>From</Text>
-              <TouchableOpacity onPress={() => setShowFromPicker(true)}>
-                <TextInput
-                  style={styles.dateInput}
-                  value={formatDate(fromDate)}
-                  editable={false}
-                  pointerEvents="none"
-                />
-              </TouchableOpacity>
-              {showFromPicker && (
-                <DateTimePicker
-                  value={fromDate}
-                  mode="date"
-                  display={Platform.OS === "ios" ? "spinner" : "default"}
-                  onChange={(event, selectedDate) => {
-                    setShowFromPicker(false);
-                    if (selectedDate) {
-                      setFromDate(selectedDate);
-                    }
-                  }}
-                />
-              )}
-            </View>
 
-            <View style={styles.dateBox}>
-              <Text style={styles.dateLabel}>To</Text>
-              <TouchableOpacity onPress={() => setShowToPicker(true)}>
-                <TextInput
-                  style={styles.dateInput}
-                  value={formatDate(toDate)}
-                  editable={false}
-                  pointerEvents="none"
-                />
-              </TouchableOpacity>
-              {showToPicker && (
-                <DateTimePicker
-                  value={toDate}
-                  mode="date"
-                  display={Platform.OS === "ios" ? "spinner" : "default"}
-                  onChange={(event, selectedDate) => {
-                    setShowToPicker(false);
-                    if (selectedDate) {
-                      setToDate(selectedDate);
-                    }
-                  }}
-                />
-              )}
-            </View>
-          </View>
+          {selectedTab === "Dashboard" ? (
+            <>
+              <View style={styles.dateRow}>
+                <View style={styles.dateBox}>
+                  <Text style={styles.dateLabel}>From</Text>
+                  <TouchableOpacity onPress={() => setShowFromPicker(true)}>
+                    <TextInput
+                      style={styles.dateInput}
+                      value={formatDate(fromDate)}
+                      editable={false}
+                      pointerEvents="none"
+                    />
+                  </TouchableOpacity>
+                  {showFromPicker && (
+                    <DateTimePicker
+                      value={fromDate}
+                      mode="date"
+                      display={Platform.OS === "ios" ? "spinner" : "default"}
+                      onChange={(event, selectedDate) => {
+                        setShowFromPicker(false);
+                        if (selectedDate) {
+                          setFromDate(selectedDate);
+                        }
+                      }}
+                    />
+                  )}
+                </View>
 
-          <View style={styles.segmentedContainer}>
-            <TouchableOpacity
-              style={[styles.segment, selectedTest === "Live" && styles.segmentActive]}
-              onPress={() => setSelectedTest("Live")}
-            >
-              <Text
-                style={[
-                  styles.segmentText,
-                  selectedTest === "Live" && styles.segmentActiveText,
-                ]}
-              >
-                Live
+                <View style={styles.dateBox}>
+                  <Text style={styles.dateLabel}>To</Text>
+                  <TouchableOpacity onPress={() => setShowToPicker(true)}>
+                    <TextInput
+                      style={styles.dateInput}
+                      value={formatDate(toDate)}
+                      editable={false}
+                      pointerEvents="none"
+                    />
+                  </TouchableOpacity>
+                  {showToPicker && (
+                    <DateTimePicker
+                      value={toDate}
+                      mode="date"
+                      display={Platform.OS === "ios" ? "spinner" : "default"}
+                      onChange={(event, selectedDate) => {
+                        setShowToPicker(false);
+                        if (selectedDate) {
+                          setToDate(selectedDate);
+                        }
+                      }}
+                    />
+                  )}
+                </View>
+              </View>
+
+              <View style={styles.segmentedContainer}>
+                <TouchableOpacity
+                  style={[styles.segment, selectedTest === "Live" && styles.segmentActive]}
+                  onPress={() => setSelectedTest("Live")}
+                >
+                  <Text
+                    style={[
+                      styles.segmentText,
+                      selectedTest === "Live" && styles.segmentActiveText,
+                    ]}
+                  >
+                    Live
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.segment,
+                    selectedTest === "Forward Test" && styles.segmentActive,
+                  ]}
+                  onPress={() => setSelectedTest("Forward Test")}
+                >
+                  <Text
+                    style={[
+                      styles.segmentText,
+                      selectedTest === "Forward Test" && styles.segmentActiveText,
+                    ]}
+                  >
+                    Forward Test
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity style={styles.reportButton}>
+                <Text style={styles.reportButtonText}>Get Reports ⬇️</Text>
+              </TouchableOpacity>
+              <View style={styles.emptyState}>
+                <Image
+                  source={require("@/assets/images/backtest.png")}
+                  style={styles.emptyImage}
+                  resizeMode="contain"
+                />
+                <Text style={styles.emptyText}>
+                  No user reports found for the selected dates!
+                </Text>
+              </View>
+            </>
+          ) : (
+            <View style={styles.emptyState}>
+              <Image
+                source={require("@/assets/images/backtest.png")}
+                style={styles.emptyImage}
+                resizeMode="contain"
+              />
+              <Text style={styles.emptyText}>
+                You havent subscribed to any strategies yet!
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.segment,
-                selectedTest === "Forward Test" && styles.segmentActive,
-              ]}
-              onPress={() => setSelectedTest("Forward Test")}
-            >
-              <Text
-                style={[
-                  styles.segmentText,
-                  selectedTest === "Forward Test" && styles.segmentActiveText,
-                ]}
-              >
-                Forward Test
-              </Text>
-            </TouchableOpacity>
-          </View>
-          <TouchableOpacity style={styles.reportButton}>
-            <Text style={styles.reportButtonText}>Get Reports ⬇️</Text>
-          </TouchableOpacity>
-          <View style={styles.emptyState}>
-            <Image
-              source={require("@/assets/images/backtest.png")}
-              style={styles.emptyImage}
-              resizeMode="contain"
-            />
-            <Text style={styles.emptyText}>
-              No user reports found for the selected dates!
-            </Text>
-          </View>
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -223,7 +239,12 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   reportButtonText: { fontSize: 14, fontWeight: "500", color: "#222" },
-  emptyState: { flex: 1, justifyContent: "center", alignItems: "center", paddingTop: 30 },
-  emptyImage: { width: 150, height: 150, marginBottom: 20 },
+  emptyState: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 30,
+  },
+  emptyImage: { width: 180, height: 180, marginBottom: 20 },
   emptyText: { fontSize: 14, color: "#666", textAlign: "center", paddingHorizontal: 20 },
 });
