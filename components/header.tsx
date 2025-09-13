@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ProfileMenu } from './profile-menu';
 
 export function Header() {
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+
   return (
     <View style={styles.container}>
       <TouchableOpacity style={styles.nameButton}>
@@ -30,9 +33,17 @@ export function Header() {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.profileButton}>
+      <TouchableOpacity 
+        style={styles.profileButton}
+        onPress={() => setShowProfileMenu(true)}
+      >
         <Text style={styles.profileText}>P</Text>
       </TouchableOpacity>
+
+      <ProfileMenu 
+        visible={showProfileMenu} 
+        onClose={() => setShowProfileMenu(false)} 
+      />
     </View>
   );
 }
@@ -52,8 +63,7 @@ const styles = StyleSheet.create({
       height: 2,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+
   },
   nameButton: {
     paddingHorizontal: 8,

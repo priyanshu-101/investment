@@ -2,6 +2,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import React from 'react';
 import { StyleSheet, View, TouchableOpacity, Image } from 'react-native';
+import { Header } from '../header';
 
 export function BrokersScreen() {
   const handleAddBroker = () => {
@@ -10,6 +11,7 @@ export function BrokersScreen() {
 
   return (
     <ThemedView style={[styles.container, styles.whiteBackground]}>
+      <Header />
       <ThemedText type="title" style={[styles.titleText, styles.blackText]}>
         Brokers
       </ThemedText>
@@ -45,8 +47,7 @@ export function BrokersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    paddingTop: 60,
+
   },
   whiteBackground: {
     backgroundColor: '#FFFFFF',
