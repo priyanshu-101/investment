@@ -1,11 +1,13 @@
 import { BottomNavigation } from '@/components/bottom-navigation';
 import {
-    BacktestScreen,
-    BrokersScreen,
-    HomeScreen,
-    ReportsScreen,
-    StrategiesScreen
+  BacktestScreen,
+  BrokersScreen,
+  HomeScreen,
+  ReportsScreen,
+  StrategiesScreen
 } from '@/components/screens';
+import ProfileScreen from '@/components/screens/profile-screen';
+import WalletScreen from '@/components/screens/wallet-screen';
 import { ThemedView } from '@/components/themed-view';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
@@ -45,6 +47,9 @@ export default function App() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Main" component={MainScreen} />
+      <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="Wallet" component={WalletScreen} />
+      <Stack.Screen name="Backtest" component={BacktestScreen} />
     </Stack.Navigator>
   );
 }
