@@ -1,12 +1,21 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import React, { useRef, useState } from 'react';
-import { Image, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  Image,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { Header } from '../header';
 
 export function StrategiesScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const [activeTab, setActiveTab] = useState('My Strategies');
+  const [sortOpen, setSortOpen] = useState(false);
+  const [sortOption, setSortOption] = useState('Date');
 
   const tabs = [
     'Create Strategy',
@@ -14,7 +23,6 @@ export function StrategiesScreen() {
     'Deployed Strategies',
     'Strategy Template',
     'My Portfolio',
-
   ];
 
   const scrollBy = (offset: number) => {
@@ -56,16 +64,37 @@ export function StrategiesScreen() {
           <ThemedText style={styles.arrowText}>▶</ThemedText>
         </TouchableOpacity>
       </View>
-
       <ThemedView style={styles.searchRow}>
         <TextInput
           style={styles.searchInput}
           placeholder="Search Strategies"
           placeholderTextColor="#999"
         />
-        <TouchableOpacity style={styles.sortButton}>
-          <ThemedText style={styles.sortText}>Sort By Date</ThemedText>
-        </TouchableOpacity>
+        <View style={{ position: 'relative' }}>
+          <TouchableOpacity
+            style={styles.sortButton}
+            onPress={() => setSortOpen(!sortOpen)}
+          >
+            <ThemedText style={styles.sortText}>Sort By {sortOption}</ThemedText>
+          </TouchableOpacity>
+
+          {sortOpen && (
+            <View style={styles.dropdown}>
+              {['Date', 'A-Z'].map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  onPress={() => {
+                    setSortOption(option);
+                    setSortOpen(false);
+                  }}
+                  style={styles.dropdownItem}
+                >
+                  <ThemedText style={styles.dropdownText}>{option}</ThemedText>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
       </ThemedView>
 
       <ThemedView style={styles.emptyState}>
@@ -146,6 +175,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   sortText: { fontSize: 14, color: '#222' },
+  dropdown: {
+    position: 'absolute',
+    top: 45,
+    right: 0,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    zIndex: 10,
+  },
+  dropdownItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  dropdownText: {
+    fontSize: 14,
+    color: '#333',
+  },
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyImage: { width: 180, height: 180, marginBottom: 20 },
   emptyText: { fontSize: 14, color: '#666', marginBottom: 20 },
