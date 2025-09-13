@@ -1,15 +1,16 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
-  StyleSheet,
-  TouchableOpacity,
-  View,
-  Text,
   Image,
   ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Header } from '../header';
 
 export function BacktestScreen() {
   const [selectedStrategy, setSelectedStrategy] = useState('');
@@ -26,12 +27,13 @@ export function BacktestScreen() {
     'Custom Range',
   ];
 
-  const handleTimeframeSelect = (timeframe) => {
+  const handleTimeframeSelect = (timeframe: string) => {
     setSelectedTimeframe(timeframe);
   };
 
   return (
     <ThemedView style={[styles.container, styles.whiteBackground]}>
+      <Header />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -65,7 +67,7 @@ export function BacktestScreen() {
               style={[
                 styles.timeframeButton,
                 selectedTimeframe === timeframe &&
-                  styles.selectedTimeframeButton,
+                styles.selectedTimeframeButton,
               ]}
               onPress={() => handleTimeframeSelect(timeframe)}
             >
@@ -73,7 +75,7 @@ export function BacktestScreen() {
                 style={[
                   styles.timeframeText,
                   selectedTimeframe === timeframe &&
-                    styles.selectedTimeframeText,
+                  styles.selectedTimeframeText,
                 ]}
               >
                 {timeframe}
@@ -152,7 +154,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 60,
     paddingBottom: 40,
   },
   titleText: {
