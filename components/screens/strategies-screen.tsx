@@ -16,7 +16,7 @@ import TradingStrategy from './create-strategies';
 export function StrategiesScreen() {
   const navigation = useNavigation();
   const scrollRef = useRef<ScrollView>(null);
-  const [activeTab, setActiveTab] = useState('My Strategies');
+  const [activeTab, setActiveTab] = useState('Create Strategy');
   const [sortOpen, setSortOpen] = useState(false);
   const [sortOption, setSortOption] = useState('Date');
 
