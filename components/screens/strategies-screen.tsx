@@ -1,5 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useNavigation } from '@react-navigation/native';
 import React, { useRef, useState } from 'react';
 import {
   Image,
@@ -12,6 +13,7 @@ import {
 import { Header } from '../header';
 
 export function StrategiesScreen() {
+  const navigation = useNavigation();
   const scrollRef = useRef<ScrollView>(null);
   const [activeTab, setActiveTab] = useState('My Strategies');
   const [sortOpen, setSortOpen] = useState(false);
@@ -48,7 +50,13 @@ export function StrategiesScreen() {
           {tabs.map((tab) => (
             <TouchableOpacity
               key={tab}
-              onPress={() => setActiveTab(tab)}
+              onPress={() => {
+                if (tab === 'My Portfolio') {
+                  navigation.navigate('Backtest' as never);
+                } else {
+                  setActiveTab(tab);
+                }
+              }}
               style={[styles.tabButton, activeTab === tab && styles.activeTab]}
             >
               <ThemedText
