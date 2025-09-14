@@ -64,50 +64,66 @@ export function StrategiesScreen() {
           <ThemedText style={styles.arrowText}>▶</ThemedText>
         </TouchableOpacity>
       </View>
-      <ThemedView style={styles.searchRow}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search Strategies"
-          placeholderTextColor="#999"
-        />
-        <View style={{ position: 'relative' }}>
-          <TouchableOpacity
-            style={styles.sortButton}
-            onPress={() => setSortOpen(!sortOpen)}
-          >
-            <ThemedText style={styles.sortText}>Sort By {sortOption}</ThemedText>
+      {activeTab === 'My Strategies' && (
+        <ThemedView style={styles.searchRow}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search Strategies"
+            placeholderTextColor="#999"
+          />
+          <View style={{ position: 'relative' }}>
+            <TouchableOpacity
+              style={styles.sortButton}
+              onPress={() => setSortOpen(!sortOpen)}
+            >
+              <ThemedText style={styles.sortText}>Sort By {sortOption}</ThemedText>
+            </TouchableOpacity>
+
+            {sortOpen && (
+              <View style={styles.dropdown}>
+                {['Date', 'A-Z'].map((option) => (
+                  <TouchableOpacity
+                    key={option}
+                    onPress={() => {
+                      setSortOption(option);
+                      setSortOpen(false);
+                    }}
+                    style={styles.dropdownItem}
+                  >
+                    <ThemedText style={styles.dropdownText}>{option}</ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        </ThemedView>
+      )}
+
+      {activeTab === 'Deployed Strategies' ? (
+        <ThemedView style={styles.emptyState}>
+          <Image
+            source={require('@/assets/images/strategy.png')}
+            style={styles.emptyImage}
+            resizeMode="contain"
+          />
+          <ThemedText style={styles.emptyText}>No Deployed Strategy</ThemedText>
+          <TouchableOpacity style={[styles.createButton, styles.createButtonDotted]}>
+            <ThemedText style={styles.createButtonText}>+ Create Strategy</ThemedText>
           </TouchableOpacity>
-
-          {sortOpen && (
-            <View style={styles.dropdown}>
-              {['Date', 'A-Z'].map((option) => (
-                <TouchableOpacity
-                  key={option}
-                  onPress={() => {
-                    setSortOption(option);
-                    setSortOpen(false);
-                  }}
-                  style={styles.dropdownItem}
-                >
-                  <ThemedText style={styles.dropdownText}>{option}</ThemedText>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
-      </ThemedView>
-
-      <ThemedView style={styles.emptyState}>
-        <Image
-          source={require('@/assets/images/strategy.png')}
-          style={styles.emptyImage}
-          resizeMode="contain"
-        />
-        <ThemedText style={styles.emptyText}>No Strategy Created</ThemedText>
-        <TouchableOpacity style={styles.createButton}>
-          <ThemedText style={styles.createButtonText}>+ Create Strategy</ThemedText>
-        </TouchableOpacity>
-      </ThemedView>
+        </ThemedView>
+      ) : (
+        <ThemedView style={styles.emptyState}>
+          <Image
+            source={require('@/assets/images/strategy.png')}
+            style={styles.emptyImage}
+            resizeMode="contain"
+          />
+          <ThemedText style={styles.emptyText}>No Strategy Created</ThemedText>
+          <TouchableOpacity style={styles.createButton}>
+            <ThemedText style={styles.createButtonText}>+ Create Strategy</ThemedText>
+          </TouchableOpacity>
+        </ThemedView>
+      )}
     </ThemedView>
   );
 }
@@ -202,6 +218,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 20,
+  },
+  createButtonDotted: {
+    borderStyle: 'dashed',
   },
   createButtonText: { fontSize: 14, color: '#4a4aff', fontWeight: '500' },
 });
