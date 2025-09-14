@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { Header } from '../header';
+import TradingStrategy from './create-strategies';
 
 export function StrategiesScreen() {
   const navigation = useNavigation();
@@ -107,7 +108,9 @@ export function StrategiesScreen() {
         </ThemedView>
       )}
 
-      {activeTab === 'Deployed Strategies' ? (
+      {activeTab === 'Create Strategy' ? (
+        <TradingStrategy />
+      ) : activeTab === 'Deployed Strategies' ? (
         <ThemedView style={styles.emptyState}>
           <Image
             source={require('@/assets/images/strategy.png')}
