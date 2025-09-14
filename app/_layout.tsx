@@ -6,7 +6,8 @@ import 'react-native-reanimated';
 export default function RootLayout() {
   return (
     <ThemeProvider value={DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack initialRouteName="auth" screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="auth" />
         <Stack.Screen name="index" />
       </Stack>
       <StatusBar style="dark" />
