@@ -1,5 +1,8 @@
+import { router } from 'expo-router';
+import { signOut } from 'firebase/auth';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View, TouchableOpacity, TextInput } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { auth } from '../../firebaseConfig';
 
 export default function ProfileScreen() {
   const [editMode, setEditMode] = useState(false);
@@ -11,6 +14,28 @@ export default function ProfileScreen() {
 
   const handleSave = () => {
     setEditMode(false);
+  };
+
+  const handleLogout = async () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await signOut(auth);
+              router.replace('/auth');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to logout. Please try again.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -114,6 +139,10 @@ export default function ProfileScreen() {
             <TouchableOpacity style={styles.editButton} onPress={() => setEditMode(true)}>
               <Text style={styles.editButtonText}>✎ Edit Profile</Text>
             </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <Text style={styles.logoutButtonText}>🚪 Logout</Text>
+            </TouchableOpacity>
           </>
         )}
       </View>
@@ -176,6 +205,16 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   editButtonText: { color: '#4A90E2', fontSize: 16, fontWeight: '600' },
+  logoutButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ff4444',
+    borderRadius: 8,
+    paddingVertical: 12,
+    marginBottom: 20,
+  },
+  logoutButtonText: { color: 'white', fontSize: 16, fontWeight: '600' },
   infoSection: {
     backgroundColor: 'white',
     borderRadius: 12,

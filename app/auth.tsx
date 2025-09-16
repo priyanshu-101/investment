@@ -1,50 +1,157 @@
-import { AntDesign } from '@expo/vector-icons';
+
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import React from 'react';
-import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { router } from 'expo-router';
+import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth';
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, Button, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { auth } from '../firebaseConfig';
+
 
 export default function AuthScreen() {
-  const router = useRouter();
+  const [mode, setMode] = useState<'login'|'register'|'forgot'>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [info, setInfo] = useState('');
 
-  const onGooglePress = () => {
-    router.replace('/');
+  const handleRegister = async () => {
+    if (!email || !password || !confirmPassword) {
+      return Alert.alert('Error', 'Please fill all fields');
+    }
+    if (password !== confirmPassword) {
+      return Alert.alert('Error', 'Passwords do not match');
+    }
+    if (password.length < 6) {
+      return Alert.alert('Error', 'Password must be at least 6 characters');
+    }
+    
+    setLoading(true);
+    try {
+      console.log('Attempting to register with:', email);
+      
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      console.log('Registration successful:', userCredential.user.uid);
+      
+      setInfo('Registration successful! You are now logged in.');
+      router.replace('/');
+    } catch (e: any) {
+      console.error('Registration error:', e);
+      
+      let errorMessage = 'Registration failed';
+      if (e.code === 'auth/email-already-in-use') {
+        errorMessage = 'This email is already registered. Please try logging in instead.';
+      } else if (e.code === 'auth/invalid-email') {
+        errorMessage = 'Please enter a valid email address.';
+      } else if (e.code === 'auth/weak-password') {
+        errorMessage = 'Password is too weak. Please choose a stronger password.';
+      } else if (e.code === 'auth/configuration-not-found') {
+        errorMessage = 'Firebase Authentication is not properly configured. Please check your Firebase project settings and ensure Authentication is enabled.';
+      } else if (e.code === 'auth/api-key-not-valid') {
+        errorMessage = 'Invalid API key. Please check your Firebase configuration.';
+      } else {
+        errorMessage = e.message || 'An unknown error occurred during registration.';
+      }
+      
+      Alert.alert('Registration Failed', errorMessage);
+    }
+    setLoading(false);
+  };
+
+  const handleLogin = async () => {
+    if (!email || !password) return Alert.alert('Error', 'Please fill all fields');
+    setLoading(true);
+    try {
+      console.log('Attempting to login with:', email);
+      console.log('Auth object:', auth);
+      
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log('Login successful:', userCredential.user.uid);
+      
+      setInfo('Logged in successfully!');
+      setTimeout(() => {
+        router.replace('/');
+      }, 1000);
+    } catch (e) {
+      console.error('Login error:', e);
+      const errorMessage = (e as any).code || (e as Error).message;
+      Alert.alert('Login failed', errorMessage);
+    }
+    setLoading(false);
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) return Alert.alert('Error', 'Please enter your email address');
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setInfo('Password reset email sent. Please check your inbox.');
+      setMode('login');
+    } catch (e) {
+      Alert.alert('Error', (e as Error).message);
+    }
+    setLoading(false);
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}> 
+    <SafeAreaView style={styles.safeArea}>
       <LinearGradient
         colors={["#102A43", "#1E5A96"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.gradient}
       >
-        {/* Decorative header */}
         <View style={styles.headerDecor}>
           <View style={[styles.bubble, { width: 140, height: 140, opacity: 0.12, right: -30, top: -20 }]} />
           <View style={[styles.bubble, { width: 90, height: 90, opacity: 0.15, left: -20, top: 20 }]} />
         </View>
-
-        {/* Auth Card */}
-        <View style={styles.card}>
-          <View style={styles.brandBadge}>
-            <Text style={styles.brandBadgeText}>I</Text>
-          </View>
-
+        <View>
           <Text style={styles.title}>Welcome to</Text>
           <Text style={styles.brand}>Investment</Text>
           <Text style={styles.subtitle}>Sign in to continue</Text>
-
-          <TouchableOpacity style={styles.googleButton} onPress={onGooglePress} activeOpacity={0.9}>
-            <AntDesign name="google" size={20} color="#DB4437" style={{ marginRight: 10 }} />
-            <Text style={styles.googleText}>Continue with Google</Text>
-          </TouchableOpacity>
+          {info ? <Text style={{ color: 'green', marginBottom: 8 }}>{info}</Text> : null}
+          {loading && <ActivityIndicator size="small" color="#1E5A96" style={{ marginBottom: 12 }} />}
+          {mode === 'login' && (
+            <>
+              <TextInput placeholder="Email" value={email} onChangeText={setEmail} style={inputStyle} autoCapitalize="none" />
+              <TextInput placeholder="Password" value={password} onChangeText={setPassword} style={inputStyle} secureTextEntry />
+              <Button title="Login" onPress={handleLogin} />
+              <Button title="Register" onPress={()=>setMode('register')} />
+              <Button title="Forgot Password?" onPress={()=>setMode('forgot')} />
+            </>
+          )}
+          {mode === 'register' && (
+            <>
+              <TextInput placeholder="Email" value={email} onChangeText={setEmail} style={inputStyle} autoCapitalize="none" />
+              <TextInput placeholder="Password" value={password} onChangeText={setPassword} style={inputStyle} secureTextEntry />
+              <TextInput placeholder="Confirm Password" value={confirmPassword} onChangeText={setConfirmPassword} style={inputStyle} secureTextEntry />
+              <Button title="Register" onPress={handleRegister} />
+              <Button title="Back to Login" onPress={()=>setMode('login')} />
+            </>
+          )}
+          {mode === 'forgot' && (
+            <>
+              <TextInput placeholder="Email" value={email} onChangeText={setEmail} style={inputStyle} autoCapitalize="none" />
+              <Button title="Send Password Reset Email" onPress={handleForgotPassword} />
+              <Button title="Back to Login" onPress={()=>setMode('login')} />
+            </>
+          )}
         </View>
         <Text style={styles.footerNote}>By continuing, you agree to our Terms & Privacy Policy</Text>
       </LinearGradient>
     </SafeAreaView>
   );
 }
+
+
+
+const inputStyle = {
+  backgroundColor: '#fff',
+  borderRadius: 8,
+  padding: 12,
+  marginBottom: 12,
+  fontSize: 16,
+};
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -69,34 +176,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 999,
   },
-  card: {
-    width: '100%',
-    maxWidth: 420,
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    paddingVertical: 28,
-    paddingHorizontal: 22,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.15,
-    shadowRadius: 24,
-    elevation: 8,
-  },
-  brandBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#1E5A96',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
-  },
-  brandBadgeText: {
-    color: '#ffffff',
-    fontSize: 28,
-    fontWeight: '800',
-  },
+  // card, brandBadge, brandBadgeText removed
   title: {
     fontSize: 14,
     color: '#6c757d',
@@ -112,29 +192,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#6c757d',
     marginBottom: 24,
-  },
-  googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#E6EAF0',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    width: '100%',
-    maxWidth: 340,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  googleText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#2c3e50',
   },
   disclaimer: {
     marginTop: 12,
