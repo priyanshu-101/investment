@@ -2,6 +2,7 @@ import { StrategyTemplate } from '@/components/screens/StrategyTemplate';
 import React, { useEffect, useRef } from 'react';
 import { Animated, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Header } from '../header';
+import { IndicesSlider } from '../indices-slider';
 
 export function HomeScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -72,7 +73,7 @@ export function HomeScreen() {
         contentContainerStyle={styles.scrollContent} 
         showsVerticalScrollIndicator={false}
       >
-        {/* Notice */}
+        <IndicesSlider />
         <View style={styles.noticeContainer}>
           <Text style={styles.noticeText}>
             Dear users, due to some technical issue from meta,{'\n'}
@@ -192,7 +193,6 @@ export function HomeScreen() {
           </View>
         </Animated.View>
 
-        {/* Strategy Template Section */}
         <Animated.View style={{ opacity: fadeAnim, width: '100%' }}>
           <StrategyTemplate />
         </Animated.View>
