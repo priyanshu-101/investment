@@ -3,6 +3,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Header } from '../header';
 import { IndicesSlider } from '../indices-slider';
+import { ProductsSection } from '../products-section';
 
 export function HomeScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -69,8 +70,8 @@ export function HomeScreen() {
       <StatusBar backgroundColor="#4A90E2" barStyle="light-content" />
       <Header />
 
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent} 
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         <IndicesSlider />
@@ -94,53 +95,56 @@ export function HomeScreen() {
                 </View>
 
                 <View style={styles.papersContainer}>
-                  <Animated.View 
+                  <Animated.View
                     style={[
-                      styles.paper, 
+                      styles.paper,
                       styles.redPaper,
                       {
                         transform: [
                           { rotate: '-12deg' },
-                          { translateY: floatAnim1.interpolate({
+                          {
+                            translateY: floatAnim1.interpolate({
                               inputRange: [0, 1],
                               outputRange: [0, -10],
                             })
                           }
                         ]
                       }
-                    ]} 
+                    ]}
                   />
-                  <Animated.View 
+                  <Animated.View
                     style={[
-                      styles.paper, 
+                      styles.paper,
                       styles.whitePaper,
                       {
                         transform: [
                           { rotate: '2deg' },
-                          { translateY: floatAnim2.interpolate({
+                          {
+                            translateY: floatAnim2.interpolate({
                               inputRange: [0, 1],
                               outputRange: [0, -8],
                             })
                           }
                         ]
                       }
-                    ]} 
+                    ]}
                   />
-                  <Animated.View 
+                  <Animated.View
                     style={[
-                      styles.paper, 
+                      styles.paper,
                       styles.orangePaper,
                       {
                         transform: [
                           { rotate: '18deg' },
-                          { translateY: floatAnim3.interpolate({
+                          {
+                            translateY: floatAnim3.interpolate({
                               inputRange: [0, 1],
                               outputRange: [0, -12],
                             })
                           }
                         ]
                       }
-                    ]} 
+                    ]}
                   />
                 </View>
 
@@ -151,7 +155,7 @@ export function HomeScreen() {
               </View>
             </View>
 
-            <Animated.Text 
+            <Animated.Text
               style={[
                 styles.title,
                 {
@@ -168,7 +172,7 @@ export function HomeScreen() {
               Add new Broker
             </Animated.Text>
 
-            <Animated.Text 
+            <Animated.Text
               style={[
                 styles.subtitle,
                 {
@@ -193,6 +197,7 @@ export function HomeScreen() {
           </View>
         </Animated.View>
 
+        <ProductsSection />
         <Animated.View style={{ opacity: fadeAnim, width: '100%' }}>
           <StrategyTemplate />
         </Animated.View>
