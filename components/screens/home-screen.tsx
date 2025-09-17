@@ -75,12 +75,12 @@ export function HomeScreen() {
       >
         <IndicesSlider />
         <View style={styles.noticeContainer}>
-          <Text style={styles.noticeText}>
+          {/* <Text style={styles.noticeText}>
             Dear users, due to some technical issue from meta,{'\n'}
             whatsapp support is not available for today. Please{'\n'}
             share your queries on different number +91-{'\n'}
             7669284138 (Whatsapp chat only).
-          </Text>
+          </Text> */}
         </View>
 
         {/* Animated Card */}
@@ -213,7 +213,6 @@ const styles = StyleSheet.create({
   mainContent: {
     backgroundColor: 'white',
     paddingHorizontal: 32,
-    paddingTop: 20,
     alignItems: 'flex-start',
   },
   cardContainer: {
