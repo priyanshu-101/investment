@@ -4,6 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
+import 'react-native-url-polyfill/auto';
+import { KiteConnectProvider } from '../contexts/KiteConnectContext';
 import { useAuth } from '../hooks/useAuth';
 
 export default function RootLayout() {
@@ -18,15 +20,17 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={DefaultTheme}>
-      <Stack 
-        initialRouteName={user ? "index" : "auth"} 
-        screenOptions={{ headerShown: false }}
-      >
-        <Stack.Screen name="auth" />
-        <Stack.Screen name="index" />
-      </Stack>
-      <StatusBar style="dark" />
-    </ThemeProvider>
+    <KiteConnectProvider>
+      <ThemeProvider value={DefaultTheme}>
+        <Stack 
+          initialRouteName={user ? "index" : "auth"} 
+          screenOptions={{ headerShown: false }}
+        >
+          <Stack.Screen name="auth" />
+          <Stack.Screen name="index" />
+        </Stack>
+        <StatusBar style="dark" />
+      </ThemeProvider>
+    </KiteConnectProvider>
   );
 }
