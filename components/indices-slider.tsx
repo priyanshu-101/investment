@@ -1,85 +1,92 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-
-const indices = [
-  {
-    name: 'NIFTY 50',
-    value: '25,156.10',
-    change: '+86.90',
-    percent: '+0.35%',
-    color: '#1abc9c',
-  },
-  {
-    name: 'SENSEX',
-    value: '82,090.13',
-    change: '+304.39',
-    percent: '+0.37%',
-    color: '#1abc9c',
-  },
-  {
-    name: 'NIFTY BANK',
-    value: '52,145.75',
-    change: '+245.80',
-    percent: '+0.47%',
-    color: '#1abc9c',
-  },
-  {
-    name: 'NIFTY IT',
-    value: '43,892.60',
-    change: '-156.25',
-    percent: '-0.36%',
-    color: '#e74c3c',
-  },
-  {
-    name: 'NIFTY AUTO',
-    value: '26,785.45',
-    change: '+189.30',
-    percent: '+0.71%',
-    color: '#1abc9c',
-  },
-  {
-    name: 'NIFTY PHARMA',
-    value: '21,456.90',
-    change: '-89.15',
-    percent: '-0.41%',
-    color: '#e74c3c',
-  },
-  {
-    name: 'NIFTY FMCG',
-    value: '58,234.85',
-    change: '+123.45',
-    percent: '+0.21%',
-    color: '#1abc9c',
-  },
-  {
-    name: 'NIFTY METAL',
-    value: '9,876.20',
-    change: '+67.80',
-    percent: '+0.69%',
-    color: '#1abc9c',
-  },
-];
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useMarketData } from '../hooks/useMarketData';
 
 export function IndicesSlider() {
+  const { 
+    data: indices, 
+    loading, 
+    error, 
+    lastUpdated, 
+    isMarketOpen, 
+    nextMarketEvent, 
+    refreshData 
+  } = useMarketData({
+    autoRefresh: true,
+    refreshInterval: 30000, // 30 seconds
+  });
+
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refreshData();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshData]);
+
+  const formatLastUpdated = (date: Date | null) => {
+    if (!date) return '';
+    const now = new Date();
+    const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (diff < 60) return `${diff}s ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    return `${Math.floor(diff / 3600)}h ago`;
+  };
+
   return (
     <View style={styles.sliderContainer}>
-      <Text style={styles.sectionTitle}>Market Indices</Text>
+      <View style={styles.headerContainer}>
+        <Text style={styles.sectionTitle}>Market Indices</Text>
+      </View>
+
+      {nextMarketEvent && (
+        <Text style={styles.nextEventText}>{nextMarketEvent}</Text>
+      )}
+      
+      {error && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>⚠️ {error}</Text>
+          <TouchableOpacity onPress={onRefresh} style={styles.retryButton}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <ScrollView 
         horizontal 
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         pagingEnabled={false}
         decelerationRate="fast"
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
-        {indices.map((item, idx) => (
-          <View key={item.name} style={styles.card}>
-            <Text style={styles.name}>{item.name}</Text>
-            <Text style={styles.value}>{item.value}</Text>
-            <Text style={[styles.change, { color: item.color }]}> 
-              {item.change} <Text style={styles.percent}>({item.percent})</Text>
-            </Text>
+        {loading && indices.length === 0 ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#1a1f71" />
+            <Text style={styles.loadingText}>Loading market data...</Text>
           </View>
-        ))}
+        ) : (
+          indices.map((item, idx) => (
+            <View key={item.name || idx} style={styles.card}>
+              <Text style={styles.name}>{item.name}</Text>
+              <Text style={styles.value}>{item.value}</Text>
+              <Text style={[styles.change, { color: item.color }]}> 
+                {item.change} <Text style={styles.percent}>({item.percent})</Text>
+              </Text>
+              {loading && (
+                <View style={styles.cardLoading}>
+                  <ActivityIndicator size="small" color="#1a1f71" />
+                </View>
+              )}
+            </View>
+          ))
+        )}
       </ScrollView>
     </View>
   );
@@ -91,12 +98,86 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     paddingLeft: 16,
   },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+    marginRight: 16,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#1a1f71',
-    marginBottom: 12,
     marginLeft: 4,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#64748b',
+  },
+  lastUpdatedContainer: {
+    marginBottom: 8,
+    marginRight: 16,
+  },
+  lastUpdatedText: {
+    fontSize: 11,
+    color: '#94a3b8',
+    marginLeft: 4,
+  },
+  nextEventText: {
+    fontSize: 12,
+    color: '#64748b',
+    marginBottom: 8,
+    marginLeft: 4,
+    fontStyle: 'italic',
+  },
+  errorContainer: {
+    backgroundColor: '#fef2f2',
+    margin: 16,
+    padding: 12,
+    borderRadius: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  errorText: {
+    color: '#dc2626',
+    fontSize: 12,
+    flex: 1,
+  },
+  retryButton: {
+    backgroundColor: '#dc2626',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 200,
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 8,
+    color: '#64748b',
+    fontSize: 14,
   },
   scrollContent: {
     paddingRight: 16,
@@ -115,6 +196,12 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     borderWidth: 1,
     borderColor: '#e2e8f0',
+    position: 'relative',
+  },
+  cardLoading: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
   },
   name: {
     fontWeight: '600',
