@@ -16,9 +16,9 @@ export const MARKET_API_CONFIG = {
   
   // Refresh intervals (in milliseconds)
   REFRESH_INTERVALS: {
-    FAST: 15000,    // 15 seconds - for active trading
-    NORMAL: 30000,  // 30 seconds - default
-    SLOW: 60000,    // 1 minute - for background updates
+    FAST: 3000,     // 3 seconds - for very active trading
+    NORMAL: 5000,   // 5 seconds - default (faster)
+    SLOW: 10000,    // 10 seconds - for background updates
   },
   
   // Market timing (IST - Indian Standard Time)

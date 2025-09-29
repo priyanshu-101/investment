@@ -13,7 +13,7 @@ export function IndicesSlider() {
     refreshData 
   } = useMarketData({
     autoRefresh: true,
-    refreshInterval: 30000, // 30 seconds
+    refreshInterval: 5000, // 5 seconds for fast updates
   });
 
   const [refreshing, setRefreshing] = React.useState(false);

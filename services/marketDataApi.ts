@@ -377,22 +377,32 @@ class MarketDataService {
       }
     ];
 
-    // Add slight random variations to make it look more realistic
+    // Add more noticeable random variations for fast updates
     return simulatedIndices.map(index => {
       try {
         const baseValue = parseFloat(index.value.replace(/,/g, ''));
-        const fluctuation = (Math.random() - 0.5) * 0.01; // ±0.5% fluctuation
+        
+        // More dynamic fluctuation for faster refresh (±1.5% change)
+        const fluctuation = (Math.random() - 0.5) * 0.03; // ±1.5% fluctuation
         const newValue = baseValue * (1 + fluctuation);
+        
+        // Calculate new change with more variation
         const baseChange = parseFloat(index.change.replace(/[+\-,]/g, ''));
-        const newChange = baseChange * (1 + fluctuation);
+        const changeMultiplier = 1 + (Math.random() - 0.5) * 0.4; // ±20% variation in change
+        const newChange = baseChange * changeMultiplier * (fluctuation > 0 ? 1 : -1);
         const changePercent = (newChange / baseValue) * 100;
+
+        // Sometimes make it negative for realism
+        const shouldBeNegative = Math.random() < 0.3; // 30% chance of being negative
+        const finalChange = shouldBeNegative ? -Math.abs(newChange) : Math.abs(newChange);
+        const finalPercent = shouldBeNegative ? -Math.abs(changePercent) : Math.abs(changePercent);
 
         return {
           ...index,
           value: this.formatIndianCurrency(newValue),
-          change: newChange >= 0 ? `+${this.formatIndianCurrency(newChange)}` : `-${this.formatIndianCurrency(Math.abs(newChange))}`,
-          percent: `${newChange >= 0 ? '+' : ''}${changePercent.toFixed(2)}%`,
-          color: newChange >= 0 ? '#1abc9c' : '#e74c3c',
+          change: finalChange >= 0 ? `+${this.formatIndianCurrency(finalChange)}` : `-${this.formatIndianCurrency(Math.abs(finalChange))}`,
+          percent: `${finalChange >= 0 ? '+' : ''}${finalPercent.toFixed(2)}%`,
+          color: finalChange >= 0 ? '#1abc9c' : '#e74c3c',
         };
       } catch (error) {
         console.error(`Error in simulation for ${index.name}:`, error);
