@@ -2,37 +2,44 @@ import BrokerSelectionModal, { type Broker } from '@/components/broker-selection
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import React, { useState } from 'react';
-import { Image, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useBrokers } from '../../hooks/useBrokers';
 import { Header } from '../header';
 
-// Mock broker data - replace with actual broker data
-const brokersData = [
-  { id: 1, name: 'STOXKART', logo: 'S', color: '#4CAF50', bgColor: '#E8F5E8' },
-  { id: 2, name: 'Upstox', logo: 'up', color: '#9C27B0', bgColor: '#F3E5F5' },
-  { id: 3, name: 'FINVASIA', logo: '∞', color: '#FF9800', bgColor: '#FFF3E0' },
-  { id: 4, name: 'FYERS', logo: 'F', color: '#2196F3', bgColor: '#E3F2FD' },
-  { id: 5, name: 'XTS', logo: '∑', color: '#FF5722', bgColor: '#FFE8E0' },
-  { id: 6, name: 'Dhan', logo: 'B', color: '#607D8B', bgColor: '#ECEFF1' },
-  { id: 7, name: 'IIFL', logo: '⬡', color: '#FF5722', bgColor: '#FFE8E0' },
-  { id: 8, name: 'Zerodha', logo: 'Z', color: '#FF6B35', bgColor: '#FFE8E0' },
-  { id: 9, name: 'Alice', logo: 'a', color: '#00BCD4', bgColor: '#E0F7FA' },
-];
 
 
-
-// Updated BrokersScreen Component
 export function BrokersScreen() {
   const [showBrokerModal, setShowBrokerModal] = useState<boolean>(false);
-  const [selectedBrokers, setSelectedBrokers] = useState<Broker[]>([]);
+  const { 
+    availableBrokers, 
+    connectedBrokers, 
+    loading, 
+    error, 
+    refreshBrokers, 
+    connectBroker,
+    disconnectBroker 
+  } = useBrokers();
 
   const handleAddBroker = () => {
     setShowBrokerModal(true);
   };
 
-  const handleSelectBroker = (broker: Broker) => {
-    setSelectedBrokers(prev => [...prev, broker]);
+  const handleSelectBroker = async (broker: Broker) => {
     console.log('Broker selected:', broker);
-    // You can add logic here to handle broker connection/authentication
+    await refreshBrokers(); // Refresh to get updated connected status
+  };
+
+  const handleConnectBroker = async (params: any) => {
+    return await connectBroker(params);
+  };
+
+  const handleDisconnectBroker = async (brokerId: string) => {
+    const result = await disconnectBroker(brokerId);
+    if (result.success) {
+      Alert.alert('Success', result.message);
+    } else {
+      Alert.alert('Error', result.message);
+    }
   };
 
   const handleCloseBrokerModal = () => {
@@ -47,7 +54,20 @@ export function BrokersScreen() {
       </ThemedText>
       
       <View style={styles.contentContainer}>
-        {selectedBrokers.length === 0 ? (
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#4A90E2" />
+            <ThemedText style={styles.loadingText}>Loading Brokers...</ThemedText>
+          </View>
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <ThemedText style={styles.errorText}>Failed to load brokers</ThemedText>
+            <ThemedText style={styles.errorMessage}>{error}</ThemedText>
+            <TouchableOpacity style={styles.retryButton} onPress={refreshBrokers}>
+              <ThemedText style={styles.retryText}>Retry</ThemedText>
+            </TouchableOpacity>
+          </View>
+        ) : connectedBrokers.length === 0 ? (
           <>
             <View style={styles.illustrationContainer}>
               <Image 
@@ -58,7 +78,7 @@ export function BrokersScreen() {
             </View>
             
             <ThemedText style={styles.noBrokersText}>
-              No Brokers found. Please Add brokers!
+              No Brokers connected. Please connect your brokers!
             </ThemedText>
             
             <TouchableOpacity 
@@ -68,24 +88,41 @@ export function BrokersScreen() {
             >
               <View style={styles.buttonContent}>
                 <ThemedText style={styles.plusIcon}>+</ThemedText>
-                <ThemedText style={styles.buttonText}>Add Broker</ThemedText>
+                <ThemedText style={styles.buttonText}>Connect Broker</ThemedText>
               </View>
             </TouchableOpacity>
           </>
         ) : (
           <View style={styles.brokersListContainer}>
-            {selectedBrokers.map((broker, index) => (
+            {connectedBrokers.map((broker, index) => (
               <View key={`${broker.id}-${index}`} style={styles.connectedBrokerCard}>
                 <View style={[styles.connectedBrokerLogo, { backgroundColor: broker.bgColor }]}>
                   <ThemedText style={[styles.connectedBrokerLogoText, { color: broker.color }]}>
                     {broker.logo}
                   </ThemedText>
                 </View>
-                <ThemedText style={styles.connectedBrokerName}>{broker.name}</ThemedText>
-                <View style={styles.connectedStatus}>
-                  <View style={styles.statusDot} />
-                  <ThemedText style={styles.statusText}>Connected</ThemedText>
+                <View style={styles.brokerInfo}>
+                  <ThemedText style={styles.connectedBrokerName}>{broker.name}</ThemedText>
+                  {broker.userId && (
+                    <ThemedText style={styles.brokerUserId}>ID: {broker.userId}</ThemedText>
+                  )}
                 </View>
+                <View style={styles.connectedStatus}>
+                  <View style={[styles.statusDot, { 
+                    backgroundColor: broker.status === 'connected' ? '#4CAF50' : '#FF4444' 
+                  }]} />
+                  <ThemedText style={[styles.statusText, { 
+                    color: broker.status === 'connected' ? '#4CAF50' : '#FF4444' 
+                  }]}>
+                    {broker.status === 'connected' ? 'Connected' : 'Disconnected'}
+                  </ThemedText>
+                </View>
+                <TouchableOpacity 
+                  style={styles.disconnectButton}
+                  onPress={() => handleDisconnectBroker(broker.id)}
+                >
+                  <ThemedText style={styles.disconnectText}>×</ThemedText>
+                </TouchableOpacity>
               </View>
             ))}
             
@@ -104,7 +141,8 @@ export function BrokersScreen() {
         visible={showBrokerModal}
         onClose={handleCloseBrokerModal}
         onSelectBroker={handleSelectBroker}
-        brokers={brokersData as Broker[]}
+        onConnectBroker={handleConnectBroker}
+        brokers={availableBrokers}
       />
     </ThemedView>
   );
@@ -239,5 +277,71 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#3B82F6',
     fontWeight: '500',
+  },
+  
+  // Loading and Error States
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#6b7280',
+    fontSize: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#ef4444',
+    marginBottom: 8,
+  },
+  errorMessage: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: '#4A90E2',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  
+  // Enhanced Broker Card Styles
+  brokerInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  brokerUserId: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  disconnectButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FFE8E8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  disconnectText: {
+    fontSize: 16,
+    color: '#FF4444',
+    fontWeight: 'bold',
   },
 });

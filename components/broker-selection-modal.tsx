@@ -2,24 +2,20 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { Linking, Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { BrokerApiData, BrokerConnectionParams } from '../services/brokersApi';
 
-export type Broker = {
-  id: number;
-  name: string;
-  logo: string;
-  color: string;
-  bgColor: string;
-};
+export type Broker = BrokerApiData;
 
 interface BrokerSelectionModalProps {
   visible: boolean;
   onClose: () => void;
   onSelectBroker: (broker: Broker) => void;
   brokers: Broker[];
+  onConnectBroker?: (params: BrokerConnectionParams) => Promise<{ success: boolean; message: string; broker?: BrokerApiData }>;
 }
 
-const BrokerSelectionModal: React.FC<BrokerSelectionModalProps> = ({ visible, onClose, onSelectBroker, brokers }) => {
+const BrokerSelectionModal: React.FC<BrokerSelectionModalProps> = ({ visible, onClose, onSelectBroker, brokers, onConnectBroker }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBroker, setSelectedBroker] = useState<Broker | null>(null);
   const [showConfigForm, setShowConfigForm] = useState(false);
@@ -46,12 +42,43 @@ const BrokerSelectionModal: React.FC<BrokerSelectionModalProps> = ({ visible, on
     setSelectedBroker(null);
   };
 
-  const handleSubmitConfig = () => {
-    if (selectedBroker) {
-      onSelectBroker(selectedBroker);
-      onClose();
-      setShowConfigForm(false);
-      setSelectedBroker(null);
+  const handleSubmitConfig = async () => {
+    if (selectedBroker && onConnectBroker) {
+      if (!brokerId || !apiKey || !apiSecretKey) {
+        Alert.alert('Error', 'Please fill all required fields');
+        return;
+      }
+
+      try {
+        const connectionParams: BrokerConnectionParams = {
+          brokerId: selectedBroker.id,
+          appName: appName || 'Investment App',
+          apiKey,
+          apiSecretKey
+        };
+
+        const result = await onConnectBroker(connectionParams);
+        
+        if (result.success && result.broker) {
+          onSelectBroker(result.broker);
+          Alert.alert('Success', result.message);
+          onClose();
+          setShowConfigForm(false);
+          setSelectedBroker(null);
+        } else {
+          Alert.alert('Connection Failed', result.message);
+        }
+      } catch {
+        Alert.alert('Error', 'Failed to connect broker. Please try again.');
+      }
+    } else {
+      // Fallback for brokers that don't need API connection
+      if (selectedBroker) {
+        onSelectBroker(selectedBroker);
+        onClose();
+        setShowConfigForm(false);
+        setSelectedBroker(null);
+      }
     }
   };
 
