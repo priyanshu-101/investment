@@ -1,7 +1,7 @@
 import { NavigationProp, ParamListBase, useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ProfileMenu } from './profile-menu';
 
 
@@ -37,11 +37,7 @@ export function Header() {
     <>
       <View style={styles.container}>
         <TouchableOpacity style={styles.nameButton} onPress={() => navigation.navigate('Main', { activeTab: 'Home' })}>
-          <Image 
-            source={require('../assets/images/Logo.jpg')} 
-            style={styles.logoImage}
-            resizeMode="contain"
-          />
+          <Text style={styles.nameText}>Investment</Text>
         </TouchableOpacity>
 
         <View style={styles.centerControls}>
