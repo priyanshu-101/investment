@@ -89,10 +89,7 @@ export function HomeScreen() {
           <View style={styles.cardContainer}>
             <View style={styles.illustrationContainer}>
               <View style={styles.handsContainer}>
-                <View style={styles.leftHand}>
-                  <View style={styles.hand} />
-                  <View style={styles.leftThumb} />
-                </View>
+
 
                 <View style={styles.papersContainer}>
                   <Animated.View
@@ -146,11 +143,6 @@ export function HomeScreen() {
                       }
                     ]}
                   />
-                </View>
-
-                <View style={styles.rightHand}>
-                  <View style={styles.hand} />
-                  <View style={styles.rightThumb} />
                 </View>
               </View>
             </View>

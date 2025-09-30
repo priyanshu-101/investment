@@ -1,7 +1,7 @@
 import { NavigationProp, ParamListBase, useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ProfileMenu } from './profile-menu';
 
 
@@ -37,7 +37,11 @@ export function Header() {
     <>
       <View style={styles.container}>
         <TouchableOpacity style={styles.nameButton} onPress={() => navigation.navigate('Main', { activeTab: 'Home' })}>
-          <Text style={styles.nameText}>Investment</Text>
+          <Image 
+            source={require('../assets/images/Logo.jpg')} 
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
         </TouchableOpacity>
 
         <View style={styles.centerControls}>
@@ -88,8 +92,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: 'white',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     paddingTop: 50, 
     shadowColor: '#000',
     shadowOffset: {
@@ -99,30 +103,35 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
   },
   nameButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    flex: 1,
+    alignItems: 'flex-start',
+    paddingRight: 12,
   },
   nameText: {
     color: '#4A90E2',
     fontSize: 16,
     fontWeight: '600',
   },
+  logoImage: {
+    width: 100,
+    height: 28,
+  },
   iconButton: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
   },
   centerControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 20,
+    gap: 12,
   },
   goButton: {
     backgroundColor: '#4A90E2',
     borderRadius: 8,
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -165,16 +174,16 @@ const styles = StyleSheet.create({
     borderRadius: 1,
   },
   profileButton: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     backgroundColor: '#1E5A96',
-    borderRadius: 18,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   profileText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
   },
   // FAQ Modal Styles
