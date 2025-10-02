@@ -1,7 +1,8 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -13,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useAuth } from '../../contexts/AuthContext';
 import { useStrategies } from '../../hooks/useStrategies';
 import { StrategyApiData } from '../../services/strategiesApi';
 import { Header } from '../header';
@@ -28,13 +30,47 @@ export function StrategiesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [createdStrategies, setCreatedStrategies] = useState<StrategyApiData[]>([]);
 
-  const { 
-    strategies, 
-    loading, 
-    error, 
-    refreshStrategies, 
-    subscribeToStrategy 
+  const { user, isAuthenticated } = useAuth();
+  const {
+    strategies,
+    loading,
+    error,
+    refreshStrategies,
+    subscribeToStrategy
   } = useStrategies();
+
+  const loadCreatedStrategies = useCallback(async () => {
+    try {
+      if (!user?.id) return;
+      const key = `createdStrategies_${user.id}`;
+      const stored = await AsyncStorage.getItem(key);
+      if (stored) {
+        const parsedStrategies = JSON.parse(stored);
+        setCreatedStrategies(parsedStrategies);
+      }
+    } catch (error) {
+      console.error('Error loading created strategies:', error);
+    }
+  }, [user?.id]);
+
+  // Load created strategies from AsyncStorage when component mounts or user changes
+  useEffect(() => {
+    if (user?.id) {
+      loadCreatedStrategies();
+    } else {
+      setCreatedStrategies([]);
+    }
+  }, [user?.id, loadCreatedStrategies]);
+
+  const saveCreatedStrategies = async (strategies: StrategyApiData[]) => {
+    try {
+      if (!user?.id) return;
+      const key = `createdStrategies_${user.id}`;
+      await AsyncStorage.setItem(key, JSON.stringify(strategies));
+    } catch (error) {
+      console.error('Error saving created strategies:', error);
+    }
+  };
 
   const tabs = [
     'Create Strategy',
@@ -109,15 +145,17 @@ export function StrategiesScreen() {
   const handleSubscribeToStrategy = async (strategyId: string, strategyName: string) => {
     try {
       if (strategyId.startsWith('created_')) {
-        setCreatedStrategies(prev => prev.map(strategy => 
-          strategy.id === strategyId 
+        const updatedStrategies = createdStrategies.map(strategy =>
+          strategy.id === strategyId
             ? { ...strategy, isActive: true }
             : strategy
-        ));
+        );
+        setCreatedStrategies(updatedStrategies);
+        await saveCreatedStrategies(updatedStrategies);
         Alert.alert('Success', `${strategyName} has been deployed successfully!`);
         return;
       }
-      
+
       const success = await subscribeToStrategy(strategyId);
       if (success) {
         Alert.alert('Success', `Successfully subscribed to ${strategyName}`);
@@ -130,9 +168,14 @@ export function StrategiesScreen() {
     }
   };
 
-  const handleStrategyCreated = (strategyData: any) => {
+  const handleStrategyCreated = async (strategyData: any) => {
+    if (!isAuthenticated || !user) {
+      Alert.alert('Authentication Required', 'Please log in to create strategies.');
+      return;
+    }
+
     const newStrategy: StrategyApiData = {
-      id: `created_${Date.now()}`,
+      id: `created_${user.id}_${Date.now()}`,
       name: strategyData.strategyName || 'Custom Strategy',
       shortName: strategyData.strategyName?.substring(0, 10) || 'Custom',
       maxDrawdown: -5.0,
@@ -151,12 +194,14 @@ export function StrategiesScreen() {
       instruments: strategyData.instruments || [],
     };
 
-    setCreatedStrategies(prev => [newStrategy, ...prev]);
-    
+    const updatedStrategies = [newStrategy, ...createdStrategies];
+    setCreatedStrategies(updatedStrategies);
+    await saveCreatedStrategies(updatedStrategies);
+
     setActiveTab('My Strategies');
-    
+
     Alert.alert(
-      'Strategy Created!', 
+      'Strategy Created!',
       `${newStrategy.name} has been created successfully and added to your strategies.`,
       [{ text: 'OK' }]
     );
