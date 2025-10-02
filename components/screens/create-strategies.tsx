@@ -1,16 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
+import { kiteConnect } from '../../services/kiteConnect';
+import { marketDataService } from '../../services/marketDataApi';
 
-const TradingStrategy = () => {
+interface TradingStrategyProps {
+  onStrategyCreated?: (strategyData: any) => void;
+}
+
+const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
   const [selectedStrategyType, setSelectedStrategyType] = useState('Time Based');
   const [selectedOrderType, setSelectedOrderType] = useState('MIS');
   const [startTime, setStartTime] = useState('09:16');
@@ -21,11 +28,83 @@ const TradingStrategy = () => {
   const [exitLossAmount, setExitLossAmount] = useState('');
   const [noTradeAfterTime, setNoTradeAfterTime] = useState('15:15');
   const [profitTrailing, setProfitTrailing] = useState('No Trailing');
+  const [selectedInstruments, setSelectedInstruments] = useState<string[]>([]);
+  const [showInstrumentModal, setShowInstrumentModal] = useState(false);
+  const [availableInstruments, setAvailableInstruments] = useState<string[]>([]);
+  const [loadingInstruments, setLoadingInstruments] = useState(false);
+  const [instrumentSearchQuery, setInstrumentSearchQuery] = useState('');
 
   const strategyTypes = ['Time Based', 'Indicator Based'];
   const orderTypes = ['MIS', 'CNC', 'BTST'];
   const weekDays = ['MON', 'TUE', 'WED', 'THU', 'FRI'];
   const profitTrailingOptions = ['No Trailing', 'Lock Fix Profit', 'Trail Profit', 'Lock and Trail'];
+
+  const fetchInstruments = async () => {
+    setLoadingInstruments(true);
+    try {
+      let instruments: string[] = [];
+      
+      try {
+        const marketIndices = await marketDataService.getMarketIndices();
+        const indexSymbols = marketIndices.map(index => index.name.replace(/\s+/g, ''));
+        instruments = indexSymbols;
+      } catch {
+        instruments = ['NIFTY50', 'BANKNIFTY', 'FINNIFTY', 'SENSEX', 'BANKEX'];
+      }
+
+      const popularStocks = [
+        'RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK',
+        'SBIN', 'BHARTIARTL', 'ITC', 'HINDUNILVR', 'KOTAKBANK',
+        'LT', 'ASIANPAINT', 'MARUTI', 'AXISBANK', 'WIPRO',
+        'ONGC', 'ADANIPORTS', 'COALINDIA', 'NTPC', 'POWERGRID',
+        'ULTRACEMCO', 'NESTLEIND', 'BAJFINANCE', 'M&M', 'TITAN',
+        'SUNPHARMA', 'DRREDDY', 'BAJAJFINSV', 'TECHM', 'HCLTECH'
+      ];
+      
+      const isAuthenticated = await kiteConnect.isAuthenticated();
+      if (isAuthenticated) {
+        try {
+          const allInstruments = await kiteConnect.getInstruments();
+          const kiteInstruments = allInstruments
+            .filter((instrument: any) => {
+              const symbol = instrument.tradingsymbol || instrument.trading_symbol;
+              const exchange = instrument.exchange;
+              const instrumentType = instrument.instrument_type;
+              
+              return (
+                (exchange === 'NSE' && instrumentType === 'EQ') ||
+                (exchange === 'NSE' && symbol?.includes('NIFTY')) ||
+                (exchange === 'BSE' && symbol?.includes('SENSEX'))
+              );
+            })
+            .map((instrument: any) => instrument.tradingsymbol || instrument.trading_symbol)
+            .filter((symbol: string) => symbol && symbol.length > 0)
+            .slice(0, 200);
+          
+          instruments = [...instruments, ...kiteInstruments, ...popularStocks];
+        } catch {
+          instruments = [...instruments, ...popularStocks];
+        }
+      } else {
+        instruments = [...instruments, ...popularStocks];
+      }
+      
+      setAvailableInstruments([...new Set(instruments)].sort());
+    } catch {
+      const fallbackInstruments = [
+        'NIFTY50', 'BANKNIFTY', 'FINNIFTY', 'SENSEX', 'BANKEX',
+        'RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK',
+        'SBIN', 'BHARTIARTL', 'ITC', 'HINDUNILVR', 'KOTAKBANK'
+      ];
+      setAvailableInstruments(fallbackInstruments);
+    } finally {
+      setLoadingInstruments(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInstruments();
+  }, []);
 
   const toggleDay = (day: string) => {
     setSelectedDays(prev => 
@@ -36,8 +115,13 @@ const TradingStrategy = () => {
   };
 
   const handleSaveStrategy = () => {
-    console.log('Saving strategy:', {
-      strategyName,
+    if (!strategyName.trim()) {
+      alert('Please enter a strategy name');
+      return;
+    }
+
+    const strategyData = {
+      strategyName: strategyName.trim(),
       selectedStrategyType,
       selectedOrderType,
       startTime,
@@ -46,8 +130,20 @@ const TradingStrategy = () => {
       exitProfitAmount,
       exitLossAmount,
       noTradeAfterTime,
-      profitTrailing
-    });
+      profitTrailing,
+      instruments: selectedInstruments,
+    };
+
+    console.log('Saving strategy:', strategyData);
+    
+    if (onStrategyCreated) {
+      onStrategyCreated(strategyData);
+    }
+
+    setStrategyName('');
+    setExitProfitAmount('');
+    setExitLossAmount('');
+    setSelectedInstruments([]);
   };
 
   return (
@@ -77,9 +173,34 @@ const TradingStrategy = () => {
         </View>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Select Instruments</Text>
-          <TouchableOpacity style={styles.addInstrumentsBox}>
+          {selectedInstruments.length > 0 && (
+            <View style={styles.selectedInstruments}>
+              {selectedInstruments.map((instrument, index) => (
+                <View key={index} style={styles.instrumentChip}>
+                  <Text style={styles.instrumentChipText}>{instrument}</Text>
+                  <TouchableOpacity
+                    onPress={() => setSelectedInstruments(prev => prev.filter((_, i) => i !== index))}
+                    style={styles.removeInstrument}
+                  >
+                    <Text style={styles.removeInstrumentText}>×</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+          <TouchableOpacity 
+            style={styles.addInstrumentsBox}
+            onPress={() => {
+              if (availableInstruments.length === 0 && !loadingInstruments) {
+                fetchInstruments();
+              }
+              setShowInstrumentModal(true);
+            }}
+          >
             <Text style={styles.plusIcon}>+</Text>
-            <Text style={styles.addInstrumentsText}>Add Instruments.</Text>
+            <Text style={styles.addInstrumentsText}>
+              {loadingInstruments ? 'Loading Instruments...' : 'Add Instruments.'}
+            </Text>
           </TouchableOpacity>
         </View>
         <View style={styles.section}>
@@ -243,6 +364,99 @@ const TradingStrategy = () => {
           </View>
         </View>
       </ScrollView>
+
+      {/* Instrument Selection Modal */}
+      {showInstrumentModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Instruments</Text>
+              <TouchableOpacity 
+                onPress={() => {
+                  setShowInstrumentModal(false);
+                  setInstrumentSearchQuery('');
+                }}
+                style={styles.closeButton}
+              >
+                <Text style={styles.closeButtonText}>×</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {/* Search Bar */}
+            <View style={styles.searchContainer}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search instruments..."
+                placeholderTextColor="#999"
+                value={instrumentSearchQuery}
+                onChangeText={setInstrumentSearchQuery}
+              />
+            </View>
+            
+            <ScrollView style={styles.instrumentList}>
+              {loadingInstruments ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color="#1976d2" />
+                  <Text style={styles.loadingText}>Loading instruments from API...</Text>
+                </View>
+              ) : availableInstruments.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>No instruments available</Text>
+                  <TouchableOpacity 
+                    style={styles.retryButton}
+                    onPress={fetchInstruments}
+                  >
+                    <Text style={styles.retryButtonText}>Retry</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                availableInstruments
+                  .filter(instrument => 
+                    instrument.toLowerCase().includes(instrumentSearchQuery.toLowerCase())
+                  )
+                  .map((instrument) => {
+                  const isSelected = selectedInstruments.includes(instrument);
+                  return (
+                    <TouchableOpacity
+                      key={instrument}
+                      style={[
+                        styles.instrumentOption,
+                        isSelected && styles.selectedInstrumentOption
+                      ]}
+                      onPress={() => {
+                        if (isSelected) {
+                          setSelectedInstruments(prev => prev.filter(item => item !== instrument));
+                        } else {
+                          setSelectedInstruments(prev => [...prev, instrument]);
+                        }
+                      }}
+                    >
+                      <Text style={[
+                        styles.instrumentOptionText,
+                        isSelected && styles.selectedInstrumentOptionText
+                      ]}>
+                        {instrument}
+                      </Text>
+                      {isSelected && (
+                        <Text style={styles.checkmark}>✓</Text>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })
+              )}
+            </ScrollView>
+            
+            <View style={styles.modalFooter}>
+              <TouchableOpacity 
+                style={styles.modalButton}
+                onPress={() => setShowInstrumentModal(false)}
+              >
+                <Text style={styles.modalButtonText}>Done ({selectedInstruments.length})</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -456,7 +670,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 12,
   },
-  // New styles for the save section
   saveSection: {
     paddingHorizontal: 16,
     paddingVertical: 24,
@@ -515,6 +728,177 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  selectedInstruments: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  instrumentChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#1976d2',
+  },
+  instrumentChipText: {
+    fontSize: 12,
+    color: '#1976d2',
+    fontWeight: '500',
+    marginRight: 6,
+  },
+  removeInstrument: {
+    marginLeft: 4,
+  },
+  removeInstrumentText: {
+    fontSize: 14,
+    color: '#1976d2',
+    fontWeight: 'bold',
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    width: '90%',
+    maxHeight: '80%',
+    paddingVertical: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  closeButton: {
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    fontSize: 24,
+    color: '#666',
+    fontWeight: 'bold',
+  },
+  instrumentList: {
+    maxHeight: 400,
+    paddingHorizontal: 20,
+  },
+  instrumentOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginVertical: 2,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  selectedInstrumentOption: {
+    backgroundColor: '#e3f2fd',
+    borderColor: '#1976d2',
+  },
+  instrumentOptionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  selectedInstrumentOptionText: {
+    color: '#1976d2',
+    fontWeight: '600',
+  },
+  checkmark: {
+    fontSize: 16,
+    color: '#1976d2',
+    fontWeight: 'bold',
+  },
+  modalFooter: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  modalButton: {
+    backgroundColor: '#1976d2',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: '#1976d2',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  searchContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: '#333',
+    backgroundColor: '#f8f9fa',
   },
 });
 

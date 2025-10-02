@@ -26,8 +26,8 @@ export function StrategiesScreen() {
   const [sortOption, setSortOption] = useState('Date');
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [createdStrategies, setCreatedStrategies] = useState<StrategyApiData[]>([]);
 
-  // API Integration
   const { 
     strategies, 
     loading, 
@@ -51,18 +51,23 @@ export function StrategiesScreen() {
   };
 
   const getFilteredStrategies = (): StrategyApiData[] => {
-    let filteredStrategies = strategies;
+    const allStrategies = [...strategies, ...createdStrategies];
+    let filteredStrategies = allStrategies;
+    
     switch (activeTab) {
       case 'My Strategies':
+        filteredStrategies = allStrategies;
         break;
       case 'Deployed Strategies':
-        filteredStrategies = strategies.filter(s => s.isActive);
+        filteredStrategies = allStrategies.filter(s => s.isActive === true);
         break;
       case 'Strategy Template':
-        filteredStrategies = strategies.filter(s => s.category === 'Template');
+        filteredStrategies = allStrategies.filter(s => 
+          s.category === 'Template' || s.category === 'Algorithm'
+        );
         break;
       default:
-        filteredStrategies = strategies;
+        filteredStrategies = allStrategies;
     }
 
     if (searchQuery.trim()) {
@@ -103,6 +108,16 @@ export function StrategiesScreen() {
 
   const handleSubscribeToStrategy = async (strategyId: string, strategyName: string) => {
     try {
+      if (strategyId.startsWith('created_')) {
+        setCreatedStrategies(prev => prev.map(strategy => 
+          strategy.id === strategyId 
+            ? { ...strategy, isActive: true }
+            : strategy
+        ));
+        Alert.alert('Success', `${strategyName} has been deployed successfully!`);
+        return;
+      }
+      
       const success = await subscribeToStrategy(strategyId);
       if (success) {
         Alert.alert('Success', `Successfully subscribed to ${strategyName}`);
@@ -115,7 +130,38 @@ export function StrategiesScreen() {
     }
   };
 
-  // Strategy Card Component
+  const handleStrategyCreated = (strategyData: any) => {
+    const newStrategy: StrategyApiData = {
+      id: `created_${Date.now()}`,
+      name: strategyData.strategyName || 'Custom Strategy',
+      shortName: strategyData.strategyName?.substring(0, 10) || 'Custom',
+      maxDrawdown: -5.0,
+      margin: 50000,
+      totalReturn: 0,
+      winRate: 0,
+      sharpeRatio: 0,
+      performance: [],
+      isActive: false,
+      risk: 'Medium' as 'Medium',
+      category: 'Custom',
+      description: `${strategyData.selectedStrategyType} strategy created on ${new Date().toLocaleDateString()}`,
+      minInvestment: 25000,
+      expectedReturn: 15,
+      backtestedFrom: new Date().toISOString().split('T')[0],
+      instruments: strategyData.instruments || [],
+    };
+
+    setCreatedStrategies(prev => [newStrategy, ...prev]);
+    
+    setActiveTab('My Strategies');
+    
+    Alert.alert(
+      'Strategy Created!', 
+      `${newStrategy.name} has been created successfully and added to your strategies.`,
+      [{ text: 'OK' }]
+    );
+  };
+
   const StrategyCard = ({ strategy, onSubscribe }: { 
     strategy: StrategyApiData; 
     onSubscribe: (id: string, name: string) => void; 
@@ -269,7 +315,7 @@ export function StrategiesScreen() {
 
       {/* Main Content */}
       {activeTab === 'Create Strategy' ? (
-        <TradingStrategy />
+        <TradingStrategy onStrategyCreated={handleStrategyCreated} />
       ) : (
         <ScrollView 
           style={styles.contentContainer}
