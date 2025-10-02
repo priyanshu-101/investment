@@ -1,41 +1,53 @@
 import { router } from 'expo-router';
-import { signOut } from 'firebase/auth';
 import React, { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { auth } from '../../firebaseConfig';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function ProfileScreen() {
+  const { user, logout } = useAuth();
   const [editMode, setEditMode] = useState(false);
 
-  const [name, setName] = useState("John Doe");
-  const [email, setEmail] = useState("john.doe@example.com");
+  const [name, setName] = useState(user?.email?.split('@')[0] || "User");
+  const [email, setEmail] = useState(user?.email || "");
   const [phone, setPhone] = useState("+91 9876543210");
   const [location, setLocation] = useState("Mumbai, India");
 
   const handleSave = () => {
     setEditMode(false);
+    Alert.alert('Success', 'Profile updated successfully!');
   };
 
-  const handleLogout = async () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await signOut(auth);
-              router.replace('/auth');
-            } catch (error) {
-              Alert.alert('Error', 'Failed to logout. Please try again.');
-            }
-          },
-        },
-      ]
-    );
+  // const handleLogout = async () => {
+  //   Alert.alert(
+  //     'Logout',
+  //     'Are you sure you want to logout?',
+  //     [
+  //       { text: 'Cancel', style: 'cancel' },
+  //       {
+  //         text: 'Logout',
+  //         style: 'destructive',
+  //         onPress: async () => {
+  //           try {
+  //             await logout();
+  //             router.replace('/auth');
+  //           } catch (error) {
+  //             Alert.alert('Error', 'Failed to logout. Please try again.');
+  //           }
+  //         },
+  //       },
+  //     ]
+  //   );
+  // };
+
+  const getInitials = () => {
+    if (name) {
+      const parts = name.split(" ");
+      if (parts.length > 1) {
+        return parts[0].charAt(0).toUpperCase() + parts[1].charAt(0).toUpperCase();
+      }
+      return name.charAt(0).toUpperCase() + (name.charAt(1) || "").toUpperCase();
+    }
+    return "U";
   };
 
   return (
@@ -47,7 +59,7 @@ export default function ProfileScreen() {
       <View style={styles.content}>
         <View style={styles.profileSection}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{name.charAt(0)}{name.split(" ")[1]?.charAt(0) || ""}</Text>
+            <Text style={styles.avatarText}>{getInitials()}</Text>
           </View>
 
           {editMode ? (
@@ -63,6 +75,8 @@ export default function ProfileScreen() {
                 value={email}
                 onChangeText={setEmail}
                 placeholder="Email"
+                editable={false}
+                placeholderTextColor="#999"
               />
             </>
           ) : (
@@ -88,18 +102,6 @@ export default function ProfileScreen() {
             <Text style={styles.cardValue}>Free Plan</Text>
             <Text style={styles.cardLabel}>Active Plan</Text>
           </View>
-
-          
-            <View style={styles.infoSection}>
-              <View style={styles.infoItem}>
-                <Text style={styles.label}>Phone</Text>
-                <Text style={styles.value}>{phone}</Text>
-              </View>
-              <View style={styles.infoItem}>
-                <Text style={styles.label}>Location</Text>
-                <Text style={styles.value}>{location}</Text>
-              </View>
-            </View>
         </View>
 
         {editMode ? (
@@ -136,12 +138,19 @@ export default function ProfileScreen() {
           </>
         ) : (
           <>
+            <View style={styles.infoSection}>
+              <View style={styles.infoItem}>
+                <Text style={styles.label}>Phone</Text>
+                <Text style={styles.value}>{phone}</Text>
+              </View>
+              <View style={styles.infoItem}>
+                <Text style={styles.label}>Location</Text>
+                <Text style={styles.value}>{location}</Text>
+              </View>
+            </View>
+
             <TouchableOpacity style={styles.editButton} onPress={() => setEditMode(true)}>
-              <Text style={styles.editButtonText}>✎ Edit Profile</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-              <Text style={styles.logoutButtonText}>🚪 Logout</Text>
+              <Text style={styles.editButtonText}> Edit Profile</Text>
             </TouchableOpacity>
           </>
         )}
@@ -219,6 +228,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 12,
     padding: 20,
+    marginBottom: 20,
   },
   infoItem: { marginBottom: 15 },
   label: { fontSize: 12, color: '#666', marginBottom: 5 },

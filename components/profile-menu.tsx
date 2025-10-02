@@ -94,19 +94,7 @@ export function ProfileMenu({ visible, onClose, onNavigate }: ProfileMenuProps) 
             {isAuthenticated && user && (
               <>
                 <View style={styles.userInfo}>
-                  <View style={styles.userAvatar}>
-                    <Text style={styles.userAvatarText}>
-                      {user.email.charAt(0).toUpperCase()}
-                    </Text>
-                  </View>
-                  <View style={styles.userDetails}>
-                    <Text style={styles.userEmail}>{user.email}</Text>
-                    <Text style={styles.memberSince}>
-                      Member since {new Date(user.createdAt).toLocaleDateString()}
-                    </Text>
-                  </View>
                 </View>
-                <View style={styles.separator} />
               </>
             )}
             
