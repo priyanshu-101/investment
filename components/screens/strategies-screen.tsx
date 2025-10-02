@@ -63,7 +63,7 @@ export function StrategiesScreen() {
         break;
       case 'Strategy Template':
         filteredStrategies = allStrategies.filter(s => 
-          s.category === 'Template' || s.category === 'Algorithm'
+          s.category === 'Template' || s.category === 'Algorithm' || s.category === 'Custom'
         );
         break;
       default:
