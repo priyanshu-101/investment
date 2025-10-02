@@ -13,6 +13,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   register: (email: string, password: string) => Promise<boolean>;
+  resetPassword: (email: string, newPassword: string) => Promise<boolean>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
 }
@@ -96,6 +97,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const resetPassword = async (email: string, newPassword: string): Promise<boolean> => {
+    try {
+      const existingUsers = await AsyncStorage.getItem('users');
+      const users: User[] = existingUsers ? JSON.parse(existingUsers) : [];
+      
+      const userIndex = users.findIndex((u: User) => u.email === email);
+      if (userIndex === -1) {
+        return false;
+      }
+
+      const updatedUser = {
+        ...users[userIndex],
+        password: newPassword,
+      };
+
+      users[userIndex] = updatedUser;
+      await AsyncStorage.setItem('users', JSON.stringify(users));
+
+      const currentUser = await AsyncStorage.getItem('currentUser');
+      if (currentUser) {
+        const parsedCurrentUser: User = JSON.parse(currentUser);
+        if (parsedCurrentUser.email === email) {
+          await AsyncStorage.setItem('currentUser', JSON.stringify(updatedUser));
+          setUser(updatedUser);
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Reset password error:', error);
+      return false;
+    }
+  };
+
   const logout = async (): Promise<void> => {
     try {
       await AsyncStorage.removeItem('currentUser');
@@ -110,6 +145,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading,
     login,
     register,
+    resetPassword,
     logout,
     isAuthenticated: !!user,
   };

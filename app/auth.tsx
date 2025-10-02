@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -7,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 
 export default function AuthScreen() {
-  const { login, register } = useAuth();
+  const { login, register, resetPassword } = useAuth();
   const [mode, setMode] = useState<'login'|'register'|'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -71,25 +70,36 @@ export default function AuthScreen() {
   };
 
   const handleForgotPassword = async () => {
-    if (!email) return Alert.alert('Error', 'Please enter your email address');
+    if (!email) {
+      return Alert.alert('Error', 'Please enter your email address');
+    }
+
+    if (!password || password.length < 6) {
+      return Alert.alert('Error', 'Please enter a new password with at least 6 characters.');
+    }
+
+    if (password !== confirmPassword) {
+      return Alert.alert('Error', 'New password and confirm password do not match.');
+    }
+
     setLoading(true);
     try {
-      // Get stored users
-      const existingUsers = await AsyncStorage.getItem('users');
-      const users = existingUsers ? JSON.parse(existingUsers) : [];
-      
-      // Find user with matching email
-      const user = users.find((user: any) => user.email === email);
-      
-      if (user) {
-        Alert.alert('Password Recovery', `Password recovery instructions have been sent to ${email}. Please check your email.`);
+      const success = await resetPassword(email, password);
+
+      if (success) {
+        Alert.alert(
+          'Password Updated',
+          'Your password has been reset successfully. Please use your new password to log in.'
+        );
+        setPassword('');
+        setConfirmPassword('');
         setMode('login');
       } else {
         Alert.alert('Error', 'No account found with this email address.');
       }
     } catch (error) {
       console.error('Password reset error:', error);
-      Alert.alert('Error', 'An error occurred during password recovery.');
+      Alert.alert('Error', 'An error occurred during password recovery. Please try again.');
     }
     setLoading(false);
   };
@@ -229,9 +239,33 @@ export default function AuthScreen() {
                   placeholderTextColor="#94a3b8"
                 />
               </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>New Password</Text>
+                <TextInput
+                  placeholder="Enter a new password"
+                  value={password}
+                  onChangeText={setPassword}
+                  style={styles.input}
+                  secureTextEntry
+                  textContentType="newPassword"
+                  placeholderTextColor="#94a3b8"
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Confirm New Password</Text>
+                <TextInput
+                  placeholder="Re-enter your new password"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  style={styles.input}
+                  secureTextEntry
+                  textContentType="newPassword"
+                  placeholderTextColor="#94a3b8"
+                />
+              </View>
               <View style={styles.buttonContainer}>
                 <View style={styles.primaryButton}>
-                  <Button title="Recover Password" onPress={handleForgotPassword} color="#4A90E2" />
+                  <Button title={loading ? "Updating..." : "Recover Password"} onPress={handleForgotPassword} color="#4A90E2" disabled={loading} />
                 </View>
               </View>
               <View style={styles.divider}>
