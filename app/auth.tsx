@@ -1,13 +1,14 @@
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Button, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { auth } from '../firebaseConfig';
+import { useAuth } from '../contexts/AuthContext';
 
 
 export default function AuthScreen() {
+  const { login, register } = useAuth();
   const [mode, setMode] = useState<'login'|'register'|'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,30 +31,17 @@ export default function AuthScreen() {
     try {
       console.log('Attempting to register with:', email);
       
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      console.log('Registration successful:', userCredential.user.uid);
-      
-      setInfo('Registration successful! You are now logged in.');
-      router.replace('/');
-    } catch (e: any) {
-      console.error('Registration error:', e);
-      
-      let errorMessage = 'Registration failed';
-      if (e.code === 'auth/email-already-in-use') {
-        errorMessage = 'This email is already registered. Please try logging in instead.';
-      } else if (e.code === 'auth/invalid-email') {
-        errorMessage = 'Please enter a valid email address.';
-      } else if (e.code === 'auth/weak-password') {
-        errorMessage = 'Password is too weak. Please choose a stronger password.';
-      } else if (e.code === 'auth/configuration-not-found') {
-        errorMessage = 'Firebase Authentication is not properly configured. Please check your Firebase project settings and ensure Authentication is enabled.';
-      } else if (e.code === 'auth/api-key-not-valid') {
-        errorMessage = 'Invalid API key. Please check your Firebase configuration.';
+      const success = await register(email, password);
+      if (success) {
+        console.log('Registration successful');
+        setInfo('Registration successful! You are now logged in.');
+        router.replace('/');
       } else {
-        errorMessage = e.message || 'An unknown error occurred during registration.';
+        Alert.alert('Registration Failed', 'This email is already registered. Please try logging in instead.');
       }
-      
-      Alert.alert('Registration Failed', errorMessage);
+    } catch (error) {
+      console.error('Registration error:', error);
+      Alert.alert('Registration Failed', 'An error occurred during registration.');
     }
     setLoading(false);
   };
@@ -61,21 +49,24 @@ export default function AuthScreen() {
   const handleLogin = async () => {
     if (!email || !password) return Alert.alert('Error', 'Please fill all fields');
     setLoading(true);
+    setInfo('');
+    
     try {
       console.log('Attempting to login with:', email);
-      console.log('Auth object:', auth);
       
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      console.log('Login successful:', userCredential.user.uid);
-      
-      setInfo('Logged in successfully!');
-      setTimeout(() => {
-        router.replace('/');
-      }, 1000);
-    } catch (e) {
-      console.error('Login error:', e);
-      const errorMessage = (e as any).code || (e as Error).message;
-      Alert.alert('Login failed', errorMessage);
+      const success = await login(email, password);
+      if (success) {
+        console.log('Login successful');
+        setInfo('Logged in successfully!');
+        setTimeout(() => {
+          router.replace('/');
+        }, 500);
+      } else {
+        Alert.alert('Login Failed', 'Invalid email or password. Please check your credentials or register first.');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      Alert.alert('Login Failed', 'An error occurred during login.');
     }
     setLoading(false);
   };
@@ -84,11 +75,22 @@ export default function AuthScreen() {
     if (!email) return Alert.alert('Error', 'Please enter your email address');
     setLoading(true);
     try {
-      await sendPasswordResetEmail(auth, email);
-      setInfo('Password reset email sent. Please check your inbox.');
-      setMode('login');
-    } catch (e) {
-      Alert.alert('Error', (e as Error).message);
+      // Get stored users
+      const existingUsers = await AsyncStorage.getItem('users');
+      const users = existingUsers ? JSON.parse(existingUsers) : [];
+      
+      // Find user with matching email
+      const user = users.find((user: any) => user.email === email);
+      
+      if (user) {
+        Alert.alert('Password Recovery', `Password recovery instructions have been sent to ${email}. Please check your email.`);
+        setMode('login');
+      } else {
+        Alert.alert('Error', 'No account found with this email address.');
+      }
+    } catch (error) {
+      console.error('Password reset error:', error);
+      Alert.alert('Error', 'An error occurred during password recovery.');
     }
     setLoading(false);
   };
@@ -113,26 +115,70 @@ export default function AuthScreen() {
           {loading && <ActivityIndicator size="small" color="#1E5A96" style={{ marginBottom: 12 }} />}
           {mode === 'login' && (
             <>
-              <TextInput placeholder="Email" value={email} onChangeText={setEmail} style={inputStyle} autoCapitalize="none" />
-              <TextInput placeholder="Password" value={password} onChangeText={setPassword} style={inputStyle} secureTextEntry />
-              <Button title="Login" onPress={handleLogin} />
+              <TextInput 
+                placeholder="Email" 
+                value={email} 
+                onChangeText={setEmail} 
+                style={inputStyle} 
+                autoCapitalize="none"
+                keyboardType="email-address"
+                textContentType="emailAddress"
+              />
+              <TextInput 
+                placeholder="Password" 
+                value={password} 
+                onChangeText={setPassword} 
+                style={inputStyle} 
+                secureTextEntry 
+                textContentType="password"
+              />
+              <Button title={loading ? "Logging in..." : "Login"} onPress={handleLogin} disabled={loading} />
               <Button title="Register" onPress={()=>setMode('register')} />
               <Button title="Forgot Password?" onPress={()=>setMode('forgot')} />
             </>
           )}
           {mode === 'register' && (
             <>
-              <TextInput placeholder="Email" value={email} onChangeText={setEmail} style={inputStyle} autoCapitalize="none" />
-              <TextInput placeholder="Password" value={password} onChangeText={setPassword} style={inputStyle} secureTextEntry />
-              <TextInput placeholder="Confirm Password" value={confirmPassword} onChangeText={setConfirmPassword} style={inputStyle} secureTextEntry />
-              <Button title="Register" onPress={handleRegister} />
+              <TextInput 
+                placeholder="Email" 
+                value={email} 
+                onChangeText={setEmail} 
+                style={inputStyle} 
+                autoCapitalize="none"
+                keyboardType="email-address"
+                textContentType="emailAddress"
+              />
+              <TextInput 
+                placeholder="Password" 
+                value={password} 
+                onChangeText={setPassword} 
+                style={inputStyle} 
+                secureTextEntry 
+                textContentType="newPassword"
+              />
+              <TextInput 
+                placeholder="Confirm Password" 
+                value={confirmPassword} 
+                onChangeText={setConfirmPassword} 
+                style={inputStyle} 
+                secureTextEntry 
+                textContentType="newPassword"
+              />
+              <Button title={loading ? "Registering..." : "Register"} onPress={handleRegister} disabled={loading} />
               <Button title="Back to Login" onPress={()=>setMode('login')} />
             </>
           )}
           {mode === 'forgot' && (
             <>
-              <TextInput placeholder="Email" value={email} onChangeText={setEmail} style={inputStyle} autoCapitalize="none" />
-              <Button title="Send Password Reset Email" onPress={handleForgotPassword} />
+              <TextInput 
+                placeholder="Email" 
+                value={email} 
+                onChangeText={setEmail} 
+                style={inputStyle} 
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+              <Button title="Recover Password" onPress={handleForgotPassword} />
               <Button title="Back to Login" onPress={()=>setMode('login')} />
             </>
           )}

@@ -1,17 +1,19 @@
 import { NavigationProp, ParamListBase, useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useAuth } from '../contexts/AuthContext';
 import { ProfileMenu } from './profile-menu';
 
 
 
 export function Header() {
+  const { user, logout, isAuthenticated } = useAuth();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const router = useRouter();
 
-  const handleNavigation = (screen: string) => {
+  const handleNavigation = async (screen: string) => {
     switch (screen) {
       case 'Backtest':
         navigation.navigate('Backtest');
@@ -26,7 +28,21 @@ export function Header() {
         router.push('/subscriptions');
         break;
       case 'Logout':
-        console.log('Logging out user');
+        Alert.alert(
+          'Logout',
+          'Are you sure you want to logout?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Logout', 
+              style: 'destructive',
+              onPress: async () => {
+                await logout();
+                router.replace('/auth');
+              }
+            }
+          ]
+        );
         break;
       default:
         console.log(`Screen ${screen} not implemented yet`);
@@ -67,9 +83,17 @@ export function Header() {
 
         <TouchableOpacity 
           style={styles.profileButton}
-          onPress={() => setShowProfileMenu(true)}
+          onPress={() => {
+            if (isAuthenticated) {
+              setShowProfileMenu(true);
+            } else {
+              router.push('/auth');
+            }
+          }}
         >
-          <Text style={styles.profileText}>P</Text>
+          <Text style={styles.profileText}>
+            {isAuthenticated && user ? user.email.charAt(0).toUpperCase() : 'P'}
+          </Text>
         </TouchableOpacity>
 
         <ProfileMenu 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useAuth } from '../contexts/AuthContext';
 
 interface ProfileMenuProps {
   visible: boolean;
@@ -8,6 +9,7 @@ interface ProfileMenuProps {
 }
 
 export function ProfileMenu({ visible, onClose, onNavigate }: ProfileMenuProps) {
+  const { user, isAuthenticated } = useAuth();
   const menuItems = [
     { 
       icon: '👤', 
@@ -89,6 +91,25 @@ export function ProfileMenu({ visible, onClose, onNavigate }: ProfileMenuProps) 
       >
         <View style={styles.menuContainer}>
           <View style={styles.menuContent}>
+            {isAuthenticated && user && (
+              <>
+                <View style={styles.userInfo}>
+                  <View style={styles.userAvatar}>
+                    <Text style={styles.userAvatarText}>
+                      {user.email.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={styles.userDetails}>
+                    <Text style={styles.userEmail}>{user.email}</Text>
+                    <Text style={styles.memberSince}>
+                      Member since {new Date(user.createdAt).toLocaleDateString()}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.separator} />
+              </>
+            )}
+            
             {menuItems.map((item, index) => (
               <TouchableOpacity 
                 key={index} 
@@ -195,5 +216,38 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E5E5',
     marginVertical: 8,
     marginHorizontal: 12,
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+  },
+  userAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#4A90E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  userAvatarText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  userDetails: {
+    flex: 1,
+  },
+  userEmail: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 2,
+  },
+  memberSince: {
+    fontSize: 12,
+    color: '#666',
   },
 });
