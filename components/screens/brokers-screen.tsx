@@ -71,7 +71,7 @@ export function BrokersScreen() {
           <>
             <View style={styles.illustrationContainer}>
               <Image 
-                source={require('@/assets/images/broker.png')} 
+                source={require('@/assets/images/Logo.png')} 
                 style={styles.brokerImage}
                 resizeMode="contain"
               />
