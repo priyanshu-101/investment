@@ -1,18 +1,36 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Button, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 
 
 export default function AuthScreen() {
-  const { login, register, resetPassword } = useAuth();
+  const { login, register, resetPassword, isAuthenticated, loading: authLoading } = useAuth();
   const [mode, setMode] = useState<'login'|'register'|'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [info, setInfo] = useState('');
+
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      router.replace('/');
+    }
+  }, [isAuthenticated, authLoading]);
+
+  if (authLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#4A90E2" />
+      </View>
+    );
+  }
+
+  if (isAuthenticated) {
+    return null; // Will redirect to main app
+  }
 
   const handleRegister = async () => {
     if (!email || !password || !confirmPassword) {

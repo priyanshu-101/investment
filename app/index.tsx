@@ -10,8 +10,10 @@ import ProfileScreen from '@/components/screens/profile-screen';
 import WalletScreen from '@/components/screens/wallet-screen';
 import { ThemedView } from '@/components/themed-view';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import React from 'react';
+import { router } from 'expo-router';
+import React, { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
+import { useAuth } from '../contexts/AuthContext';
 
 const Stack = createNativeStackNavigator();
 
@@ -44,6 +46,22 @@ function MainScreen() {
 }
 
 export default function App() {
+  const { isAuthenticated, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.replace('/auth');
+    }
+  }, [isAuthenticated, loading]);
+
+  if (loading) {
+    return null; // or a loading component
+  }
+
+  if (!isAuthenticated) {
+    return null; // Will redirect to auth
+  }
+
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Main" component={MainScreen} />
