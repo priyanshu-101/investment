@@ -1,4 +1,3 @@
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -107,79 +106,142 @@ export default function AuthScreen() {
           <View style={[styles.bubble, { width: 140, height: 140, opacity: 0.12, right: -30, top: -20 }]} />
           <View style={[styles.bubble, { width: 90, height: 90, opacity: 0.15, left: -20, top: 20 }]} />
         </View>
-        <View>
-          <Text style={styles.title}>Welcome to</Text>
-          <Text style={styles.brand}>Investment</Text>
-          <Text style={styles.subtitle}>Sign in to continue</Text>
-          {info ? <Text style={{ color: 'green', marginBottom: 8 }}>{info}</Text> : null}
-          {loading && <ActivityIndicator size="small" color="#1E5A96" style={{ marginBottom: 12 }} />}
+        <View style={styles.formContainer}>
+          <View style={styles.headerSection}>
+            <Text style={styles.title}>Welcome Back</Text>
+            <Text style={styles.brand}>Investment Tracker</Text>
+            <Text style={styles.subtitle}>
+              {mode === 'login' ? 'Sign in to your account' : mode === 'register' ? 'Create a new account' : 'Reset your password'}
+            </Text>
+          </View>
+          {info ? <Text style={styles.successText}>{info}</Text> : null}
+          {loading && <ActivityIndicator size="large" color="#4A90E2" style={{ marginBottom: 16 }} />}
           {mode === 'login' && (
             <>
-              <TextInput 
-                placeholder="Email" 
-                value={email} 
-                onChangeText={setEmail} 
-                style={inputStyle} 
-                autoCapitalize="none"
-                keyboardType="email-address"
-                textContentType="emailAddress"
-              />
-              <TextInput 
-                placeholder="Password" 
-                value={password} 
-                onChangeText={setPassword} 
-                style={inputStyle} 
-                secureTextEntry 
-                textContentType="password"
-              />
-              <Button title={loading ? "Logging in..." : "Login"} onPress={handleLogin} disabled={loading} />
-              <Button title="Register" onPress={()=>setMode('register')} />
-              <Button title="Forgot Password?" onPress={()=>setMode('forgot')} />
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Email Address</Text>
+                <TextInput 
+                  placeholder="Enter your email" 
+                  value={email} 
+                  onChangeText={setEmail} 
+                  style={styles.input} 
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  textContentType="emailAddress"
+                  placeholderTextColor="#94a3b8"
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Password</Text>
+                <TextInput 
+                  placeholder="Enter your password" 
+                  value={password} 
+                  onChangeText={setPassword} 
+                  style={styles.input} 
+                  secureTextEntry 
+                  textContentType="password"
+                  placeholderTextColor="#94a3b8"
+                />
+              </View>
+              <View style={styles.buttonContainer}>
+                <View style={styles.primaryButton}>
+                  <Button title={loading ? "Logging in..." : "Login"} onPress={handleLogin} disabled={loading} color="#4A90E2" />
+                </View>
+              </View>
+              <View style={styles.linkContainer}>
+                <Text style={styles.linkText} onPress={()=>setMode('forgot')}>Forgot Password?</Text>
+              </View>
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>OR</Text>
+                <View style={styles.dividerLine} />
+              </View>
+              <View style={styles.secondaryButton}>
+                <Button title="Create New Account" onPress={()=>setMode('register')} color="#64748b" />
+              </View>
             </>
           )}
           {mode === 'register' && (
             <>
-              <TextInput 
-                placeholder="Email" 
-                value={email} 
-                onChangeText={setEmail} 
-                style={inputStyle} 
-                autoCapitalize="none"
-                keyboardType="email-address"
-                textContentType="emailAddress"
-              />
-              <TextInput 
-                placeholder="Password" 
-                value={password} 
-                onChangeText={setPassword} 
-                style={inputStyle} 
-                secureTextEntry 
-                textContentType="newPassword"
-              />
-              <TextInput 
-                placeholder="Confirm Password" 
-                value={confirmPassword} 
-                onChangeText={setConfirmPassword} 
-                style={inputStyle} 
-                secureTextEntry 
-                textContentType="newPassword"
-              />
-              <Button title={loading ? "Registering..." : "Register"} onPress={handleRegister} disabled={loading} />
-              <Button title="Back to Login" onPress={()=>setMode('login')} />
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Email Address</Text>
+                <TextInput 
+                  placeholder="Enter your email" 
+                  value={email} 
+                  onChangeText={setEmail} 
+                  style={styles.input} 
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  textContentType="emailAddress"
+                  placeholderTextColor="#94a3b8"
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Password</Text>
+                <TextInput 
+                  placeholder="Create a password (min 6 characters)" 
+                  value={password} 
+                  onChangeText={setPassword} 
+                  style={styles.input} 
+                  secureTextEntry 
+                  textContentType="newPassword"
+                  placeholderTextColor="#94a3b8"
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Confirm Password</Text>
+                <TextInput 
+                  placeholder="Re-enter your password" 
+                  value={confirmPassword} 
+                  onChangeText={setConfirmPassword} 
+                  style={styles.input} 
+                  secureTextEntry 
+                  textContentType="newPassword"
+                  placeholderTextColor="#94a3b8"
+                />
+              </View>
+              <View style={styles.buttonContainer}>
+                <View style={styles.primaryButton}>
+                  <Button title={loading ? "Creating Account..." : "Register"} onPress={handleRegister} disabled={loading} color="#4A90E2" />
+                </View>
+              </View>
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>OR</Text>
+                <View style={styles.dividerLine} />
+              </View>
+              <View style={styles.secondaryButton}>
+                <Button title="Back to Login" onPress={()=>setMode('login')} color="#64748b" />
+              </View>
             </>
           )}
           {mode === 'forgot' && (
             <>
-              <TextInput 
-                placeholder="Email" 
-                value={email} 
-                onChangeText={setEmail} 
-                style={inputStyle} 
-                autoCapitalize="none"
-                keyboardType="email-address"
-              />
-              <Button title="Recover Password" onPress={handleForgotPassword} />
-              <Button title="Back to Login" onPress={()=>setMode('login')} />
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Email Address</Text>
+                <TextInput 
+                  placeholder="Enter your registered email" 
+                  value={email} 
+                  onChangeText={setEmail} 
+                  style={styles.input} 
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  placeholderTextColor="#94a3b8"
+                />
+              </View>
+              <View style={styles.buttonContainer}>
+                <View style={styles.primaryButton}>
+                  <Button title="Recover Password" onPress={handleForgotPassword} color="#4A90E2" />
+                </View>
+              </View>
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>OR</Text>
+                <View style={styles.dividerLine} />
+              </View>
+              <View style={styles.secondaryButton}>
+                <Button title="Back to Login" onPress={()=>setMode('login')} color="#64748b" />
+              </View>
             </>
           )}
         </View>
@@ -189,20 +251,10 @@ export default function AuthScreen() {
   );
 }
 
-
-
-const inputStyle = {
-  backgroundColor: '#fff',
-  borderRadius: 8,
-  padding: 12,
-  marginBottom: 12,
-  fontSize: 16,
-};
-
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#102A43',
+    backgroundColor: '#0f172a',
   },
   gradient: {
     flex: 1,
@@ -219,30 +271,113 @@ const styles = StyleSheet.create({
   },
   bubble: {
     position: 'absolute',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#4A90E2',
     borderRadius: 999,
   },
-  // card, brandBadge, brandBadgeText removed
+  formContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 24,
+    padding: 32,
+    width: '100%',
+    maxWidth: 420,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 24,
+    elevation: 10,
+  },
+  headerSection: {
+    marginBottom: 28,
+    alignItems: 'center',
+  },
   title: {
-    fontSize: 14,
-    color: '#6c757d',
+    fontSize: 16,
+    color: '#64748b',
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   brand: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '800',
-    color: '#1E5A96',
-    marginTop: 2,
+    color: '#1e293b',
+    marginTop: 8,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 15,
-    color: '#6c757d',
-    marginBottom: 24,
+    color: '#64748b',
+    textAlign: 'center',
   },
-  disclaimer: {
-    marginTop: 12,
-    color: '#9aa5b1',
+  successText: {
+    color: '#10b981',
+    marginBottom: 16,
+    fontSize: 14,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#334155',
+    marginBottom: 8,
+    letterSpacing: 0.3,
+  },
+  input: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 16,
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+    color: '#1e293b',
+  },
+  buttonContainer: {
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  primaryButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#4A90E2',
+    shadowColor: '#4A90E2',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  secondaryButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#f1f5f9',
+  },
+  linkContainer: {
+    alignItems: 'flex-end',
+    marginBottom: 8,
+  },
+  linkText: {
+    color: '#4A90E2',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e2e8f0',
+  },
+  dividerText: {
+    marginHorizontal: 16,
+    color: '#94a3b8',
     fontSize: 12,
+    fontWeight: '600',
   },
   footerNote: {
     position: 'absolute',
@@ -250,7 +385,7 @@ const styles = StyleSheet.create({
     left: 24,
     right: 24,
     textAlign: 'center',
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255,255,255,0.8)',
     fontSize: 12,
   },
 });
