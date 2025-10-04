@@ -419,107 +419,110 @@ export function BacktestScreen() {
   };
 
   const exportToPDF = async () => {
-    if (!backtestResults) {
-      Alert.alert('Error', 'No backtest data to export');
+  if (!backtestResults) {
+    Alert.alert('Error', 'No backtest data to export');
+    return;
+  }
+
+  if (!isAuthenticated || !user) {
+    Alert.alert('Authentication Required', 'Please login to export reports');
+    return;
+  }
+
+  try {
+    console.log('=== Starting PDF Export ===');
+    
+    const sharingAvailable = await Sharing.isAvailableAsync();
+    console.log('Sharing available:', sharingAvailable);
+    
+    if (!sharingAvailable) {
+      Alert.alert('Error', 'Sharing is not available on this device');
       return;
     }
 
-    if (!isAuthenticated || !user) {
-      Alert.alert('Authentication Required', 'Please login to export reports');
+    const htmlContent = generatePDFContent(backtestResults);
+    const filename = `backtest_${backtestResults.strategy.replace(/\s+/g, '_')}_${Date.now()}.html`;
+    const fileUri =  filename;
+    console.log('File URI:', fileUri);
+
+    console.log('Writing file...');
+    await FileSystem.writeAsStringAsync(fileUri, htmlContent);
+    console.log('File written successfully');
+    
+    const fileInfo = await FileSystem.getInfoAsync(fileUri);
+    console.log('File exists:', fileInfo.exists);
+    
+    if (!fileInfo.exists) {
+      throw new Error('File was not created successfully');
+    }
+
+    console.log('Initiating share...');
+    await Sharing.shareAsync(fileUri);
+    
+    Alert.alert('Success', 'Report exported successfully!');
+  } catch (error) {
+    console.error('=== Export Error ===');
+    console.error('Error:', error);
+    
+    Alert.alert(
+      'Export Failed', 
+      `Unable to export report: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+  }
+};
+
+const exportTransactions = async () => {
+  if (!backtestResults) {
+    Alert.alert('Error', 'No backtest data to export');
+    return;
+  }
+
+  if (!isAuthenticated || !user) {
+    Alert.alert('Authentication Required', 'Please login to export transactions');
+    return;
+  }
+
+  try {
+    console.log('=== Starting Transaction Export ===');
+    
+    const sharingAvailable = await Sharing.isAvailableAsync();
+    console.log('Sharing available:', sharingAvailable);
+    
+    if (!sharingAvailable) {
+      Alert.alert('Error', 'Sharing is not available on this device');
       return;
     }
 
-    try {
-      // Check if sharing is available first
-      const sharingAvailable = await Sharing.isAvailableAsync();
-      if (!sharingAvailable) {
-        Alert.alert('Error', 'Sharing is not available on this device');
-        return;
-      }
+    const csvContent = generateTransactionData(backtestResults);
+    const filename = `transactions_${backtestResults.strategy.replace(/\s+/g, '_')}_${Date.now()}.csv`;
+    const fileUri =  filename;
+    console.log('File URI:', fileUri);
 
-      const htmlContent = generatePDFContent(backtestResults);
-      const filename = `backtest_${backtestResults.strategy.replace(/\s+/g, '_')}_${Date.now()}.html`;
-      const fileUri = FileSystem.documentDirectory + filename;
-
-      // Write file
-      await FileSystem.writeAsStringAsync(fileUri, htmlContent, {
-        encoding: FileSystem.EncodingType.UTF8,
-      });
-      
-      // Verify file was created
-      const fileInfo = await FileSystem.getInfoAsync(fileUri);
-      if (!fileInfo.exists) {
-        throw new Error('File was not created successfully');
-      }
-
-      // Share the file
-      await Sharing.shareAsync(fileUri, {
-        mimeType: 'text/html',
-        dialogTitle: 'Export Backtest Report',
-        UTI: 'public.html',
-      });
-      
-      Alert.alert('Success', 'Report exported successfully!');
-    } catch (error) {
-      console.error('Export error:', error);
-      Alert.alert(
-        'Export Failed', 
-        `Unable to export report: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
-  };
-
-  const exportTransactions = async () => {
-    if (!backtestResults) {
-      Alert.alert('Error', 'No backtest data to export');
-      return;
+    console.log('Writing file...');
+    await FileSystem.writeAsStringAsync(fileUri, csvContent);
+    console.log('File written successfully');
+    
+    const fileInfo = await FileSystem.getInfoAsync(fileUri);
+    console.log('File exists:', fileInfo.exists);
+    
+    if (!fileInfo.exists) {
+      throw new Error('File was not created successfully');
     }
 
-    if (!isAuthenticated || !user) {
-      Alert.alert('Authentication Required', 'Please login to export transactions');
-      return;
-    }
-
-    try {
-      // Check if sharing is available first
-      const sharingAvailable = await Sharing.isAvailableAsync();
-      if (!sharingAvailable) {
-        Alert.alert('Error', 'Sharing is not available on this device');
-        return;
-      }
-
-      const csvContent = generateTransactionData(backtestResults);
-      const filename = `transactions_${backtestResults.strategy.replace(/\s+/g, '_')}_${Date.now()}.csv`;
-      const fileUri = FileSystem.documentDirectory + filename;
-
-      // Write file
-      await FileSystem.writeAsStringAsync(fileUri, csvContent, {
-        encoding: FileSystem.EncodingType.UTF8,
-      });
-      
-      // Verify file was created
-      const fileInfo = await FileSystem.getInfoAsync(fileUri);
-      if (!fileInfo.exists) {
-        throw new Error('File was not created successfully');
-      }
-
-      // Share the file
-      await Sharing.shareAsync(fileUri, {
-        mimeType: 'text/csv',
-        dialogTitle: 'Export Transaction Data',
-        UTI: 'public.comma-separated-values-text',
-      });
-      
-      Alert.alert('Success', 'Transaction data exported successfully!');
-    } catch (error) {
-      console.error('Export error:', error);
-      Alert.alert(
-        'Export Failed', 
-        `Unable to export transactions: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
-  };
-
+    console.log('Initiating share...');
+    await Sharing.shareAsync(fileUri);
+    
+    Alert.alert('Success', 'Transaction data exported successfully!');
+  } catch (error) {
+    console.error('=== Export Error ===');
+    console.error('Error:', error);
+    
+    Alert.alert(
+      'Export Failed', 
+      `Unable to export transactions: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+  }
+};
   const resetBacktest = () => {
     Alert.alert('Reset', 'Are you sure you want to reset the backtest?', [
       { text: 'Cancel', style: 'cancel' },
