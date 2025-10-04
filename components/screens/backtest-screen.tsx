@@ -1,9 +1,10 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,6 +19,7 @@ import {
   View,
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
+import { useAuth } from '../../contexts/AuthContext';
 import { Header } from '../header';
 
 import { useStrategies } from '@/hooks/useStrategies';
@@ -63,6 +65,7 @@ type StrategyOption = {
 };
 
 export function BacktestScreen() {
+  const { user, isAuthenticated } = useAuth();
   const { strategies, loading: strategiesLoading } = useStrategies();
   const [selectedStrategy, setSelectedStrategy] = useState('');
   const [selectedTimeframe, setSelectedTimeframe] = useState('3 Months');
@@ -74,6 +77,42 @@ export function BacktestScreen() {
   const [showCustomDateModal, setShowCustomDateModal] = useState(false);
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
+
+  // Load user credits on mount
+  useEffect(() => {
+    loadUserCredits();
+  }, [user]);
+
+  const loadUserCredits = async () => {
+    if (!user) return;
+    
+    try {
+      const creditsKey = `backtest_credits_${user.id}`;
+      const savedCredits = await AsyncStorage.getItem(creditsKey);
+      
+      if (savedCredits !== null) {
+        setCredits(parseInt(savedCredits, 10));
+      } else {
+        // Initialize with 50 credits for new users
+        await AsyncStorage.setItem(creditsKey, '50');
+        setCredits(50);
+      }
+    } catch (error) {
+      console.error('Error loading credits:', error);
+    }
+  };
+
+  const saveUserCredits = async (newCredits: number) => {
+    if (!user) return;
+    
+    try {
+      const creditsKey = `backtest_credits_${user.id}`;
+      await AsyncStorage.setItem(creditsKey, newCredits.toString());
+      setCredits(newCredits);
+    } catch (error) {
+      console.error('Error saving credits:', error);
+    }
+  };
 
   const timeframes = [
     '1 Month',
@@ -179,6 +218,11 @@ export function BacktestScreen() {
     strategies.find((strategy) => strategy.id === selectedStrategy);
 
   const runBacktest = () => {
+    if (!isAuthenticated || !user) {
+      Alert.alert('Authentication Required', 'Please login to run backtests');
+      return;
+    }
+
     if (!selectedStrategy) {
       Alert.alert('Error', 'Please select a strategy first');
       return;
@@ -193,7 +237,14 @@ export function BacktestScreen() {
     if (credits < requiredCredits) {
       Alert.alert(
         'Insufficient Credits',
-        `You need ${requiredCredits} credits but only have ${credits} available.`
+        `You need ${requiredCredits} credits but only have ${credits} available. Would you like to refill your credits?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Refill Credits',
+            onPress: () => refillCredits(),
+          },
+        ]
       );
       return;
     }
@@ -211,16 +262,48 @@ export function BacktestScreen() {
     );
   };
 
+  const refillCredits = () => {
+    Alert.alert(
+      'Refill Credits',
+      'How many credits would you like to add?',
+      [
+        {
+          text: '25 Credits',
+          onPress: () => addCredits(25),
+        },
+        {
+          text: '50 Credits',
+          onPress: () => addCredits(50),
+        },
+        {
+          text: '100 Credits',
+          onPress: () => addCredits(100),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
+  const addCredits = async (amount: number) => {
+    const newCredits = credits + amount;
+    await saveUserCredits(newCredits);
+    Alert.alert('Success', `${amount} credits added successfully! You now have ${newCredits} credits.`);
+  };
+
   const executeBacktest = async (requiredCredits: number) => {
     setIsLoading(true);
 
     const strategyDetails = getSelectedStrategyDetails();
 
-    setTimeout(() => {
+    setTimeout(async () => {
       if (strategyDetails) {
         const mockResults = generateMockData(strategyDetails, getMonthsFromTimeframe(selectedTimeframe));
         setBacktestResults(mockResults);
-        setCredits((prev) => prev - requiredCredits);
+        
+        // Deduct credits and save
+        const newCredits = credits - requiredCredits;
+        await saveUserCredits(newCredits);
+        
         Alert.alert('Success', 'Backtest completed successfully!');
       }
       setIsLoading(false);
@@ -298,7 +381,15 @@ export function BacktestScreen() {
   };
 
   const generateTransactionData = (results: BacktestResult): string => {
-    const transactions = [];
+    const transactions: {
+      date: string;
+      type: string;
+      symbol: string;
+      quantity: number;
+      price: string;
+      amount: string;
+      status: string;
+    }[] = [];
     
     results.performanceData.forEach((data, index) => {
       for (let i = 0; i < data.trades; i++) {
@@ -333,22 +424,48 @@ export function BacktestScreen() {
       return;
     }
 
+    if (!isAuthenticated || !user) {
+      Alert.alert('Authentication Required', 'Please login to export reports');
+      return;
+    }
+
     try {
+      // Check if sharing is available first
+      const sharingAvailable = await Sharing.isAvailableAsync();
+      if (!sharingAvailable) {
+        Alert.alert('Error', 'Sharing is not available on this device');
+        return;
+      }
+
       const htmlContent = generatePDFContent(backtestResults);
       const filename = `backtest_${backtestResults.strategy.replace(/\s+/g, '_')}_${Date.now()}.html`;
       const fileUri = FileSystem.documentDirectory + filename;
 
-      await FileSystem.writeAsStringAsync(fileUri, htmlContent);
+      // Write file
+      await FileSystem.writeAsStringAsync(fileUri, htmlContent, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
       
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri);
-        Alert.alert('Success', 'PDF report exported successfully!');
-      } else {
-        Alert.alert('Error', 'Sharing is not available on this device');
+      // Verify file was created
+      const fileInfo = await FileSystem.getInfoAsync(fileUri);
+      if (!fileInfo.exists) {
+        throw new Error('File was not created successfully');
       }
+
+      // Share the file
+      await Sharing.shareAsync(fileUri, {
+        mimeType: 'text/html',
+        dialogTitle: 'Export Backtest Report',
+        UTI: 'public.html',
+      });
+      
+      Alert.alert('Success', 'Report exported successfully!');
     } catch (error) {
       console.error('Export error:', error);
-      Alert.alert('Error', 'Failed to export PDF');
+      Alert.alert(
+        'Export Failed', 
+        `Unable to export report: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   };
 
@@ -358,22 +475,48 @@ export function BacktestScreen() {
       return;
     }
 
+    if (!isAuthenticated || !user) {
+      Alert.alert('Authentication Required', 'Please login to export transactions');
+      return;
+    }
+
     try {
+      // Check if sharing is available first
+      const sharingAvailable = await Sharing.isAvailableAsync();
+      if (!sharingAvailable) {
+        Alert.alert('Error', 'Sharing is not available on this device');
+        return;
+      }
+
       const csvContent = generateTransactionData(backtestResults);
       const filename = `transactions_${backtestResults.strategy.replace(/\s+/g, '_')}_${Date.now()}.csv`;
       const fileUri = FileSystem.documentDirectory + filename;
 
-      await FileSystem.writeAsStringAsync(fileUri, csvContent);
+      // Write file
+      await FileSystem.writeAsStringAsync(fileUri, csvContent, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
       
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri);
-        Alert.alert('Success', 'Transaction data exported successfully!');
-      } else {
-        Alert.alert('Error', 'Sharing is not available on this device');
+      // Verify file was created
+      const fileInfo = await FileSystem.getInfoAsync(fileUri);
+      if (!fileInfo.exists) {
+        throw new Error('File was not created successfully');
       }
+
+      // Share the file
+      await Sharing.shareAsync(fileUri, {
+        mimeType: 'text/csv',
+        dialogTitle: 'Export Transaction Data',
+        UTI: 'public.comma-separated-values-text',
+      });
+      
+      Alert.alert('Success', 'Transaction data exported successfully!');
     } catch (error) {
       console.error('Export error:', error);
-      Alert.alert('Error', 'Failed to export transactions');
+      Alert.alert(
+        'Export Failed', 
+        `Unable to export transactions: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   };
 
@@ -480,19 +623,38 @@ export function BacktestScreen() {
 
         {/* Card */}
         <View style={styles.cardContainer}>
-          <TouchableOpacity
-            style={styles.creditContainer}
-            onPress={() => setShowInfo(!showInfo)}
-          >
-            <Text style={styles.creditText}>
-              Backtest credit : {credits} / 50
-            </Text>
-            <Ionicons
-              name={showInfo ? 'chevron-up' : 'chevron-down'}
-              size={20}
-              color="#666"
-            />
-          </TouchableOpacity>
+          <View style={styles.creditRow}>
+            <TouchableOpacity
+              style={styles.creditContainer}
+              onPress={() => setShowInfo(!showInfo)}
+            >
+              <Text style={styles.creditText}>
+                Backtest credit : {credits}
+              </Text>
+              <Ionicons
+                name={showInfo ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color="#666"
+              />
+            </TouchableOpacity>
+            {isAuthenticated && (
+              <TouchableOpacity
+                style={styles.refillButton}
+                onPress={refillCredits}
+              >
+                <Ionicons name="add-circle-outline" size={20} color="#2B5CE6" />
+                <Text style={styles.refillText}>Refill</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {!isAuthenticated && (
+            <View style={styles.authWarning}>
+              <Ionicons name="warning-outline" size={16} color="#FF9800" />
+              <Text style={styles.authWarningText}>
+                Login required to use backtest credits
+              </Text>
+            </View>
+          )}
 
           <View style={styles.buttonRow}>
             <TouchableOpacity
@@ -898,8 +1060,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    width: '100%',
-    marginBottom: 15,
+    flex: 1,
   },
   creditText: {
     fontSize: 16,
@@ -1123,5 +1284,40 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  creditRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 15,
+  },
+  refillButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F0FE',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 4,
+  },
+  refillText: {
+    fontSize: 14,
+    color: '#2B5CE6',
+    fontWeight: '600',
+  },
+  authWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 15,
+    gap: 8,
+  },
+  authWarningText: {
+    fontSize: 13,
+    color: '#F57C00',
+    flex: 1,
   },
 });
