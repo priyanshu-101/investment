@@ -2,6 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Modal,
+  Picker,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -13,31 +16,139 @@ import {
 import { kiteConnect } from '../../services/kiteConnect';
 import { marketDataService } from '../../services/marketDataApi';
 
+interface CandlePattern {
+  id: string;
+  name: string;
+  type: 'bullish' | 'bearish';
+}
+
+interface OrderLeg {
+  id: string;
+  action: 'Buy' | 'Sell';
+  orderType: 'Market' | 'Limit' | 'SL' | 'SL-M';
+  quantity: string;
+  instrument: string;
+  lotSize: number;
+  entryCondition?: {
+    candleType: string;
+    candleColor: string;
+    candleTime: string;
+  };
+  exitCondition?: {
+    candleType: string;
+    candleColor: string;
+    profitTarget: string;
+    stopLoss: string;
+  };
+}
+
 interface TradingStrategyProps {
   onStrategyCreated?: (strategyData: any) => void;
 }
 
 const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
-  const [selectedStrategyType, setSelectedStrategyType] = useState('Time Based');
+  // Existing state
+  const [selectedStrategyType, setSelectedStrategyType] = useState('Candle Based');
+  const [selectedChartType, setSelectedChartType] = useState('Candle');
   const [selectedOrderType, setSelectedOrderType] = useState('MIS');
+  const [selectedTransactionType, setSelectedTransactionType] = useState('Buy');
   const [startTime, setStartTime] = useState('09:16');
   const [squareOffTime, setSquareOffTime] = useState('15:15');
   const [selectedDays, setSelectedDays] = useState(['MON', 'TUE', 'WED', 'THU', 'FRI']);
   const [strategyName, setStrategyName] = useState('');
-  const [exitProfitAmount, setExitProfitAmount] = useState('');
-  const [exitLossAmount, setExitLossAmount] = useState('');
+  const [exitProfitAmount, setExitProfitAmount] = useState('5000');
+  const [exitLossAmount, setExitLossAmount] = useState('1000');
   const [noTradeAfterTime, setNoTradeAfterTime] = useState('15:15');
-  const [profitTrailing, setProfitTrailing] = useState('No Trailing');
   const [selectedInstruments, setSelectedInstruments] = useState<string[]>([]);
   const [showInstrumentModal, setShowInstrumentModal] = useState(false);
   const [availableInstruments, setAvailableInstruments] = useState<string[]>([]);
   const [loadingInstruments, setLoadingInstruments] = useState(false);
   const [instrumentSearchQuery, setInstrumentSearchQuery] = useState('');
 
-  const strategyTypes = ['Time Based', 'Indicator Based'];
+  // New candle-based strategy state
+  const [selectedInterval, setSelectedInterval] = useState('1M');
+  const [orderLegs, setOrderLegs] = useState<OrderLeg[]>([]);
+  const [showOrderLegModal, setShowOrderLegModal] = useState(false);
+  const [currentEditingLeg, setCurrentEditingLeg] = useState<OrderLeg | null>(null);
+  const [riskRewardRatio, setRiskRewardRatio] = useState('1:3');
+  const [overallStopLoss, setOverallStopLoss] = useState('0.001'); // 0.1%
+  const [overallProfit, setOverallProfit] = useState('0.005'); // 0.5%
+  const [maxLossAmount, setMaxLossAmount] = useState('1000');
+  const [maxProfitAmount, setMaxProfitAmount] = useState('5000');
+  
+  // Dynamic data from Zerodha
+  const [marketData, setMarketData] = useState<any>({});
+  const [liveQuotes, setLiveQuotes] = useState<any>({});
+  const [candleData, setCandleData] = useState<any>({});
+  const [loadingMarketData, setLoadingMarketData] = useState(false);
+
+  const strategyTypes = ['Candle Based', 'Time Based', 'Indicator Based'];
+  const chartTypes = ['Candle', 'Line', 'OHLC'];
   const orderTypes = ['MIS', 'CNC', 'BTST'];
+  const transactionTypes = ['Buy', 'Sell'];
   const weekDays = ['MON', 'TUE', 'WED', 'THU', 'FRI'];
-  const profitTrailingOptions = ['No Trailing', 'Lock Fix Profit', 'Trail Profit', 'Lock and Trail'];
+  const intervals = ['1M', '3M', '5M', '10M', '15M', '30M', '1H', '4H', '1Day'];
+
+  const candlePatterns: CandlePattern[] = [
+    { id: '1', name: 'Green/Red', type: 'bullish' },
+    { id: '2', name: 'Doji', type: 'bullish' },
+    { id: '3', name: 'Hammer', type: 'bullish' },
+    { id: '4', name: 'Shooting Star', type: 'bearish' },
+    { id: '5', name: 'Engulfing Bull', type: 'bullish' },
+    { id: '6', name: 'Engulfing Bear', type: 'bearish' },
+    { id: '7', name: 'Morning Star', type: 'bullish' },
+    { id: '8', name: 'Evening Star', type: 'bearish' },
+  ];
+
+  // Fetch live market data from Zerodha
+  const fetchMarketData = async () => {
+    if (!selectedInstruments.length) return;
+    
+    setLoadingMarketData(true);
+    try {
+      const isAuth = await kiteConnect.isAuthenticated();
+      if (!isAuth) {
+        console.log('Not authenticated with Zerodha');
+        return;
+      }
+
+      // Get live quotes for selected instruments
+      const quotes = await kiteConnect.getQuotes(selectedInstruments);
+      setLiveQuotes(quotes);
+
+      // Get historical candle data
+      const candlePromises = selectedInstruments.map(async (instrument) => {
+        try {
+          const from = new Date();
+          from.setDate(from.getDate() - 7); // Last 7 days
+          const to = new Date();
+          
+          const candles = await kiteConnect.getHistoricalData(
+            instrument,
+            selectedInterval.toLowerCase(),
+            from.toISOString().split('T')[0],
+            to.toISOString().split('T')[0]
+          );
+          return { instrument, candles };
+        } catch (error) {
+          console.error(`Error fetching candles for ${instrument}:`, error);
+          return { instrument, candles: [] };
+        }
+      });
+
+      const candleResults = await Promise.all(candlePromises);
+      const candleMap: any = {};
+      candleResults.forEach(result => {
+        candleMap[result.instrument] = result.candles;
+      });
+      setCandleData(candleMap);
+
+    } catch (error) {
+      console.error('Error fetching market data:', error);
+    } finally {
+      setLoadingMarketData(false);
+    }
+  };
 
   const fetchInstruments = async () => {
     setLoadingInstruments(true);
@@ -106,6 +217,12 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
     fetchInstruments();
   }, []);
 
+  useEffect(() => {
+    if (selectedInstruments.length > 0) {
+      fetchMarketData();
+    }
+  }, [selectedInstruments, selectedInterval]);
+
   const toggleDay = (day: string) => {
     setSelectedDays(prev => 
       prev.includes(day) 
@@ -114,24 +231,90 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
     );
   };
 
+  const addOrderLeg = () => {
+    const newLeg: OrderLeg = {
+      id: Date.now().toString(),
+      action: 'Buy',
+      orderType: 'Market',
+      quantity: '1',
+      instrument: selectedInstruments[0] || '',
+      lotSize: 1,
+      entryCondition: {
+        candleType: 'Green/Red',
+        candleColor: 'Green',
+        candleTime: '09:15',
+      },
+      exitCondition: {
+        candleType: 'Green/Red',
+        candleColor: 'Red',
+        profitTarget: '100',
+        stopLoss: '50',
+      }
+    };
+    setCurrentEditingLeg(newLeg);
+    setShowOrderLegModal(true);
+  };
+
+  const saveOrderLeg = (leg: OrderLeg) => {
+    const existingIndex = orderLegs.findIndex(l => l.id === leg.id);
+    if (existingIndex >= 0) {
+      const updatedLegs = [...orderLegs];
+      updatedLegs[existingIndex] = leg;
+      setOrderLegs(updatedLegs);
+    } else {
+      setOrderLegs(prev => [...prev, leg]);
+    }
+    setShowOrderLegModal(false);
+    setCurrentEditingLeg(null);
+  };
+
+  const deleteOrderLeg = (id: string) => {
+    setOrderLegs(prev => prev.filter(leg => leg.id !== id));
+  };
+
   const handleSaveStrategy = () => {
     if (!strategyName.trim()) {
-      alert('Please enter a strategy name');
+      Alert.alert('Error', 'Please enter a strategy name');
+      return;
+    }
+
+    if (selectedInstruments.length === 0) {
+      Alert.alert('Error', 'Please select at least one instrument');
+      return;
+    }
+
+    if (selectedStrategyType === 'Candle Based' && orderLegs.length === 0) {
+      Alert.alert('Error', 'Please add at least one order leg for candle-based strategy');
       return;
     }
 
     const strategyData = {
       strategyName: strategyName.trim(),
       selectedStrategyType,
+      selectedChartType,
       selectedOrderType,
+      selectedTransactionType,
       startTime,
       squareOffTime,
       selectedDays,
-      exitProfitAmount,
-      exitLossAmount,
-      noTradeAfterTime,
-      profitTrailing,
+      selectedInterval,
       instruments: selectedInstruments,
+      orderLegs,
+      riskManagement: {
+        riskRewardRatio,
+        overallStopLoss,
+        overallProfit,
+        maxLossAmount,
+        maxProfitAmount,
+        exitProfitAmount,
+        exitLossAmount,
+        noTradeAfterTime,
+      },
+      marketData: {
+        liveQuotes,
+        candleData,
+      },
+      createdAt: new Date().toISOString(),
     };
 
     console.log('Saving strategy:', strategyData);
@@ -140,15 +323,18 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
       onStrategyCreated(strategyData);
     }
 
+    Alert.alert('Success', 'Strategy created successfully!');
+    
+    // Reset form
     setStrategyName('');
-    setExitProfitAmount('');
-    setExitLossAmount('');
+    setOrderLegs([]);
     setSelectedInstruments([]);
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Strategy Type Selection */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Strategy Type</Text>
           <View style={styles.tabContainer}>
@@ -171,6 +357,34 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
             ))}
           </View>
         </View>
+
+        {/* Chart Type - Only for Candle Based */}
+        {selectedStrategyType === 'Candle Based' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Chart Type</Text>
+            <View style={styles.tabContainer}>
+              {chartTypes.map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    styles.tab,
+                    selectedChartType === type && styles.activeTab
+                  ]}
+                  onPress={() => setSelectedChartType(type)}
+                >
+                  <Text style={[
+                    styles.tabText,
+                    selectedChartType === type && styles.activeTabText
+                  ]}>
+                    {type}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Instruments Selection */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Select Instruments</Text>
           {selectedInstruments.length > 0 && (
@@ -178,6 +392,13 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
               {selectedInstruments.map((instrument, index) => (
                 <View key={index} style={styles.instrumentChip}>
                   <Text style={styles.instrumentChipText}>{instrument}</Text>
+                  <View style={styles.instrumentPrice}>
+                    {liveQuotes[instrument] && (
+                      <Text style={styles.priceText}>
+                        ₹{liveQuotes[instrument].last_price?.toFixed(2)}
+                      </Text>
+                    )}
+                  </View>
                   <TouchableOpacity
                     onPress={() => setSelectedInstruments(prev => prev.filter((_, i) => i !== index))}
                     style={styles.removeInstrument}
@@ -203,6 +424,27 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Transaction Type */}
+        <View style={styles.section}>
+          <Text style={styles.orderTypeLabel}>Transaction Type</Text>
+          <View style={styles.radioContainer}>
+            {transactionTypes.map((type) => (
+              <TouchableOpacity
+                key={type}
+                style={styles.radioOption}
+                onPress={() => setSelectedTransactionType(type)}
+              >
+                <View style={styles.radioButton}>
+                  {selectedTransactionType === type && <View style={styles.radioButtonInner} />}
+                </View>
+                <Text style={styles.radioText}>{type}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Order Type */}
         <View style={styles.section}>
           <Text style={styles.orderTypeLabel}>Order Type</Text>
           <View style={styles.radioContainer}>
@@ -220,6 +462,8 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
             ))}
           </View>
         </View>
+
+        {/* Time Settings */}
         <View style={styles.timeSection}>
           <View style={styles.timeInputContainer}>
             <Text style={styles.timeLabel}>Start time</Text>
@@ -247,6 +491,8 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
             </View>
           </View>
         </View>
+
+        {/* Trading Days */}
         <View style={styles.daysContainer}>
           {weekDays.map((day) => (
             <TouchableOpacity
@@ -267,77 +513,150 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
           ))}
         </View>
 
-        <View style={styles.templatesSection}>
-          <View style={styles.templatesHeader}>
-            <Text style={styles.templatesTitle}>Readymade Templates</Text>
-            <Ionicons name="open-outline" size={16} color="#1976d2" />
-          </View>
+        {/* Interval Selection for Candle Based */}
+        {selectedStrategyType === 'Candle Based' && (
           <View style={styles.section}>
-            <View style={styles.orderLegsHeader}>
-              <Text style={styles.orderLegsTitle}>Order Legs</Text>
-              <TouchableOpacity style={styles.addLegButton}>
-                <Ionicons name="add" size={16} color="#fff" />
-                <Text style={styles.addLegText}>ADD LEG</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Risk Management */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Risk management</Text>
-            
-            <View style={styles.inputGroup}>
-              <TextInput
-                style={styles.riskInput}
-                value={exitProfitAmount}
-                onChangeText={setExitProfitAmount}
-                placeholder="Exit When Over All Profit In Amount (INR)"
-                placeholderTextColor="#999"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <TextInput
-                style={styles.riskInput}
-                value={exitLossAmount}
-                onChangeText={setExitLossAmount}
-                placeholder="Exit When Over All Loss In Amount(INR)"
-                placeholderTextColor="#999"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.timeLabel}>No Trade After</Text>
-              <View style={styles.timeInputWrapper}>
-                <TextInput
-                  style={styles.timeInput}
-                  value={noTradeAfterTime}
-                  onChangeText={setNoTradeAfterTime}
-                  placeholder="15:15"
-                />
-                <Ionicons name="time-outline" size={20} color="#666" />
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Profit Trailing</Text>
-            <View style={styles.profitTrailingContainer}>
-              {profitTrailingOptions.map((option) => (
+            <Text style={styles.sectionTitle}>Interval</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.intervalContainer}>
+              {intervals.map((interval) => (
                 <TouchableOpacity
-                  key={option}
-                  style={styles.radioOption}
-                  onPress={() => setProfitTrailing(option)}
+                  key={interval}
+                  style={[
+                    styles.intervalButton,
+                    selectedInterval === interval && styles.activeIntervalButton
+                  ]}
+                  onPress={() => setSelectedInterval(interval)}
                 >
-                  <View style={styles.radioButton}>
-                    {profitTrailing === option && <View style={styles.radioButtonInner} />}
-                  </View>
-                  <Text style={styles.radioText}>{option}</Text>
+                  <Text style={[
+                    styles.intervalText,
+                    selectedInterval === interval && styles.activeIntervalText
+                  ]}>
+                    {interval}
+                  </Text>
                 </TouchableOpacity>
               ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Order Legs Section */}
+        <View style={styles.section}>
+          <View style={styles.orderLegsHeader}>
+            <Text style={styles.orderLegsTitle}>
+              {selectedStrategyType === 'Candle Based' ? 'Entry/Exit Conditions' : 'Order Legs'}
+            </Text>
+            <TouchableOpacity style={styles.addLegButton} onPress={addOrderLeg}>
+              <Ionicons name="add" size={16} color="#fff" />
+              <Text style={styles.addLegText}>ADD LEG</Text>
+            </TouchableOpacity>
+          </View>
+
+          {orderLegs.map((leg) => (
+            <View key={leg.id} style={styles.orderLegCard}>
+              <View style={styles.orderLegHeader}>
+                <Text style={styles.orderLegTitle}>
+                  {leg.action} {leg.instrument} - {leg.quantity} Qty
+                </Text>
+                <View style={styles.orderLegActions}>
+                  <TouchableOpacity 
+                    onPress={() => {
+                      setCurrentEditingLeg(leg);
+                      setShowOrderLegModal(true);
+                    }}
+                    style={styles.editButton}
+                  >
+                    <Ionicons name="pencil" size={16} color="#1976d2" />
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    onPress={() => deleteOrderLeg(leg.id)}
+                    style={styles.deleteButton}
+                  >
+                    <Ionicons name="trash" size={16} color="#f44336" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+              
+              {selectedStrategyType === 'Candle Based' && (
+                <View style={styles.orderLegDetails}>
+                  <Text style={styles.conditionText}>
+                    Entry: {leg.entryCondition?.candleType} - {leg.entryCondition?.candleColor} at {leg.entryCondition?.candleTime}
+                  </Text>
+                  <Text style={styles.conditionText}>
+                    Exit: {leg.exitCondition?.candleType} - {leg.exitCondition?.candleColor}
+                  </Text>
+                  <Text style={styles.conditionText}>
+                    Target: ₹{leg.exitCondition?.profitTarget} | SL: ₹{leg.exitCondition?.stopLoss}
+                  </Text>
+                </View>
+              )}
+            </View>
+          ))}
+        </View>
+
+        {/* Risk Management */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Risk Management</Text>
+          
+          <View style={styles.riskRow}>
+            <View style={styles.riskInputContainer}>
+              <Text style={styles.riskLabel}>Risk : Reward</Text>
+              <TextInput
+                style={styles.riskInput}
+                value={riskRewardRatio}
+                onChangeText={setRiskRewardRatio}
+                placeholder="1:3"
+              />
+            </View>
+          </View>
+
+          <View style={styles.riskRow}>
+            <View style={styles.riskInputContainer}>
+              <Text style={styles.riskLabel}>Overall Stop Loss (%)</Text>
+              <TextInput
+                style={styles.riskInput}
+                value={overallStopLoss}
+                onChangeText={setOverallStopLoss}
+                placeholder="0.1%"
+                keyboardType="numeric"
+              />
+            </View>
+            <View style={styles.riskInputContainer}>
+              <Text style={styles.riskLabel}>Overall Profit (%)</Text>
+              <TextInput
+                style={styles.riskInput}
+                value={overallProfit}
+                onChangeText={setOverallProfit}
+                placeholder="0.5%"
+                keyboardType="numeric"
+              />
+            </View>
+          </View>
+
+          <View style={styles.riskRow}>
+            <View style={styles.riskInputContainer}>
+              <Text style={styles.riskLabel}>Max Loss (₹)</Text>
+              <TextInput
+                style={styles.riskInput}
+                value={maxLossAmount}
+                onChangeText={setMaxLossAmount}
+                placeholder="1000"
+                keyboardType="numeric"
+              />
+            </View>
+            <View style={styles.riskInputContainer}>
+              <Text style={styles.riskLabel}>Max Profit (₹)</Text>
+              <TextInput
+                style={styles.riskInput}
+                value={maxProfitAmount}
+                onChangeText={setMaxProfitAmount}
+                placeholder="5000"
+                keyboardType="numeric"
+              />
             </View>
           </View>
         </View>
+
+        {/* Save Section */}
         <View style={styles.saveSection}>
           <View style={styles.strategyNameContainer}>
             <Text style={styles.requiredIndicator}>*</Text>
@@ -365,12 +684,236 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
         </View>
       </ScrollView>
 
+      {/* Order Leg Modal */}
+      <Modal visible={showOrderLegModal} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.orderLegModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {currentEditingLeg?.id ? 'Edit Order Leg' : 'Add Order Leg'}
+              </Text>
+              <TouchableOpacity 
+                onPress={() => {
+                  setShowOrderLegModal(false);
+                  setCurrentEditingLeg(null);
+                }}
+                style={styles.closeButton}
+              >
+                <Text style={styles.closeButtonText}>×</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.orderLegForm}>
+              {currentEditingLeg && (
+                <>
+                  {/* Basic Order Details */}
+                  <View style={styles.formSection}>
+                    <Text style={styles.formSectionTitle}>Order Details</Text>
+                    
+                    <View style={styles.formRow}>
+                      <Text style={styles.formLabel}>Action</Text>
+                      <View style={styles.radioContainer}>
+                        {['Buy', 'Sell'].map((action) => (
+                          <TouchableOpacity
+                            key={action}
+                            style={styles.radioOption}
+                            onPress={() => setCurrentEditingLeg(prev => prev ? {...prev, action: action as 'Buy' | 'Sell'} : null)}
+                          >
+                            <View style={styles.radioButton}>
+                              {currentEditingLeg.action === action && <View style={styles.radioButtonInner} />}
+                            </View>
+                            <Text style={styles.radioText}>{action}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+
+                    <View style={styles.formRow}>
+                      <Text style={styles.formLabel}>Quantity</Text>
+                      <TextInput
+                        style={styles.formInput}
+                        value={currentEditingLeg.quantity}
+                        onChangeText={(value) => setCurrentEditingLeg(prev => prev ? {...prev, quantity: value} : null)}
+                        placeholder="1"
+                        keyboardType="numeric"
+                      />
+                    </View>
+
+                    <View style={styles.formRow}>
+                      <Text style={styles.formLabel}>Instrument</Text>
+                      <View style={styles.pickerContainer}>
+                        <Picker
+                          selectedValue={currentEditingLeg.instrument}
+                          onValueChange={(value) => setCurrentEditingLeg(prev => prev ? {...prev, instrument: value} : null)}
+                          style={styles.picker}
+                        >
+                          {selectedInstruments.map((instrument) => (
+                            <Picker.Item key={instrument} label={instrument} value={instrument} />
+                          ))}
+                        </Picker>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Entry Conditions for Candle Based */}
+                  {selectedStrategyType === 'Candle Based' && (
+                    <View style={styles.formSection}>
+                      <Text style={styles.formSectionTitle}>Entry Condition</Text>
+                      
+                      <View style={styles.formRow}>
+                        <Text style={styles.formLabel}>Candle Type</Text>
+                        <View style={styles.pickerContainer}>
+                          <Picker
+                            selectedValue={currentEditingLeg.entryCondition?.candleType}
+                            onValueChange={(value) => setCurrentEditingLeg(prev => prev ? {
+                              ...prev, 
+                              entryCondition: {...prev.entryCondition!, candleType: value}
+                            } : null)}
+                            style={styles.picker}
+                          >
+                            {candlePatterns.map((pattern) => (
+                              <Picker.Item key={pattern.id} label={pattern.name} value={pattern.name} />
+                            ))}
+                          </Picker>
+                        </View>
+                      </View>
+
+                      <View style={styles.formRow}>
+                        <Text style={styles.formLabel}>Candle Color</Text>
+                        <View style={styles.radioContainer}>
+                          {['Green', 'Red'].map((color) => (
+                            <TouchableOpacity
+                              key={color}
+                              style={styles.radioOption}
+                              onPress={() => setCurrentEditingLeg(prev => prev ? {
+                                ...prev,
+                                entryCondition: {...prev.entryCondition!, candleColor: color}
+                              } : null)}
+                            >
+                              <View style={styles.radioButton}>
+                                {currentEditingLeg.entryCondition?.candleColor === color && <View style={styles.radioButtonInner} />}
+                              </View>
+                              <Text style={styles.radioText}>{color}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
+
+                      <View style={styles.formRow}>
+                        <Text style={styles.formLabel}>Entry Time</Text>
+                        <TextInput
+                          style={styles.formInput}
+                          value={currentEditingLeg.entryCondition?.candleTime}
+                          onChangeText={(value) => setCurrentEditingLeg(prev => prev ? {
+                            ...prev,
+                            entryCondition: {...prev.entryCondition!, candleTime: value}
+                          } : null)}
+                          placeholder="09:15"
+                        />
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Exit Conditions */}
+                  <View style={styles.formSection}>
+                    <Text style={styles.formSectionTitle}>Exit Condition</Text>
+                    
+                    <View style={styles.formRow}>
+                      <Text style={styles.formLabel}>Profit Target (₹)</Text>
+                      <TextInput
+                        style={styles.formInput}
+                        value={currentEditingLeg.exitCondition?.profitTarget}
+                        onChangeText={(value) => setCurrentEditingLeg(prev => prev ? {
+                          ...prev,
+                          exitCondition: {...prev.exitCondition!, profitTarget: value}
+                        } : null)}
+                        placeholder="100"
+                        keyboardType="numeric"
+                      />
+                    </View>
+
+                    <View style={styles.formRow}>
+                      <Text style={styles.formLabel}>Stop Loss (₹)</Text>
+                      <TextInput
+                        style={styles.formInput}
+                        value={currentEditingLeg.exitCondition?.stopLoss}
+                        onChangeText={(value) => setCurrentEditingLeg(prev => prev ? {
+                          ...prev,
+                          exitCondition: {...prev.exitCondition!, stopLoss: value}
+                        } : null)}
+                        placeholder="50"
+                        keyboardType="numeric"
+                      />
+                    </View>
+
+                    {selectedStrategyType === 'Candle Based' && (
+                      <>
+                        <View style={styles.formRow}>
+                          <Text style={styles.formLabel}>Exit Candle Type</Text>
+                          <View style={styles.pickerContainer}>
+                            <Picker
+                              selectedValue={currentEditingLeg.exitCondition?.candleType}
+                              onValueChange={(value) => setCurrentEditingLeg(prev => prev ? {
+                                ...prev,
+                                exitCondition: {...prev.exitCondition!, candleType: value}
+                              } : null)}
+                              style={styles.picker}
+                            >
+                              {candlePatterns.map((pattern) => (
+                                <Picker.Item key={pattern.id} label={pattern.name} value={pattern.name} />
+                              ))}
+                            </Picker>
+                          </View>
+                        </View>
+
+                        <View style={styles.formRow}>
+                          <Text style={styles.formLabel}>Exit Candle Color</Text>
+                          <View style={styles.radioContainer}>
+                            {['Green', 'Red'].map((color) => (
+                              <TouchableOpacity
+                                key={color}
+                                style={styles.radioOption}
+                                onPress={() => setCurrentEditingLeg(prev => prev ? {
+                                  ...prev,
+                                  exitCondition: {...prev.exitCondition!, candleColor: color}
+                                } : null)}
+                              >
+                                <View style={styles.radioButton}>
+                                  {currentEditingLeg.exitCondition?.candleColor === color && <View style={styles.radioButtonInner} />}
+                                </View>
+                                <Text style={styles.radioText}>{color}</Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        </View>
+                      </>
+                    )}
+                  </View>
+                </>
+              )}
+            </ScrollView>
+            
+            <View style={styles.modalFooter}>
+              <TouchableOpacity 
+                style={styles.modalButton}
+                onPress={() => currentEditingLeg && saveOrderLeg(currentEditingLeg)}
+              >
+                <Text style={styles.modalButtonText}>Save Order Leg</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Instrument Selection Modal */}
       {showInstrumentModal && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Instruments</Text>
+              {loadingMarketData && (
+                <ActivityIndicator size="small" color="#1976d2" />
+              )}
               <TouchableOpacity 
                 onPress={() => {
                   setShowInstrumentModal(false);
@@ -397,7 +940,7 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
               {loadingInstruments ? (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="large" color="#1976d2" />
-                  <Text style={styles.loadingText}>Loading instruments from API...</Text>
+                  <Text style={styles.loadingText}>Loading instruments from Zerodha API...</Text>
                 </View>
               ) : availableInstruments.length === 0 ? (
                 <View style={styles.emptyContainer}>
@@ -416,6 +959,7 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
                   )
                   .map((instrument) => {
                   const isSelected = selectedInstruments.includes(instrument);
+                  const quote = liveQuotes[instrument];
                   return (
                     <TouchableOpacity
                       key={instrument}
@@ -431,12 +975,25 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
                         }
                       }}
                     >
-                      <Text style={[
-                        styles.instrumentOptionText,
-                        isSelected && styles.selectedInstrumentOptionText
-                      ]}>
-                        {instrument}
-                      </Text>
+                      <View style={styles.instrumentInfo}>
+                        <Text style={[
+                          styles.instrumentOptionText,
+                          isSelected && styles.selectedInstrumentOptionText
+                        ]}>
+                          {instrument}
+                        </Text>
+                        {quote && (
+                          <View style={styles.quoteInfo}>
+                            <Text style={styles.priceText}>₹{quote.last_price?.toFixed(2)}</Text>
+                            <Text style={[
+                              styles.changeText,
+                              quote.net_change >= 0 ? styles.positiveChange : styles.negativeChange
+                            ]}>
+                              {quote.net_change >= 0 ? '+' : ''}{quote.net_change?.toFixed(2)} ({quote.net_change_percent?.toFixed(2)}%)
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                       {isSelected && (
                         <Text style={styles.checkmark}>✓</Text>
                       )}
@@ -500,6 +1057,44 @@ const styles = StyleSheet.create({
   activeTabText: {
     color: '#1976d2',
   },
+  selectedInstruments: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  instrumentChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#1976d2',
+  },
+  instrumentChipText: {
+    fontSize: 12,
+    color: '#1976d2',
+    fontWeight: '600',
+    marginRight: 6,
+  },
+  instrumentPrice: {
+    marginRight: 6,
+  },
+  priceText: {
+    fontSize: 10,
+    color: '#1976d2',
+    fontWeight: '500',
+  },
+  removeInstrument: {
+    marginLeft: 4,
+  },
+  removeInstrumentText: {
+    fontSize: 16,
+    color: '#1976d2',
+    fontWeight: 'bold',
+  },
   addInstrumentsBox: {
     borderWidth: 2,
     borderColor: '#ddd',
@@ -528,6 +1123,7 @@ const styles = StyleSheet.create({
   radioContainer: {
     flexDirection: 'row',
     gap: 24,
+    flexWrap: 'wrap',
   },
   radioOption: {
     flexDirection: 'row',
@@ -610,22 +1206,28 @@ const styles = StyleSheet.create({
   activeDayText: {
     color: '#fff',
   },
-  templatesSection: {
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    paddingTop: 16,
+  intervalContainer: {
+    paddingVertical: 8,
   },
-  templatesHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  intervalButton: {
     paddingHorizontal: 16,
-    marginBottom: 16,
-    gap: 8,
+    paddingVertical: 8,
+    marginRight: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#1976d2',
+    backgroundColor: '#fff',
   },
-  templatesTitle: {
-    fontSize: 18,
-    fontWeight: '500',
+  activeIntervalButton: {
+    backgroundColor: '#1976d2',
+  },
+  intervalText: {
+    fontSize: 12,
     color: '#1976d2',
+    fontWeight: '500',
+  },
+  activeIntervalText: {
+    color: '#fff',
   },
   orderLegsHeader: {
     flexDirection: 'row',
@@ -635,7 +1237,7 @@ const styles = StyleSheet.create({
   },
   orderLegsTitle: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#333',
   },
   addLegButton: {
@@ -652,8 +1254,55 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
-  inputGroup: {
+  orderLegCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  orderLegHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  orderLegTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    flex: 1,
+  },
+  orderLegActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  editButton: {
+    padding: 4,
+  },
+  deleteButton: {
+    padding: 4,
+  },
+  orderLegDetails: {
+    gap: 4,
+  },
+  conditionText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  riskRow: {
+    flexDirection: 'row',
+    gap: 16,
     marginBottom: 16,
+  },
+  riskInputContainer: {
+    flex: 1,
+  },
+  riskLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
   },
   riskInput: {
     backgroundColor: '#fff',
@@ -661,14 +1310,9 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 16,
+    paddingVertical: 12,
     fontSize: 14,
     color: '#333',
-  },
-  profitTrailingContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
   },
   saveSection: {
     paddingHorizontal: 16,
@@ -729,36 +1373,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  selectedInstruments: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 12,
-  },
-  instrumentChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#e3f2fd',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#1976d2',
-  },
-  instrumentChipText: {
-    fontSize: 12,
-    color: '#1976d2',
-    fontWeight: '500',
-    marginRight: 6,
-  },
-  removeInstrument: {
-    marginLeft: 4,
-  },
-  removeInstrumentText: {
-    fontSize: 14,
-    color: '#1976d2',
-    fontWeight: 'bold',
-  },
   modalOverlay: {
     position: 'absolute',
     top: 0,
@@ -775,6 +1389,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     width: '90%',
     maxHeight: '80%',
+    paddingVertical: 20,
+  },
+  orderLegModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    width: '95%',
+    maxHeight: '90%',
     paddingVertical: 20,
   },
   modalHeader: {
@@ -802,6 +1423,22 @@ const styles = StyleSheet.create({
     color: '#666',
     fontWeight: 'bold',
   },
+  searchContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: '#333',
+    backgroundColor: '#f8f9fa',
+  },
   instrumentList: {
     maxHeight: 400,
     paddingHorizontal: 20,
@@ -821,13 +1458,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#e3f2fd',
     borderColor: '#1976d2',
   },
+  instrumentInfo: {
+    flex: 1,
+  },
   instrumentOptionText: {
     fontSize: 16,
+    fontWeight: '500',
     color: '#333',
   },
   selectedInstrumentOptionText: {
     color: '#1976d2',
     fontWeight: '600',
+  },
+  quoteInfo: {
+    marginTop: 4,
+  },
+  changeText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  positiveChange: {
+    color: '#4caf50',
+  },
+  negativeChange: {
+    color: '#f44336',
   },
   checkmark: {
     fontSize: 16,
@@ -850,6 +1504,46 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  orderLegForm: {
+    paddingHorizontal: 20,
+    maxHeight: 400,
+  },
+  formSection: {
+    marginBottom: 24,
+  },
+  formSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 16,
+  },
+  formRow: {
+    marginBottom: 16,
+  },
+  formLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  formInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#333',
+    backgroundColor: '#fff',
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+  },
+  picker: {
+    height: 50,
   },
   loadingContainer: {
     padding: 40,
@@ -883,22 +1577,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
-  },
-  searchContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  searchInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    color: '#333',
-    backgroundColor: '#f8f9fa',
   },
 });
 
