@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -101,9 +101,11 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
   ];
 
   // Fetch live market data from Zerodha
-  const fetchMarketData = async () => {
-    if (!selectedInstruments.length) return;
-    
+  const fetchMarketData = useCallback(async () => {
+    if (!selectedInstruments.length) {
+      return;
+    }
+
     setLoadingMarketData(true);
     try {
       const isAuth = await kiteConnect.isAuthenticated();
@@ -113,7 +115,7 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
       }
 
       // Get live quotes for selected instruments
-      const quotes = await kiteConnect.getQuotes(selectedInstruments);
+      const quotes = await kiteConnect.getQuote(selectedInstruments);
       setLiveQuotes(quotes);
 
       // Get historical candle data
@@ -122,7 +124,7 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
           const from = new Date();
           from.setDate(from.getDate() - 7); // Last 7 days
           const to = new Date();
-          
+
           const candles = await kiteConnect.getHistoricalData(
             instrument,
             selectedInterval.toLowerCase(),
@@ -138,40 +140,63 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
 
       const candleResults = await Promise.all(candlePromises);
       const candleMap: any = {};
-      candleResults.forEach(result => {
+      candleResults.forEach((result) => {
         candleMap[result.instrument] = result.candles;
       });
       setCandleData(candleMap);
-
     } catch (error) {
       console.error('Error fetching market data:', error);
     } finally {
       setLoadingMarketData(false);
     }
-  };
+  }, [selectedInstruments, selectedInterval]);
 
-  const fetchInstruments = async () => {
+  const fetchInstruments = useCallback(async () => {
     setLoadingInstruments(true);
     try {
       let instruments: string[] = [];
-      
+
       try {
         const marketIndices = await marketDataService.getMarketIndices();
-        const indexSymbols = marketIndices.map(index => index.name.replace(/\s+/g, ''));
+        const indexSymbols = marketIndices.map((index) => index.name.replace(/\s+/g, ''));
         instruments = indexSymbols;
       } catch {
         instruments = ['NIFTY50', 'BANKNIFTY', 'FINNIFTY', 'SENSEX', 'BANKEX'];
       }
 
       const popularStocks = [
-        'RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK',
-        'SBIN', 'BHARTIARTL', 'ITC', 'HINDUNILVR', 'KOTAKBANK',
-        'LT', 'ASIANPAINT', 'MARUTI', 'AXISBANK', 'WIPRO',
-        'ONGC', 'ADANIPORTS', 'COALINDIA', 'NTPC', 'POWERGRID',
-        'ULTRACEMCO', 'NESTLEIND', 'BAJFINANCE', 'M&M', 'TITAN',
-        'SUNPHARMA', 'DRREDDY', 'BAJAJFINSV', 'TECHM', 'HCLTECH'
+        'RELIANCE',
+        'TCS',
+        'INFY',
+        'HDFCBANK',
+        'ICICIBANK',
+        'SBIN',
+        'BHARTIARTL',
+        'ITC',
+        'HINDUNILVR',
+        'KOTAKBANK',
+        'LT',
+        'ASIANPAINT',
+        'MARUTI',
+        'AXISBANK',
+        'WIPRO',
+        'ONGC',
+        'ADANIPORTS',
+        'COALINDIA',
+        'NTPC',
+        'POWERGRID',
+        'ULTRACEMCO',
+        'NESTLEIND',
+        'BAJFINANCE',
+        'M&M',
+        'TITAN',
+        'SUNPHARMA',
+        'DRREDDY',
+        'BAJAJFINSV',
+        'TECHM',
+        'HCLTECH',
       ];
-      
+
       const isAuthenticated = await kiteConnect.isAuthenticated();
       if (isAuthenticated) {
         try {
@@ -181,7 +206,7 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
               const symbol = instrument.tradingsymbol || instrument.trading_symbol;
               const exchange = instrument.exchange;
               const instrumentType = instrument.instrument_type;
-              
+
               return (
                 (exchange === 'NSE' && instrumentType === 'EQ') ||
                 (exchange === 'NSE' && symbol?.includes('NIFTY')) ||
@@ -191,7 +216,7 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
             .map((instrument: any) => instrument.tradingsymbol || instrument.trading_symbol)
             .filter((symbol: string) => symbol && symbol.length > 0)
             .slice(0, 200);
-          
+
           instruments = [...instruments, ...kiteInstruments, ...popularStocks];
         } catch {
           instruments = [...instruments, ...popularStocks];
@@ -199,29 +224,41 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
       } else {
         instruments = [...instruments, ...popularStocks];
       }
-      
+
       setAvailableInstruments([...new Set(instruments)].sort());
     } catch {
       const fallbackInstruments = [
-        'NIFTY50', 'BANKNIFTY', 'FINNIFTY', 'SENSEX', 'BANKEX',
-        'RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK',
-        'SBIN', 'BHARTIARTL', 'ITC', 'HINDUNILVR', 'KOTAKBANK'
+        'NIFTY50',
+        'BANKNIFTY',
+        'FINNIFTY',
+        'SENSEX',
+        'BANKEX',
+        'RELIANCE',
+        'TCS',
+        'INFY',
+        'HDFCBANK',
+        'ICICIBANK',
+        'SBIN',
+        'BHARTIARTL',
+        'ITC',
+        'HINDUNILVR',
+        'KOTAKBANK',
       ];
       setAvailableInstruments(fallbackInstruments);
     } finally {
       setLoadingInstruments(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchInstruments();
-  }, []);
+  }, [fetchInstruments]);
 
   useEffect(() => {
     if (selectedInstruments.length > 0) {
       fetchMarketData();
     }
-  }, [selectedInstruments, selectedInterval]);
+  }, [fetchMarketData, selectedInstruments.length]);
 
   const toggleDay = (day: string) => {
     setSelectedDays(prev => 
