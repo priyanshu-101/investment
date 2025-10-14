@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Canvas, Group, Line, Rect } from '@shopify/react-native-skia';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Dimensions,
@@ -29,6 +29,7 @@ interface CandleChartProps {
   isRealTime?: boolean;
   chartType?: 'Candle' | 'Bars' | 'Hollow candles' | 'Line' | 'OHLC';
   onCandlePatternDetected?: (pattern: string) => void;
+  action?: 'Buy' | 'Sell' | 'Both';
 }
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -39,7 +40,8 @@ const CandleChart: React.FC<CandleChartProps> = ({
   height = 300,
   isRealTime = false,
   chartType = 'Candle',
-  onCandlePatternDetected
+  onCandlePatternDetected,
+  action = 'Both'
 }) => {
   const [candleData, setCandleData] = useState<CandleData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -57,33 +59,70 @@ const CandleChart: React.FC<CandleChartProps> = ({
   const chartHeight = height - 60; // Reserve space for controls
   const candleWidth = 8;
   const candleSpacing = 2;
+  const axisPadding = 40; // Space for Y-axis labels
+  const bottomPadding = 30; // Space for X-axis labels
+  const actualChartWidth = chartWidth - axisPadding;
+  const actualChartHeight = chartHeight - bottomPadding;
 
   const timeframes = ['1M', '3M', '5M', '15M', '30M', '1H', '1D'];
 
-  // Generate mock candle data for demo purposes
+  // Generate dynamic mock candle data with realistic market movements
   const generateMockCandleData = (timeframe: string): CandleData[] => {
     const data: CandleData[] = [];
-    const basePrice = 1000;
     const now = new Date();
     
+    // Different base prices for different instruments
+    const instrumentPrices: { [key: string]: number } = {
+      'NIFTY': 22000,
+      'BANKNIFTY': 48000,
+      'NIFTYBANK': 48000,
+      'NIFTYAUTO': 18000,
+      'NIFTYFMCG': 55000,
+      'NIFTYIT': 35000,
+      'NIFTYPHARMA': 15000,
+      'NIFTYMETAL': 6500,
+      'NIFTYENERGY': 25000,
+      'NIFTYPSU': 6500,
+    };
+    
+    const basePrice = instrumentPrices[instrument] || 22000;
+    let currentPrice = basePrice;
+    
     let intervalMinutes = 1;
+    let dataPoints = 200; // More data points for better visualization
+
     switch (timeframe) {
-      case '1M': intervalMinutes = 1; break;
-      case '3M': intervalMinutes = 3; break;
-      case '5M': intervalMinutes = 5; break;
-      case '15M': intervalMinutes = 15; break;
-      case '30M': intervalMinutes = 30; break;
-      case '1H': intervalMinutes = 60; break;
-      case '1D': intervalMinutes = 1440; break;
+      case '1M': intervalMinutes = 1; dataPoints = 200; break;
+      case '3M': intervalMinutes = 3; dataPoints = 150; break;
+      case '5M': intervalMinutes = 5; dataPoints = 120; break;
+      case '15M': intervalMinutes = 15; dataPoints = 80; break;
+      case '30M': intervalMinutes = 30; dataPoints = 60; break;
+      case '1H': intervalMinutes = 60; dataPoints = 40; break;
+      case '1D': intervalMinutes = 1440; dataPoints = 30; break;
     }
     
-    for (let i = 100; i >= 0; i--) {
+    // Adjust trend based on action
+    let trendMultiplier = 0;
+    switch (action) {
+      case 'Buy': trendMultiplier = 0.001; break; // Slight upward trend
+      case 'Sell': trendMultiplier = -0.001; break; // Slight downward trend
+      case 'Both': trendMultiplier = 0; break; // Neutral trend
+    }
+    
+    for (let i = dataPoints - 1; i >= 0; i--) {
       const timestamp = new Date(now.getTime() - (i * intervalMinutes * 60000));
-      const variation = (Math.random() - 0.5) * 20;
-      const open = basePrice + variation;
-      const close = open + (Math.random() - 0.5) * 10;
-      const high = Math.max(open, close) + Math.random() * 5;
-      const low = Math.min(open, close) - Math.random() * 5;
+      
+      // Simulate realistic price movement with trend and volatility
+      const trend = Math.sin(i / 10) * basePrice * 0.001; // Slight trend
+      const volatility = basePrice * (0.001 + Math.random() * 0.002); // Variable volatility
+      const priceChange = trend + (Math.random() - 0.5) * volatility;
+      currentPrice = Math.max(currentPrice + priceChange, basePrice * 0.85); // Prevent going too low
+      
+      const open = currentPrice;
+      const close = open + (Math.random() - 0.5) * volatility * 0.8 + trendMultiplier * basePrice;
+      const high = Math.max(open, close) + Math.random() * volatility * 0.5;
+      const low = Math.min(open, close) - Math.random() * volatility * 0.5;
+      const volume = Math.floor(Math.random() * 2000000) + 500000; // Higher volume for realism
       
       data.push({
         timestamp: timestamp.toISOString(),
@@ -91,8 +130,10 @@ const CandleChart: React.FC<CandleChartProps> = ({
         high: Math.round(high * 100) / 100,
         low: Math.round(low * 100) / 100,
         close: Math.round(close * 100) / 100,
-        volume: Math.floor(Math.random() * 10000) + 1000
+        volume: volume
       });
+
+      currentPrice = close;
     }
     
     return data;
@@ -315,8 +356,8 @@ const CandleChart: React.FC<CandleChartProps> = ({
     }
   };
 
-  // Calculate chart scaling
-  const getChartBounds = () => {
+  // Memoized chart bounds calculation
+  const getChartBounds = useMemo(() => {
     if (candleData.length === 0) return { minPrice: 0, maxPrice: 100, priceRange: 100 };
     
     const prices = candleData.flatMap(candle => [candle.high, candle.low]);
@@ -329,22 +370,67 @@ const CandleChart: React.FC<CandleChartProps> = ({
       maxPrice: maxPrice + priceRange * 0.1,
       priceRange: priceRange * 1.2
     };
-  };
+  }, [candleData]);
 
   // Convert price to Y coordinate
   const priceToY = (price: number, bounds: any) => {
-    return chartHeight - ((price - bounds.minPrice) / bounds.priceRange) * chartHeight;
+    return actualChartHeight - ((price - bounds.minPrice) / bounds.priceRange) * actualChartHeight;
   };
 
+  // Memoized Y-axis labels
+  const generateYAxisLabels = useMemo(() => {
+    const bounds = getChartBounds;
+    const labels = [];
+    const numLabels = 5;
+    const priceStep = bounds.priceRange / (numLabels - 1);
+    
+    for (let i = 0; i < numLabels; i++) {
+      const price = bounds.minPrice + (i * priceStep);
+      const y = actualChartHeight - ((price - bounds.minPrice) / bounds.priceRange) * actualChartHeight;
+      labels.push({
+        price: price.toFixed(2),
+        y: y
+      });
+    }
+    return labels;
+  }, [getChartBounds, actualChartHeight]);
+
+  // Memoized X-axis labels
+  const generateXAxisLabels = useMemo(() => {
+    if (candleData.length === 0) return [];
+    const labels = [];
+    const numLabels = 5;
+    const step = Math.max(1, Math.floor(candleData.length / numLabels));
+    
+    for (let i = 0; i < numLabels; i++) {
+      const index = i * step;
+      if (index < candleData.length) {
+        const candle = candleData[index];
+        const time = new Date(candle.timestamp);
+        const timeStr = time.toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: false 
+        });
+        const x = axisPadding + (index * (candleWidth + candleSpacing)) + candleWidth / 2;
+        labels.push({
+          time: timeStr,
+          x: x
+        });
+      }
+    }
+    return labels;
+  }, [candleData, axisPadding, candleWidth, candleSpacing]);
+
   // Generate chart paths based on chart type
-  const generateChartPaths = () => {
+  const generateChartPaths = useMemo(() => {
     if (candleData.length === 0) return [];
     
-    const bounds = getChartBounds();
+    const bounds = getChartBounds;
     const paths: any[] = [];
     
     candleData.forEach((candle, index) => {
-      const x = index * (candleWidth + candleSpacing) + candleWidth / 2;
+      const x = axisPadding + (index * (candleWidth + candleSpacing)) + candleWidth / 2;
       const openY = priceToY(candle.open, bounds);
       const closeY = priceToY(candle.close, bounds);
       const highY = priceToY(candle.high, bounds);
@@ -371,7 +457,7 @@ const CandleChart: React.FC<CandleChartProps> = ({
     });
     
     return paths;
-  };
+  }, [candleData, chartType, axisPadding, candleWidth, candleSpacing, getChartBounds]);
 
   const changeTimeframe = (timeframe: string) => {
     setSelectedTimeframe(timeframe);
@@ -383,10 +469,45 @@ const CandleChart: React.FC<CandleChartProps> = ({
     if (isRealTime) {
       connectWebSocket();
       
-      // More frequent refresh for real-time charts
+      // More frequent refresh for real-time charts with dynamic updates
       intervalRef.current = setInterval(() => {
-        fetchCandleData();
-      }, isRealTime ? 10000 : 60000); // 10 seconds for real-time, 1 minute for preview
+        // Update live price dynamically
+        if (candleData.length > 0) {
+          const lastCandle = candleData[candleData.length - 1];
+          const basePrice = lastCandle.close;
+          
+          // Instrument-specific volatility
+          const instrumentVolatility: { [key: string]: number } = {
+            'NIFTY': 0.002, 'BANKNIFTY': 0.003, 'NIFTYBANK': 0.003,
+            'NIFTYAUTO': 0.004, 'NIFTYFMCG': 0.002, 'NIFTYIT': 0.003,
+            'NIFTYPHARMA': 0.003, 'NIFTYMETAL': 0.005, 'NIFTYENERGY': 0.004, 'NIFTYPSU': 0.005,
+          };
+          
+          const volatility = instrumentVolatility[instrument] || 0.003;
+          const priceChange = (Math.random() - 0.5) * basePrice * volatility;
+          const newPrice = Math.max(basePrice + priceChange, basePrice * 0.95);
+          
+          setLivePrice(newPrice);
+          
+          // Update last candle
+          setCandleData(prev => {
+            const updated = [...prev];
+            const lastIndex = updated.length - 1;
+            updated[lastIndex] = {
+              ...updated[lastIndex],
+              close: newPrice,
+              high: Math.max(updated[lastIndex].high, newPrice),
+              low: Math.min(updated[lastIndex].low, newPrice)
+            };
+            return updated;
+          });
+        }
+        
+        // Occasionally refresh full data
+        if (Math.random() < 0.3) {
+          fetchCandleData();
+        }
+      }, isRealTime ? 3000 : 60000); // 3 seconds for real-time updates
     }
     
     return () => {
@@ -397,24 +518,55 @@ const CandleChart: React.FC<CandleChartProps> = ({
         clearInterval(intervalRef.current);
       }
     };
-  }, [instrument, isRealTime]);
+  }, [instrument, isRealTime, action]);
 
-  const renderChart = () => {
-    const paths = generateChartPaths();
+  const renderChart = useCallback(() => {
+    const paths = generateChartPaths;
+    const bounds = getChartBounds;
+    const yAxisLabels = generateYAxisLabels;
+    const xAxisLabels = generateXAxisLabels;
     
     return (
       <Canvas style={{ width: chartWidth, height: chartHeight }}>
         <Group>
-          {/* Grid lines */}
-          {[0, 0.25, 0.5, 0.75, 1].map((ratio, index) => (
+          {/* Y-axis (Price axis) */}
+          <Line
+            p1={{ x: axisPadding, y: 0 }}
+            p2={{ x: axisPadding, y: actualChartHeight }}
+            color="rgba(128, 128, 128, 0.8)"
+            strokeWidth={2}
+          />
+          
+          {/* X-axis (Time axis) */}
+          <Line
+            p1={{ x: axisPadding, y: actualChartHeight }}
+            p2={{ x: chartWidth, y: actualChartHeight }}
+            color="rgba(128, 128, 128, 0.8)"
+            strokeWidth={2}
+          />
+          
+          {/* Grid lines (horizontal) */}
+          {yAxisLabels.map((label, index) => (
             <Line
-              key={`grid-${index}`}
-              p1={{ x: 0, y: chartHeight * ratio }}
-              p2={{ x: chartWidth, y: chartHeight * ratio }}
+              key={`grid-h-${index}`}
+              p1={{ x: axisPadding, y: label.y }}
+              p2={{ x: chartWidth, y: label.y }}
               color="rgba(128, 128, 128, 0.2)"
               strokeWidth={1}
             />
           ))}
+          
+          {/* Grid lines (vertical) */}
+          {xAxisLabels.map((label, index) => (
+            <Line
+              key={`grid-v-${index}`}
+              p1={{ x: label.x, y: 0 }}
+              p2={{ x: label.x, y: actualChartHeight }}
+              color="rgba(128, 128, 128, 0.2)"
+              strokeWidth={1}
+            />
+          ))}
+          
           
           {/* Chart elements based on type */}
           {paths.map((path, index) => {
@@ -502,7 +654,7 @@ const CandleChart: React.FC<CandleChartProps> = ({
         </Group>
       </Canvas>
     );
-  };
+  }, [generateChartPaths, generateYAxisLabels, generateXAxisLabels, getChartBounds, chartWidth, chartHeight, axisPadding, actualChartHeight]);
 
   return (
     <View style={styles.container}>
@@ -513,6 +665,16 @@ const CandleChart: React.FC<CandleChartProps> = ({
             <Text style={styles.instrumentName}>{instrument}</Text>
             <View style={styles.chartTypeIndicator}>
               <Text style={styles.chartTypeText}>{chartType}</Text>
+            </View>
+            <View style={styles.actionIndicator}>
+              <Text style={[
+                styles.actionText,
+                action === 'Buy' && styles.buyActionText,
+                action === 'Sell' && styles.sellActionText,
+                action === 'Both' && styles.bothActionText
+              ]}>
+                {action}
+              </Text>
             </View>
             {isRealTime && (
               <View style={styles.realTimeIndicator}>
@@ -593,9 +755,38 @@ const CandleChart: React.FC<CandleChartProps> = ({
             <Text style={styles.emptyText}>No data available</Text>
           </View>
         ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {renderChart()}
-          </ScrollView>
+          <View style={styles.chartWithAxes}>
+            {/* Y-axis labels overlay */}
+            <View style={styles.yAxisContainer}>
+              {generateYAxisLabels.map((label, index) => (
+                <Text key={`y-label-${index}`} style={[styles.axisLabel, { top: label.y }]}>
+                  ₹{label.price}
+                </Text>
+              ))}
+            </View>
+            
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ 
+                minWidth: Math.max(chartWidth, candleData.length * (candleWidth + candleSpacing) + axisPadding) 
+              }}
+              scrollEventThrottle={16}
+            >
+              <View style={styles.chartContainer}>
+                {renderChart()}
+                
+                {/* X-axis labels overlay */}
+                <View style={styles.xAxisContainer}>
+                  {generateXAxisLabels.map((label, index) => (
+                    <Text key={`x-label-${index}`} style={[styles.axisLabel, { left: label.x - 20 }]}>
+                      {label.time}
+                    </Text>
+                  ))}
+                </View>
+              </View>
+            </ScrollView>
+          </View>
         )}
       </View>
 
@@ -709,6 +900,29 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1976d2',
   },
+  actionIndicator: {
+    backgroundColor: '#f5f5f5',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    marginRight: 8,
+  },
+  actionText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#666',
+  },
+  buyActionText: {
+    color: '#4caf50',
+  },
+  sellActionText: {
+    color: '#f44336',
+  },
+  bothActionText: {
+    color: '#1976d2',
+  },
   realTimeIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -817,6 +1031,34 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
+  },
+  chartWithAxes: {
+    position: 'relative',
+  },
+  yAxisContainer: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 40, // axisPadding value
+    zIndex: 10,
+  },
+  xAxisContainer: {
+    position: 'absolute',
+    left: 40, // axisPadding value
+    right: 0,
+    bottom: 0,
+    height: 30, // bottomPadding value
+    zIndex: 10,
+  },
+  axisLabel: {
+    position: 'absolute',
+    fontSize: 10,
+    color: 'rgba(128, 128, 128, 0.8)',
+    fontWeight: '500',
+  },
+  chartContainer: {
+    position: 'relative',
   },
   volumeContainer: {
     padding: 16,

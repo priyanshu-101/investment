@@ -16,7 +16,6 @@ import {
 // For production, consider using @react-native-picker/picker
 import { kiteConnect } from '../../services/kiteConnect';
 import { marketDataService } from '../../services/marketDataApi';
-import CandleChart from '../candlechart';
 
 interface CandlePattern {
   id: string;
@@ -120,8 +119,6 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
   const [liveQuotes, setLiveQuotes] = useState<any>({});
   const [candleData, setCandleData] = useState<any>({});
   const [loadingMarketData, setLoadingMarketData] = useState(false);
-  const [showRealTimeChart, setShowRealTimeChart] = useState(false);
-  const [realTimeChartInstruments, setRealTimeChartInstruments] = useState<string[]>([]);
 
   const strategyTypes = ['Candle Based', 'Time Based', 'Indicator Based'];
   const chartTypes = ['Candle', 'Bars', 'Hollow candles', 'Line', 'OHLC'];
@@ -449,29 +446,26 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
       onStrategyCreated(strategyData);
     }
 
-    Alert.alert('Success', 'Strategy created successfully!', [
-      {
-        text: 'View Real-time Chart',
-        onPress: () => {
-          // Navigate to dedicated chart screen
-          if (navigation) {
-            navigation.navigate('chart-screen', {
-              strategyData,
-              instruments: selectedInstruments,
-              interval: selectedInterval
-            });
-          } else {
-            // Fallback to inline chart display
-            setRealTimeChartInstruments(selectedInstruments);
-            setShowRealTimeChart(true);
-          }
-        }
-      },
-      {
-        text: 'OK',
-        style: 'default'
+    if (selectedStrategyType === 'Candle Based') {
+      // Navigate to live chart screen for candle-based strategies
+      if (navigation) {
+        navigation.navigate('live-chart-screen', {
+          strategyData: JSON.stringify(strategyData),
+          instruments: JSON.stringify(selectedInstruments),
+          interval: selectedInterval,
+          chartType: selectedChartType
+        });
+      } else {
+        Alert.alert('Success', 'Strategy created successfully! Navigate to Live Charts to view real-time data.');
       }
-    ]);
+    } else {
+      Alert.alert('Success', 'Strategy created successfully!', [
+        {
+          text: 'OK',
+          style: 'default'
+        }
+      ]);
+    }
     
     // Reset form
     setStrategyName('');
@@ -570,60 +564,7 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
           </TouchableOpacity>
         </View>
 
-        {selectedInstruments.length > 0 && selectedStrategyType === 'Candle Based' && (
-  <View style={styles.section}>
-    <Text style={styles.sectionTitle}>Chart Preview</Text>
-    {selectedInstruments.slice(0, 3).map((instrument, index) => (
-      <CandleChart
-        key={`${instrument}-${selectedInterval}-${selectedChartType}`}
-        instrument={instrument}
-        interval={selectedInterval}
-        chartType={selectedChartType as 'Candle' | 'Bars' | 'Hollow candles' | 'Line' | 'OHLC'}
-        height={300}
-        onCandlePatternDetected={(pattern: string) => {
-          console.log(`Pattern detected for ${instrument}: ${pattern}`);
-          // You can trigger alerts or automatic order placement here
-        }}
-      />
-    ))}
-  </View>
-)}
 
-        {/* Real-time Chart Display */}
-        {showRealTimeChart && realTimeChartInstruments.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.realTimeChartHeader}>
-              <Text style={styles.sectionTitle}>Real-time Candle Charts</Text>
-              <TouchableOpacity 
-                style={styles.closeChartButton}
-                onPress={() => {
-                  setShowRealTimeChart(false);
-                  setRealTimeChartInstruments([]);
-                }}
-              >
-                <Ionicons name="close" size={20} color="#666" />
-              </TouchableOpacity>
-            </View>
-            {realTimeChartInstruments.map((instrument, index) => (
-              <CandleChart
-                key={`realtime-${instrument}-${selectedInterval}-${selectedChartType}`}
-                instrument={instrument}
-                interval={selectedInterval}
-                chartType={selectedChartType as 'Candle' | 'Bars' | 'Hollow candles' | 'Line' | 'OHLC'}
-                height={400}
-                isRealTime={true}
-                onCandlePatternDetected={(pattern: string) => {
-                  console.log(`Real-time pattern detected for ${instrument}: ${pattern}`);
-                  Alert.alert(
-                    'Pattern Detected!',
-                    `${pattern} pattern detected for ${instrument}`,
-                    [{ text: 'OK' }]
-                  );
-                }}
-              />
-            ))}
-          </View>
-        )}
 
         {/* Transaction Type */}
         <View style={styles.section}>
@@ -2337,17 +2278,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
-  },
-  realTimeChartHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  closeChartButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: '#f5f5f5',
   },
   dropdownContainer: {
     borderWidth: 1,

@@ -1,7 +1,6 @@
 import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React from 'react';
 
 import 'react-native-reanimated';
 import 'react-native-url-polyfill/auto';
@@ -12,11 +11,13 @@ function AppLayout() {
   return (
     <KiteConnectProvider>
       <ThemeProvider value={DefaultTheme}>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="auth" />
-          <Stack.Screen name="index" />
-          <Stack.Screen name="chart-screen" />
-        </Stack>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="auth" />
+        <Stack.Screen name="index" />
+        <Stack.Screen name="chart-screen" />
+        <Stack.Screen name="live-chart-screen" />
+        <Stack.Screen name="subscriptions" />
+      </Stack>
         <StatusBar style="dark" />
       </ThemeProvider>
     </KiteConnectProvider>
