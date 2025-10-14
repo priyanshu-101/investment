@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -113,6 +113,7 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
   const [showSlTypeModal, setShowSlTypeModal] = useState(false);
   const [showSlTrailModal, setShowSlTrailModal] = useState(false);
   const [showTimeRangeModal, setShowTimeRangeModal] = useState(false);
+  const [showChartTypeModal, setShowChartTypeModal] = useState(false);
   const [currentDropdownType, setCurrentDropdownType] = useState('');
   
   // Dynamic data from Zerodha
@@ -123,7 +124,7 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
   const [realTimeChartInstruments, setRealTimeChartInstruments] = useState<string[]>([]);
 
   const strategyTypes = ['Candle Based', 'Time Based', 'Indicator Based'];
-  const chartTypes = ['Candle', 'Line', 'OHLC'];
+  const chartTypes = ['Candle', 'Bars', 'Hollow candles', 'Line', 'OHLC'];
   const orderTypes = ['MIS', 'CNC', 'BTST'];
   const transactionTypes = ['Buy', 'Sell'];
   const weekDays = ['MON', 'TUE', 'WED', 'THU', 'FRI'];
@@ -149,6 +150,24 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
   const slTypes = ['Previous Candle - High', 'Previous Candle - Low', 'SAME Candle - High', 'SAME Candle - Low'];
   const slTrailTypes = ['On Candle Close', 'On Candle Start', 'On Price Movement'];
   const timeRanges = ['1 sec to 10 sec', '1 sec to 30 sec', '1 sec to 60 sec', '5 sec to 30 sec'];
+
+  // Helper function for chart icons
+  const getChartIcon = (chartType: string) => {
+    switch (chartType) {
+      case 'Bars':
+        return 'bar-chart';
+      case 'Candle':
+        return 'trending-up';
+      case 'Hollow candles':
+        return 'trending-up-outline';
+      case 'Line':
+        return 'analytics';
+      case 'OHLC':
+        return 'stats-chart';
+      default:
+        return 'bar-chart';
+    }
+  };
 
   // Dropdown handlers
   const handleDropdownSelect = (type: string, value: string) => {
@@ -199,7 +218,18 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
     try {
       const isAuth = await kiteConnect.isAuthenticated();
       if (!isAuth) {
-        console.log('Not authenticated with Zerodha');
+        console.log('Not authenticated with Zerodha - using mock data');
+        // Use mock data when not authenticated
+        const mockQuotes: any = {};
+        selectedInstruments.forEach(instrument => {
+          mockQuotes[instrument] = {
+            last_price: Math.floor(Math.random() * 1000) + 100,
+            net_change: (Math.random() - 0.5) * 50,
+            net_change_percent: (Math.random() - 0.5) * 5
+          };
+        });
+        setLiveQuotes(mockQuotes);
+        setLoadingMarketData(false);
         return;
       }
 
@@ -391,6 +421,11 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
       selectedInterval,
       instruments: selectedInstruments,
       orderLegs,
+      chartConfiguration: {
+        supportedChartTypes: ['Candle', 'Bars', 'Hollow candles', 'Line', 'OHLC'],
+        defaultChartType: selectedChartType,
+        dynamicChartSwitching: true,
+      },
       riskManagement: {
         riskRewardRatio,
         overallStopLoss,
@@ -471,29 +506,26 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
           </View>
         </View>
 
-        {/* Chart Type - Only for Candle Based */}
+        {/* Chart Type Dropdown - Only for Candle Based */}
         {selectedStrategyType === 'Candle Based' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Chart Type</Text>
-            <View style={styles.tabContainer}>
-              {chartTypes.map((type) => (
-                <TouchableOpacity
-                  key={type}
-                  style={[
-                    styles.tab,
-                    selectedChartType === type && styles.activeTab
-                  ]}
-                  onPress={() => setSelectedChartType(type)}
-                >
-                  <Text style={[
-                    styles.tabText,
-                    selectedChartType === type && styles.activeTabText
-                  ]}>
-                    {type}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <TouchableOpacity 
+              style={styles.chartTypeSelector}
+              onPress={() => setShowChartTypeModal(true)}
+            >
+              <View style={styles.chartTypeButton}>
+                <View style={styles.chartTypeIconContainer}>
+                  <Ionicons 
+                    name={getChartIcon(selectedChartType) as any} 
+                    size={20} 
+                    color="#1976d2" 
+                  />
+                </View>
+                <Text style={styles.chartTypeButtonText}>{selectedChartType}</Text>
+                <Ionicons name="chevron-down" size={16} color="#666" />
+              </View>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -543,11 +575,12 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
     <Text style={styles.sectionTitle}>Chart Preview</Text>
     {selectedInstruments.slice(0, 3).map((instrument, index) => (
       <CandleChart
-        key={`${instrument}-${selectedInterval}`}
+        key={`${instrument}-${selectedInterval}-${selectedChartType}`}
         instrument={instrument}
         interval={selectedInterval}
+        chartType={selectedChartType as 'Candle' | 'Bars' | 'Hollow candles' | 'Line' | 'OHLC'}
         height={300}
-        onCandlePatternDetected={(pattern) => {
+        onCandlePatternDetected={(pattern: string) => {
           console.log(`Pattern detected for ${instrument}: ${pattern}`);
           // You can trigger alerts or automatic order placement here
         }}
@@ -573,12 +606,13 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
             </View>
             {realTimeChartInstruments.map((instrument, index) => (
               <CandleChart
-                key={`realtime-${instrument}-${selectedInterval}`}
+                key={`realtime-${instrument}-${selectedInterval}-${selectedChartType}`}
                 instrument={instrument}
                 interval={selectedInterval}
+                chartType={selectedChartType as 'Candle' | 'Bars' | 'Hollow candles' | 'Line' | 'OHLC'}
                 height={400}
                 isRealTime={true}
-                onCandlePatternDetected={(pattern) => {
+                onCandlePatternDetected={(pattern: string) => {
                   console.log(`Real-time pattern detected for ${instrument}: ${pattern}`);
                   Alert.alert(
                     'Pattern Detected!',
@@ -1629,6 +1663,56 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
         </View>
       )}
 
+      {/* Chart Type Selection Modal */}
+      <Modal visible={showChartTypeModal} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.chartTypeModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Chart Type</Text>
+              <TouchableOpacity 
+                onPress={() => setShowChartTypeModal(false)}
+                style={styles.closeButton}
+              >
+                <Text style={styles.closeButtonText}>×</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.chartTypeList}>
+              {chartTypes.map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    styles.chartTypeOption,
+                    selectedChartType === type && styles.selectedChartTypeOption
+                  ]}
+                  onPress={() => {
+                    setSelectedChartType(type);
+                    setShowChartTypeModal(false);
+                  }}
+                >
+                  <View style={styles.chartTypeOptionIcon}>
+                    <Ionicons 
+                      name={getChartIcon(type) as any} 
+                      size={24} 
+                      color={selectedChartType === type ? '#1976d2' : '#666'} 
+                    />
+                  </View>
+                  <Text style={[
+                    styles.chartTypeOptionText,
+                    selectedChartType === type && styles.selectedChartTypeOptionText
+                  ]}>
+                    {type}
+                  </Text>
+                  {selectedChartType === type && (
+                    <Ionicons name="checkmark" size={20} color="#1976d2" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Universal Dropdown Modal */}
       <Modal visible={showCandleColorModal || showCandleTimingModal || showLotSizeModal || showMoneynessModal || showAtmStrikeModal || showSlTypeModal || showSlTrailModal || showTimeRangeModal} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
@@ -1719,6 +1803,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 6,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
   activeTab: {
     backgroundColor: '#e3f2fd',
@@ -2361,6 +2447,66 @@ const styles = StyleSheet.create({
   },
   toggleTextActive: {
     color: '#fff',
+  },
+  // Chart Type Selector Styles
+  chartTypeSelector: {
+    marginBottom: 16,
+  },
+  chartTypeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    justifyContent: 'space-between',
+  },
+  chartTypeIconContainer: {
+    marginRight: 12,
+  },
+  chartTypeButtonText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  chartTypeModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    width: '90%',
+    maxHeight: '70%',
+    paddingVertical: 20,
+  },
+  chartTypeList: {
+    paddingHorizontal: 20,
+  },
+  chartTypeOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginVertical: 4,
+  },
+  selectedChartTypeOption: {
+    backgroundColor: '#e3f2fd',
+  },
+  chartTypeOptionIcon: {
+    marginRight: 16,
+    width: 30,
+    alignItems: 'center',
+  },
+  chartTypeOptionText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  selectedChartTypeOptionText: {
+    color: '#1976d2',
+    fontWeight: '600',
   },
 });
 

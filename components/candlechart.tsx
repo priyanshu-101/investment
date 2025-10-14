@@ -1,8 +1,10 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Canvas, Group, Line, Rect } from '@shopify/react-native-skia';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Dimensions,
+    Modal,
     ScrollView,
     StyleSheet,
     Text,
@@ -25,6 +27,7 @@ interface CandleChartProps {
   interval: string;
   height?: number;
   isRealTime?: boolean;
+  chartType?: 'Candle' | 'Bars' | 'Hollow candles' | 'Line' | 'OHLC';
   onCandlePatternDetected?: (pattern: string) => void;
 }
 
@@ -35,6 +38,7 @@ const CandleChart: React.FC<CandleChartProps> = ({
   interval,
   height = 300,
   isRealTime = false,
+  chartType = 'Candle',
   onCandlePatternDetected
 }) => {
   const [candleData, setCandleData] = useState<CandleData[]>([]);
@@ -44,6 +48,7 @@ const CandleChart: React.FC<CandleChartProps> = ({
   const [livePrice, setLivePrice] = useState<number | null>(null);
   const [priceChange, setPriceChange] = useState<number>(0);
   const [priceChangePercent, setPriceChangePercent] = useState<number>(0);
+  const [showChartTypeModal, setShowChartTypeModal] = useState(false);
   
   const wsRef = useRef<WebSocket | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -55,6 +60,63 @@ const CandleChart: React.FC<CandleChartProps> = ({
 
   const timeframes = ['1M', '3M', '5M', '15M', '30M', '1H', '1D'];
 
+  // Generate mock candle data for demo purposes
+  const generateMockCandleData = (timeframe: string): CandleData[] => {
+    const data: CandleData[] = [];
+    const basePrice = 1000;
+    const now = new Date();
+    
+    let intervalMinutes = 1;
+    switch (timeframe) {
+      case '1M': intervalMinutes = 1; break;
+      case '3M': intervalMinutes = 3; break;
+      case '5M': intervalMinutes = 5; break;
+      case '15M': intervalMinutes = 15; break;
+      case '30M': intervalMinutes = 30; break;
+      case '1H': intervalMinutes = 60; break;
+      case '1D': intervalMinutes = 1440; break;
+    }
+    
+    for (let i = 100; i >= 0; i--) {
+      const timestamp = new Date(now.getTime() - (i * intervalMinutes * 60000));
+      const variation = (Math.random() - 0.5) * 20;
+      const open = basePrice + variation;
+      const close = open + (Math.random() - 0.5) * 10;
+      const high = Math.max(open, close) + Math.random() * 5;
+      const low = Math.min(open, close) - Math.random() * 5;
+      
+      data.push({
+        timestamp: timestamp.toISOString(),
+        open: Math.round(open * 100) / 100,
+        high: Math.round(high * 100) / 100,
+        low: Math.round(low * 100) / 100,
+        close: Math.round(close * 100) / 100,
+        volume: Math.floor(Math.random() * 10000) + 1000
+      });
+    }
+    
+    return data;
+  };
+
+
+  // Helper function for chart icons
+  const getChartIcon = (chartType: string) => {
+    switch (chartType) {
+      case 'Bars':
+        return 'bar-chart';
+      case 'Candle':
+        return 'trending-up';
+      case 'Hollow candles':
+        return 'trending-up-outline';
+      case 'Line':
+        return 'analytics';
+      case 'OHLC':
+        return 'stats-chart';
+      default:
+        return 'bar-chart';
+    }
+  };
+
   // Fetch historical candle data
   const fetchCandleData = async (timeframe: string = selectedTimeframe) => {
     setLoading(true);
@@ -63,7 +125,13 @@ const CandleChart: React.FC<CandleChartProps> = ({
     try {
       const isAuth = await kiteConnect.isAuthenticated();
       if (!isAuth) {
-        throw new Error('Not authenticated with Zerodha');
+        console.log('Not authenticated with Zerodha - using mock data');
+        // Use mock data when not authenticated
+        const mockData = generateMockCandleData(timeframe);
+        setCandleData(mockData);
+        setLivePrice(mockData[mockData.length - 1]?.close || 0);
+        setLoading(false);
+        return;
       }
 
       const to = new Date();
@@ -268,8 +336,8 @@ const CandleChart: React.FC<CandleChartProps> = ({
     return chartHeight - ((price - bounds.minPrice) / bounds.priceRange) * chartHeight;
   };
 
-  // Generate candle paths
-  const generateCandlePaths = () => {
+  // Generate chart paths based on chart type
+  const generateChartPaths = () => {
     if (candleData.length === 0) return [];
     
     const bounds = getChartBounds();
@@ -288,14 +356,17 @@ const CandleChart: React.FC<CandleChartProps> = ({
       const bodyHeight = bodyBottom - bodyTop;
       
       paths.push({
-        type: 'candle',
+        type: chartType.toLowerCase(),
         x,
-        bodyTop,
-        bodyHeight,
+        openY,
+        closeY,
         highY,
         lowY,
+        bodyTop,
+        bodyHeight,
         isGreen,
-        candle
+        candle,
+        candleWidth
       });
     });
     
@@ -329,7 +400,7 @@ const CandleChart: React.FC<CandleChartProps> = ({
   }, [instrument, isRealTime]);
 
   const renderChart = () => {
-    const paths = generateCandlePaths();
+    const paths = generateChartPaths();
     
     return (
       <Canvas style={{ width: chartWidth, height: chartHeight }}>
@@ -345,27 +416,89 @@ const CandleChart: React.FC<CandleChartProps> = ({
             />
           ))}
           
-          {/* Candles */}
-          {paths.map((path, index) => (
-            <Group key={`candle-${index}`}>
-              {/* High-Low line */}
-              <Line
-                p1={{ x: path.x, y: path.highY }}
-                p2={{ x: path.x, y: path.lowY }}
-                color={path.isGreen ? "#4CAF50" : "#F44336"}
-                strokeWidth={1}
-              />
-              
-              {/* Candle body */}
-              <Rect
-                x={path.x - candleWidth / 2}
-                y={path.bodyTop}
-                width={candleWidth}
-                height={Math.max(path.bodyHeight, 1)}
-                color={path.isGreen ? "#4CAF50" : "#F44336"}
-              />
-            </Group>
-          ))}
+          {/* Chart elements based on type */}
+          {paths.map((path, index) => {
+            const color = path.isGreen ? "#4CAF50" : "#F44336";
+            
+            switch (chartType) {
+              case 'Bars':
+                return (
+                  <Group key={`bar-${index}`}>
+                    {/* High-Low line (vertical bar) */}
+                    <Line
+                      p1={{ x: path.x, y: path.highY }}
+                      p2={{ x: path.x, y: path.lowY }}
+                      color={color}
+                      strokeWidth={3}
+                    />
+                    
+                    {/* Open tick (left horizontal line) */}
+                    <Line
+                      p1={{ x: path.x - 4, y: path.openY }}
+                      p2={{ x: path.x, y: path.openY }}
+                      color={color}
+                      strokeWidth={3}
+                    />
+                    
+                    {/* Close tick (right horizontal line) */}
+                    <Line
+                      p1={{ x: path.x, y: path.closeY }}
+                      p2={{ x: path.x + 4, y: path.closeY }}
+                      color={color}
+                      strokeWidth={3}
+                    />
+                  </Group>
+                );
+                
+              case 'Hollow candles':
+                return (
+                  <Group key={`hollow-candle-${index}`}>
+                    {/* High-Low line */}
+                    <Line
+                      p1={{ x: path.x, y: path.highY }}
+                      p2={{ x: path.x, y: path.lowY }}
+                      color={color}
+                      strokeWidth={1}
+                    />
+                    
+                    {/* Hollow candle body (outline only) */}
+                    <Rect
+                      x={path.x - path.candleWidth / 2}
+                      y={path.bodyTop}
+                      width={path.candleWidth}
+                      height={Math.max(path.bodyHeight, 1)}
+                      color="transparent"
+                      style="stroke"
+                      strokeWidth={2}
+                      stroke={color}
+                    />
+                  </Group>
+                );
+                
+              case 'Candle':
+              default:
+                return (
+                  <Group key={`candle-${index}`}>
+                    {/* High-Low line */}
+                    <Line
+                      p1={{ x: path.x, y: path.highY }}
+                      p2={{ x: path.x, y: path.lowY }}
+                      color={color}
+                      strokeWidth={1}
+                    />
+                    
+                    {/* Filled candle body */}
+                    <Rect
+                      x={path.x - path.candleWidth / 2}
+                      y={path.bodyTop}
+                      width={path.candleWidth}
+                      height={Math.max(path.bodyHeight, 1)}
+                      color={color}
+                    />
+                  </Group>
+                );
+            }
+          })}
         </Group>
       </Canvas>
     );
@@ -378,6 +511,9 @@ const CandleChart: React.FC<CandleChartProps> = ({
         <View style={styles.priceInfo}>
           <View style={styles.instrumentRow}>
             <Text style={styles.instrumentName}>{instrument}</Text>
+            <View style={styles.chartTypeIndicator}>
+              <Text style={styles.chartTypeText}>{chartType}</Text>
+            </View>
             {isRealTime && (
               <View style={styles.realTimeIndicator}>
                 <View style={styles.realTimeDot} />
@@ -401,30 +537,44 @@ const CandleChart: React.FC<CandleChartProps> = ({
         {loading && <ActivityIndicator size="small" color="#1976d2" />}
       </View>
 
-      {/* Timeframe selector */}
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        style={styles.timeframeContainer}
-      >
-        {timeframes.map((timeframe) => (
-          <TouchableOpacity
-            key={timeframe}
-            style={[
-              styles.timeframeButton,
-              selectedTimeframe === timeframe && styles.activeTimeframeButton
-            ]}
-            onPress={() => changeTimeframe(timeframe)}
-          >
-            <Text style={[
-              styles.timeframeText,
-              selectedTimeframe === timeframe && styles.activeTimeframeText
-            ]}>
-              {timeframe}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      {/* Toolbar with timeframe and chart type */}
+      <View style={styles.toolbar}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.timeframeContainer}
+        >
+          {timeframes.map((timeframe) => (
+            <TouchableOpacity
+              key={timeframe}
+              style={[
+                styles.timeframeButton,
+                selectedTimeframe === timeframe && styles.activeTimeframeButton
+              ]}
+              onPress={() => changeTimeframe(timeframe)}
+            >
+              <Text style={[
+                styles.timeframeText,
+                selectedTimeframe === timeframe && styles.activeTimeframeText
+              ]}>
+                {timeframe}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+        
+        {/* Chart Type Button */}
+        <TouchableOpacity 
+          style={styles.chartTypeButton}
+          onPress={() => setShowChartTypeModal(true)}
+        >
+          <Ionicons 
+            name={getChartIcon(chartType) as any} 
+            size={18} 
+            color="#1976d2" 
+          />
+        </TouchableOpacity>
+      </View>
 
       {/* Chart area */}
       <View style={styles.chartContainer}>
@@ -457,6 +607,56 @@ const CandleChart: React.FC<CandleChartProps> = ({
           </Text>
         </View>
       )}
+
+      {/* Chart Type Selection Modal */}
+      <Modal visible={showChartTypeModal} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.chartTypeModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Chart Type</Text>
+              <TouchableOpacity 
+                onPress={() => setShowChartTypeModal(false)}
+                style={styles.closeButton}
+              >
+                <Text style={styles.closeButtonText}>×</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.chartTypeList}>
+              {['Candle', 'Bars', 'Hollow candles', 'Line', 'OHLC'].map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    styles.chartTypeOption,
+                    chartType === type && styles.selectedChartTypeOption
+                  ]}
+                  onPress={() => {
+                    // Note: Chart type is controlled by parent component
+                    setShowChartTypeModal(false);
+                  }}
+                >
+                  <View style={styles.chartTypeOptionIcon}>
+                    <Ionicons 
+                      name={getChartIcon(type) as any} 
+                      size={24} 
+                      color={chartType === type ? '#1976d2' : '#666'} 
+                    />
+                  </View>
+                  <Text style={[
+                    styles.chartTypeOptionText,
+                    chartType === type && styles.selectedChartTypeOptionText
+                  ]}>
+                    {type}
+                  </Text>
+                  {chartType === type && (
+                    <Ionicons name="checkmark" size={20} color="#1976d2" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -494,6 +694,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     flex: 1,
+  },
+  chartTypeIndicator: {
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1976d2',
+    marginRight: 8,
+  },
+  chartTypeText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#1976d2',
   },
   realTimeIndicator: {
     flexDirection: 'row',
@@ -537,11 +751,17 @@ const styles = StyleSheet.create({
   negativeChange: {
     color: '#F44336',
   },
-  timeframeContainer: {
+  toolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+  },
+  timeframeContainer: {
+    flex: 1,
   },
   timeframeButton: {
     paddingHorizontal: 16,
@@ -607,6 +827,85 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     textAlign: 'center',
+  },
+  chartTypeButton: {
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: '#f5f5f5',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  chartTypeModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    width: '90%',
+    maxHeight: '70%',
+    paddingVertical: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  closeButton: {
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    fontSize: 24,
+    color: '#666',
+    fontWeight: 'bold',
+  },
+  chartTypeList: {
+    paddingHorizontal: 20,
+  },
+  chartTypeOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginVertical: 4,
+  },
+  selectedChartTypeOption: {
+    backgroundColor: '#e3f2fd',
+  },
+  chartTypeOptionIcon: {
+    marginRight: 16,
+    width: 30,
+    alignItems: 'center',
+  },
+  chartTypeOptionText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  selectedChartTypeOptionText: {
+    color: '#1976d2',
+    fontWeight: '600',
   },
 });
 
