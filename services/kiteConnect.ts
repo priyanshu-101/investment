@@ -470,6 +470,19 @@ class KiteConnectService {
       throw error;
     }
   }
+
+  // Get WebSocket URL for real-time data
+  async getWebSocketUrl(): Promise<string> {
+    try {
+      const response = await this.axiosInstance.get(KITE_ENDPOINTS.WEBSOCKET_URL || '/market/websocket');
+      return response.data.data.url || `wss://ws.kite.trade/?api_key=${KITE_CONFIG.API_KEY}&access_token=${await this.getAccessToken()}`;
+    } catch (error) {
+      console.error('Error fetching WebSocket URL:', error);
+      // Fallback WebSocket URL
+      const token = await this.getAccessToken();
+      return `wss://ws.kite.trade/?api_key=${KITE_CONFIG.API_KEY}&access_token=${token}`;
+    }
+  }
 }
 
 export const kiteConnect = new KiteConnectService();

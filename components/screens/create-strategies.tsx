@@ -4,7 +4,6 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  Picker,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -13,8 +12,11 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+// Note: Using React Native's built-in Picker for now
+// For production, consider using @react-native-picker/picker
 import { kiteConnect } from '../../services/kiteConnect';
 import { marketDataService } from '../../services/marketDataApi';
+import CandleChart from '../candlechart';
 
 interface CandlePattern {
   id: string;
@@ -44,9 +46,10 @@ interface OrderLeg {
 
 interface TradingStrategyProps {
   onStrategyCreated?: (strategyData: any) => void;
+  navigation?: any;
 }
 
-const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
+const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps) => {
   // Existing state
   const [selectedStrategyType, setSelectedStrategyType] = useState('Candle Based');
   const [selectedChartType, setSelectedChartType] = useState('Candle');
@@ -56,31 +59,68 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
   const [squareOffTime, setSquareOffTime] = useState('15:15');
   const [selectedDays, setSelectedDays] = useState(['MON', 'TUE', 'WED', 'THU', 'FRI']);
   const [strategyName, setStrategyName] = useState('');
-  const [exitProfitAmount, setExitProfitAmount] = useState('5000');
-  const [exitLossAmount, setExitLossAmount] = useState('1000');
-  const [noTradeAfterTime, setNoTradeAfterTime] = useState('15:15');
+  const [exitProfitAmount] = useState('5000');
+  const [exitLossAmount] = useState('1000');
+  const [noTradeAfterTime] = useState('15:15');
   const [selectedInstruments, setSelectedInstruments] = useState<string[]>([]);
   const [showInstrumentModal, setShowInstrumentModal] = useState(false);
   const [availableInstruments, setAvailableInstruments] = useState<string[]>([]);
   const [loadingInstruments, setLoadingInstruments] = useState(false);
   const [instrumentSearchQuery, setInstrumentSearchQuery] = useState('');
 
-  // New candle-based strategy state
+  // Enhanced candle-based strategy state
   const [selectedInterval, setSelectedInterval] = useState('1M');
   const [orderLegs, setOrderLegs] = useState<OrderLeg[]>([]);
   const [showOrderLegModal, setShowOrderLegModal] = useState(false);
   const [currentEditingLeg, setCurrentEditingLeg] = useState<OrderLeg | null>(null);
   const [riskRewardRatio, setRiskRewardRatio] = useState('1:3');
-  const [overallStopLoss, setOverallStopLoss] = useState('0.001'); // 0.1%
-  const [overallProfit, setOverallProfit] = useState('0.005'); // 0.5%
+  const [overallStopLoss, setOverallStopLoss] = useState(true);
+  const [overallProfit, setOverallProfit] = useState(true);
   const [maxLossAmount, setMaxLossAmount] = useState('1000');
   const [maxProfitAmount, setMaxProfitAmount] = useState('5000');
   
+  // Entry Conditions
+  const [firstCandleColor, setFirstCandleColor] = useState('Green');
+  const [firstCandleTiming, setFirstCandleTiming] = useState('Start');
+  const [secondCandleColor, setSecondCandleColor] = useState('Red');
+  const [secondCandleTiming, setSecondCandleTiming] = useState('Close');
+  const [candleTimeSelection, setCandleTimeSelection] = useState('Start');
+  const [timeRange, setTimeRange] = useState('1 sec to 10 sec');
+  
+  // Order Leg Configuration
+  const [selectedOrderAction, setSelectedOrderAction] = useState('Buy');
+  const [lotSize, setLotSize] = useState('75');
+  const [optionType, setOptionType] = useState('CE');
+  const [expiryType, setExpiryType] = useState('Weekly');
+  const [moneynessType, setMoneynessType] = useState('ATM');
+  const [entryPriceType, setEntryPriceType] = useState('Market');
+  const [atmStrike, setAtmStrike] = useState('OTM-1');
+  const [stopLossType, setStopLossType] = useState('Previous Candle - High');
+  const [slTrailType, setSlTrailType] = useState('On Candle Close');
+  
+  // Exit Conditions
+  const [exitOptionType, setExitOptionType] = useState('CE');
+  const [exitCandleTiming, setExitCandleTiming] = useState('Start');
+  const [exitCandleColor, setExitCandleColor] = useState('Green');
+  const [exitSlHit, setExitSlHit] = useState(false);
+  
+  // Modal states for dropdowns
+  const [showCandleColorModal, setShowCandleColorModal] = useState(false);
+  const [showCandleTimingModal, setShowCandleTimingModal] = useState(false);
+  const [showLotSizeModal, setShowLotSizeModal] = useState(false);
+  const [showMoneynessModal, setShowMoneynessModal] = useState(false);
+  const [showAtmStrikeModal, setShowAtmStrikeModal] = useState(false);
+  const [showSlTypeModal, setShowSlTypeModal] = useState(false);
+  const [showSlTrailModal, setShowSlTrailModal] = useState(false);
+  const [showTimeRangeModal, setShowTimeRangeModal] = useState(false);
+  const [currentDropdownType, setCurrentDropdownType] = useState('');
+  
   // Dynamic data from Zerodha
-  const [marketData, setMarketData] = useState<any>({});
   const [liveQuotes, setLiveQuotes] = useState<any>({});
   const [candleData, setCandleData] = useState<any>({});
   const [loadingMarketData, setLoadingMarketData] = useState(false);
+  const [showRealTimeChart, setShowRealTimeChart] = useState(false);
+  const [realTimeChartInstruments, setRealTimeChartInstruments] = useState<string[]>([]);
 
   const strategyTypes = ['Candle Based', 'Time Based', 'Indicator Based'];
   const chartTypes = ['Candle', 'Line', 'OHLC'];
@@ -99,6 +139,55 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
     { id: '7', name: 'Morning Star', type: 'bullish' },
     { id: '8', name: 'Evening Star', type: 'bearish' },
   ];
+
+  // Dropdown data
+  const candleColors = ['Green', 'Red'];
+  const candleTimings = ['Start', 'Close'];
+  const lotSizes = ['25', '50', '75', '100', '125', '150'];
+  const moneynessTypes = ['ATM', 'ITM', 'OTM'];
+  const atmStrikes = ['ITM-5', 'ITM-3', 'ITM-2', 'ITM-1', 'ATM', 'OTM-1', 'OTM-2', 'OTM-3', 'OTM-5'];
+  const slTypes = ['Previous Candle - High', 'Previous Candle - Low', 'SAME Candle - High', 'SAME Candle - Low'];
+  const slTrailTypes = ['On Candle Close', 'On Candle Start', 'On Price Movement'];
+  const timeRanges = ['1 sec to 10 sec', '1 sec to 30 sec', '1 sec to 60 sec', '5 sec to 30 sec'];
+
+  // Dropdown handlers
+  const handleDropdownSelect = (type: string, value: string) => {
+    switch (type) {
+      case 'firstCandleColor':
+        setFirstCandleColor(value);
+        break;
+      case 'firstCandleTiming':
+        setFirstCandleTiming(value);
+        break;
+      case 'secondCandleColor':
+        setSecondCandleColor(value);
+        break;
+      case 'secondCandleTiming':
+        setSecondCandleTiming(value);
+        break;
+      case 'candleTimeSelection':
+        setCandleTimeSelection(value);
+        break;
+      case 'timeRange':
+        setTimeRange(value);
+        break;
+      case 'lotSize':
+        setLotSize(value);
+        break;
+      case 'moneynessType':
+        setMoneynessType(value);
+        break;
+      case 'atmStrike':
+        setAtmStrike(value);
+        break;
+      case 'stopLossType':
+        setStopLossType(value);
+        break;
+      case 'slTrailType':
+        setSlTrailType(value);
+        break;
+    }
+  };
 
   // Fetch live market data from Zerodha
   const fetchMarketData = useCallback(async () => {
@@ -156,51 +245,22 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
     try {
       let instruments: string[] = [];
 
+      // First try to get market indices from API
       try {
         const marketIndices = await marketDataService.getMarketIndices();
         const indexSymbols = marketIndices.map((index) => index.name.replace(/\s+/g, ''));
-        instruments = indexSymbols;
-      } catch {
-        instruments = ['NIFTY50', 'BANKNIFTY', 'FINNIFTY', 'SENSEX', 'BANKEX'];
+        instruments = [...instruments, ...indexSymbols];
+      } catch (error) {
+        console.log('Market indices API failed:', error);
       }
 
-      const popularStocks = [
-        'RELIANCE',
-        'TCS',
-        'INFY',
-        'HDFCBANK',
-        'ICICIBANK',
-        'SBIN',
-        'BHARTIARTL',
-        'ITC',
-        'HINDUNILVR',
-        'KOTAKBANK',
-        'LT',
-        'ASIANPAINT',
-        'MARUTI',
-        'AXISBANK',
-        'WIPRO',
-        'ONGC',
-        'ADANIPORTS',
-        'COALINDIA',
-        'NTPC',
-        'POWERGRID',
-        'ULTRACEMCO',
-        'NESTLEIND',
-        'BAJFINANCE',
-        'M&M',
-        'TITAN',
-        'SUNPHARMA',
-        'DRREDDY',
-        'BAJAJFINSV',
-        'TECHM',
-        'HCLTECH',
-      ];
-
+      // Try to get instruments from Zerodha API if authenticated
       const isAuthenticated = await kiteConnect.isAuthenticated();
       if (isAuthenticated) {
         try {
+          console.log('Fetching instruments from Zerodha API...');
           const allInstruments = await kiteConnect.getInstruments();
+          
           const kiteInstruments = allInstruments
             .filter((instrument: any) => {
               const symbol = instrument.tradingsymbol || instrument.trading_symbol;
@@ -215,36 +275,30 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
             })
             .map((instrument: any) => instrument.tradingsymbol || instrument.trading_symbol)
             .filter((symbol: string) => symbol && symbol.length > 0)
-            .slice(0, 200);
+            .slice(0, 300); // Increased limit for more instruments
 
-          instruments = [...instruments, ...kiteInstruments, ...popularStocks];
-        } catch {
-          instruments = [...instruments, ...popularStocks];
+          instruments = [...instruments, ...kiteInstruments];
+          console.log(`Fetched ${kiteInstruments.length} instruments from Zerodha`);
+        } catch (error) {
+          console.log('Zerodha instruments API failed:', error);
         }
-      } else {
-        instruments = [...instruments, ...popularStocks];
+      }
+
+      // If no instruments from APIs, show error
+      if (instruments.length === 0) {
+        throw new Error('No instruments available from any API source');
       }
 
       setAvailableInstruments([...new Set(instruments)].sort());
-    } catch {
-      const fallbackInstruments = [
-        'NIFTY50',
-        'BANKNIFTY',
-        'FINNIFTY',
-        'SENSEX',
-        'BANKEX',
-        'RELIANCE',
-        'TCS',
-        'INFY',
-        'HDFCBANK',
-        'ICICIBANK',
-        'SBIN',
-        'BHARTIARTL',
-        'ITC',
-        'HINDUNILVR',
-        'KOTAKBANK',
-      ];
-      setAvailableInstruments(fallbackInstruments);
+      console.log(`Total unique instruments loaded: ${instruments.length}`);
+    } catch (error) {
+      console.error('Failed to fetch instruments:', error);
+      setAvailableInstruments([]);
+      Alert.alert(
+        'API Error', 
+        'Unable to fetch instruments from API. Please check your internet connection and try again.',
+        [{ text: 'Retry', onPress: fetchInstruments }]
+      );
     } finally {
       setLoadingInstruments(false);
     }
@@ -360,7 +414,29 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
       onStrategyCreated(strategyData);
     }
 
-    Alert.alert('Success', 'Strategy created successfully!');
+    Alert.alert('Success', 'Strategy created successfully!', [
+      {
+        text: 'View Real-time Chart',
+        onPress: () => {
+          // Navigate to dedicated chart screen
+          if (navigation) {
+            navigation.navigate('chart-screen', {
+              strategyData,
+              instruments: selectedInstruments,
+              interval: selectedInterval
+            });
+          } else {
+            // Fallback to inline chart display
+            setRealTimeChartInstruments(selectedInstruments);
+            setShowRealTimeChart(true);
+          }
+        }
+      },
+      {
+        text: 'OK',
+        style: 'default'
+      }
+    ]);
     
     // Reset form
     setStrategyName('');
@@ -461,6 +537,59 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {selectedInstruments.length > 0 && selectedStrategyType === 'Candle Based' && (
+  <View style={styles.section}>
+    <Text style={styles.sectionTitle}>Chart Preview</Text>
+    {selectedInstruments.slice(0, 3).map((instrument, index) => (
+      <CandleChart
+        key={`${instrument}-${selectedInterval}`}
+        instrument={instrument}
+        interval={selectedInterval}
+        height={300}
+        onCandlePatternDetected={(pattern) => {
+          console.log(`Pattern detected for ${instrument}: ${pattern}`);
+          // You can trigger alerts or automatic order placement here
+        }}
+      />
+    ))}
+  </View>
+)}
+
+        {/* Real-time Chart Display */}
+        {showRealTimeChart && realTimeChartInstruments.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.realTimeChartHeader}>
+              <Text style={styles.sectionTitle}>Real-time Candle Charts</Text>
+              <TouchableOpacity 
+                style={styles.closeChartButton}
+                onPress={() => {
+                  setShowRealTimeChart(false);
+                  setRealTimeChartInstruments([]);
+                }}
+              >
+                <Ionicons name="close" size={20} color="#666" />
+              </TouchableOpacity>
+            </View>
+            {realTimeChartInstruments.map((instrument, index) => (
+              <CandleChart
+                key={`realtime-${instrument}-${selectedInterval}`}
+                instrument={instrument}
+                interval={selectedInterval}
+                height={400}
+                isRealTime={true}
+                onCandlePatternDetected={(pattern) => {
+                  console.log(`Real-time pattern detected for ${instrument}: ${pattern}`);
+                  Alert.alert(
+                    'Pattern Detected!',
+                    `${pattern} pattern detected for ${instrument}`,
+                    [{ text: 'OK' }]
+                  );
+                }}
+              />
+            ))}
+          </View>
+        )}
 
         {/* Transaction Type */}
         <View style={styles.section}>
@@ -576,11 +705,246 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
           </View>
         )}
 
+        {/* Enhanced Entry Conditions for Candle Based */}
+        {selectedStrategyType === 'Candle Based' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Entry Condition</Text>
+            
+            {/* First Candle Selection */}
+            <View style={styles.conditionRow}>
+              <Text style={styles.conditionLabel}>Select Candle I</Text>
+              <View style={styles.conditionControls}>
+                <View style={styles.dropdownWrapper}>
+                  <TouchableOpacity 
+                    style={styles.dropdownButton}
+                    onPress={() => {
+                      setCurrentDropdownType('firstCandleColor');
+                      setShowCandleColorModal(true);
+                    }}
+                  >
+                    <Text style={styles.dropdownText}>{firstCandleColor}</Text>
+                    <Ionicons name="chevron-down" size={16} color="#666" />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.dropdownWrapper}>
+                  <TouchableOpacity 
+                    style={styles.dropdownButton}
+                    onPress={() => {
+                      setCurrentDropdownType('firstCandleTiming');
+                      setShowCandleTimingModal(true);
+                    }}
+                  >
+                    <Text style={styles.dropdownText}>{firstCandleTiming}</Text>
+                    <Ionicons name="chevron-down" size={16} color="#666" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            {/* Second Candle Selection */}
+            <View style={styles.conditionRow}>
+              <Text style={styles.conditionLabel}>Select Candle II</Text>
+              <View style={styles.conditionControls}>
+                <View style={styles.dropdownWrapper}>
+                  <TouchableOpacity style={styles.dropdownButton}>
+                    <Text style={styles.dropdownText}>{secondCandleColor}</Text>
+                    <Ionicons name="chevron-down" size={16} color="#666" />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.dropdownWrapper}>
+                  <TouchableOpacity style={styles.dropdownButton}>
+                    <Text style={styles.dropdownText}>{secondCandleTiming}</Text>
+                    <Ionicons name="chevron-down" size={16} color="#666" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            {/* Candle Time Selection */}
+            <View style={styles.conditionRow}>
+              <Text style={styles.conditionLabel}>Select I/II Candle Time</Text>
+              <View style={styles.dropdownWrapper}>
+                <TouchableOpacity style={styles.dropdownButton}>
+                  <Text style={styles.dropdownText}>{candleTimeSelection}</Text>
+                  <Ionicons name="chevron-down" size={16} color="#666" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Time Range */}
+            <View style={styles.conditionRow}>
+              <Text style={styles.conditionLabel}>Time Range</Text>
+              <View style={styles.dropdownWrapper}>
+                <TouchableOpacity style={styles.dropdownButton}>
+                  <Text style={styles.dropdownText}>{timeRange}</Text>
+                  <Ionicons name="chevron-down" size={16} color="#666" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.addLegButton}>
+              <Ionicons name="add" size={16} color="#fff" />
+              <Text style={styles.addLegText}>+ ADD LEG</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Enhanced Order Leg Section for Candle Based */}
+        {selectedStrategyType === 'Candle Based' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Order Leg</Text>
+            
+            {/* Buy/Sell Selection */}
+            <View style={styles.conditionRow}>
+              <Text style={styles.conditionLabel}>Buy/Sell</Text>
+              <View style={styles.radioContainer}>
+                {['Buy', 'Sell'].map((action) => (
+                  <TouchableOpacity
+                    key={action}
+                    style={styles.radioOption}
+                    onPress={() => setSelectedOrderAction(action)}
+                  >
+                    <View style={styles.radioButton}>
+                      {selectedOrderAction === action && <View style={styles.radioButtonInner} />}
+                    </View>
+                    <Text style={styles.radioText}>{action}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Lot Size */}
+            <View style={styles.conditionRow}>
+              <Text style={styles.conditionLabel}>Lot</Text>
+              <View style={styles.dropdownWrapper}>
+                <TouchableOpacity 
+                  style={styles.dropdownButton}
+                  onPress={() => {
+                    setCurrentDropdownType('lotSize');
+                    setShowLotSizeModal(true);
+                  }}
+                >
+                  <Text style={styles.dropdownText}>Lot → {lotSize}</Text>
+                  <Ionicons name="chevron-down" size={16} color="#666" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* CE/PE Selection */}
+            <View style={styles.conditionRow}>
+              <Text style={styles.conditionLabel}>CE/PE</Text>
+              <View style={styles.radioContainer}>
+                {['CE', 'PE'].map((type) => (
+                  <TouchableOpacity
+                    key={type}
+                    style={styles.radioOption}
+                    onPress={() => setOptionType(type)}
+                  >
+                    <View style={styles.radioButton}>
+                      {optionType === type && <View style={styles.radioButtonInner} />}
+                    </View>
+                    <Text style={styles.radioText}>{type}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Weekly/Monthly */}
+            <View style={styles.conditionRow}>
+              <Text style={styles.conditionLabel}>Weekly/Monthly</Text>
+              <View style={styles.radioContainer}>
+                {['Weekly', 'Monthly'].map((type) => (
+                  <TouchableOpacity
+                    key={type}
+                    style={styles.radioOption}
+                    onPress={() => setExpiryType(type)}
+                  >
+                    <View style={styles.radioButton}>
+                      {expiryType === type && <View style={styles.radioButtonInner} />}
+                    </View>
+                    <Text style={styles.radioText}>{type}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* ATM/ITM/OTM */}
+            <View style={styles.conditionRow}>
+              <Text style={styles.conditionLabel}>ATM/ITM/OTM</Text>
+              <View style={styles.dropdownWrapper}>
+                <TouchableOpacity style={styles.dropdownButton}>
+                  <Text style={styles.dropdownText}>{moneynessType}</Text>
+                  <Ionicons name="chevron-down" size={16} color="#666" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Entry Price */}
+            <View style={styles.conditionRow}>
+              <Text style={styles.conditionLabel}>Entry - ON Market price</Text>
+              <View style={styles.radioContainer}>
+                {['Market', 'Limit'].map((type) => (
+                  <TouchableOpacity
+                    key={type}
+                    style={styles.radioOption}
+                    onPress={() => setEntryPriceType(type)}
+                  >
+                    <View style={styles.radioButton}>
+                      {entryPriceType === type && <View style={styles.radioButtonInner} />}
+                    </View>
+                    <Text style={styles.radioText}>{type}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* ATM Options */}
+            <View style={styles.conditionRow}>
+              <Text style={styles.conditionLabel}>ATM Options</Text>
+              <View style={styles.dropdownWrapper}>
+                <TouchableOpacity style={styles.dropdownButton}>
+                  <Text style={styles.dropdownText}>{atmStrike}</Text>
+                  <Ionicons name="chevron-down" size={16} color="#666" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Stop Loss Configuration */}
+            <View style={styles.conditionRow}>
+              <Text style={styles.conditionLabel}>SL - Previous Candle - High / SAME Candle - Low</Text>
+              <View style={styles.dropdownWrapper}>
+                <TouchableOpacity style={styles.dropdownButton}>
+                  <Text style={styles.dropdownText}>{stopLossType}</Text>
+                  <Ionicons name="chevron-down" size={16} color="#666" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* SL Trail */}
+            <View style={styles.conditionRow}>
+              <Text style={styles.conditionLabel}>SL Trail</Text>
+              <View style={styles.dropdownWrapper}>
+                <TouchableOpacity style={styles.dropdownButton}>
+                  <Text style={styles.dropdownText}>{slTrailType}</Text>
+                  <Ionicons name="chevron-down" size={16} color="#666" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.conditionRow}>
+              <Text style={styles.conditionLabel}>THEN Previous-I / Previous-II High / Low ok</Text>
+              <TouchableOpacity style={styles.okButton}>
+                <Text style={styles.okButtonText}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* Order Legs Section */}
         <View style={styles.section}>
           <View style={styles.orderLegsHeader}>
             <Text style={styles.orderLegsTitle}>
-              {selectedStrategyType === 'Candle Based' ? 'Entry/Exit Conditions' : 'Order Legs'}
+              {selectedStrategyType === 'Candle Based' ? 'Configured Order Legs' : 'Order Legs'}
             </Text>
             <TouchableOpacity style={styles.addLegButton} onPress={addOrderLeg}>
               <Ionicons name="add" size={16} color="#fff" />
@@ -630,66 +994,249 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
           ))}
         </View>
 
-        {/* Risk Management */}
+        {/* Exit Conditions for Candle Based */}
+        {selectedStrategyType === 'Candle Based' && (
+          <>
+            {/* Exit Condition - Buying */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Exit Condition - Buying</Text>
+              
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Exit CE/PE</Text>
+                <View style={styles.radioContainer}>
+                  {['CE', 'PE'].map((type) => (
+                    <TouchableOpacity
+                      key={type}
+                      style={styles.radioOption}
+                      onPress={() => setExitOptionType(type)}
+                    >
+                      <View style={styles.radioButton}>
+                        {exitOptionType === type && <View style={styles.radioButtonInner} />}
+                      </View>
+                      <Text style={styles.radioText}>{type}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Candle Start/Close</Text>
+                <View style={styles.radioContainer}>
+                  {['Start', 'Close'].map((timing) => (
+                    <TouchableOpacity
+                      key={timing}
+                      style={styles.radioOption}
+                      onPress={() => setExitCandleTiming(timing)}
+                    >
+                      <View style={styles.radioButton}>
+                        {exitCandleTiming === timing && <View style={styles.radioButtonInner} />}
+                      </View>
+                      <Text style={styles.radioText}>{timing}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Green/Red</Text>
+                <View style={styles.radioContainer}>
+                  {['Green', 'Red'].map((color) => (
+                    <TouchableOpacity
+                      key={color}
+                      style={styles.radioOption}
+                      onPress={() => setExitCandleColor(color)}
+                    >
+                      <View style={styles.radioButton}>
+                        {exitCandleColor === color && <View style={styles.radioButtonInner} />}
+                      </View>
+                      <Text style={styles.radioText}>{color}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>or SL HIT</Text>
+                <View style={styles.radioContainer}>
+                  <TouchableOpacity
+                    style={styles.radioOption}
+                    onPress={() => setExitSlHit(!exitSlHit)}
+                  >
+                    <View style={styles.radioButton}>
+                      {exitSlHit && <View style={styles.radioButtonInner} />}
+                    </View>
+                    <Text style={styles.radioText}>SL HIT</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>...</Text>
+                <TouchableOpacity style={styles.addLegButton}>
+                  <Ionicons name="add" size={16} color="#fff" />
+                  <Text style={styles.addLegText}>+ ADD LEG</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Exit Condition - Selling */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Exit Condition - Selling</Text>
+              
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Exit CE/PE</Text>
+                <View style={styles.radioContainer}>
+                  {['CE', 'PE'].map((type) => (
+                    <TouchableOpacity
+                      key={type}
+                      style={styles.radioOption}
+                      onPress={() => setExitOptionType(type)}
+                    >
+                      <View style={styles.radioButton}>
+                        {exitOptionType === type && <View style={styles.radioButtonInner} />}
+                      </View>
+                      <Text style={styles.radioText}>{type}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Candle Start/Close</Text>
+                <View style={styles.radioContainer}>
+                  {['Start', 'Close'].map((timing) => (
+                    <TouchableOpacity
+                      key={timing}
+                      style={styles.radioOption}
+                      onPress={() => setExitCandleTiming(timing)}
+                    >
+                      <View style={styles.radioButton}>
+                        {exitCandleTiming === timing && <View style={styles.radioButtonInner} />}
+                      </View>
+                      <Text style={styles.radioText}>{timing}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Green/Red</Text>
+                <View style={styles.radioContainer}>
+                  {['Green', 'Red'].map((color) => (
+                    <TouchableOpacity
+                      key={color}
+                      style={styles.radioOption}
+                      onPress={() => setExitCandleColor(color)}
+                    >
+                      <View style={styles.radioButton}>
+                        {exitCandleColor === color && <View style={styles.radioButtonInner} />}
+                      </View>
+                      <Text style={styles.radioText}>{color}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>or SL HIT</Text>
+                <View style={styles.radioContainer}>
+                  <TouchableOpacity
+                    style={styles.radioOption}
+                    onPress={() => setExitSlHit(!exitSlHit)}
+                  >
+                    <View style={styles.radioButton}>
+                      {exitSlHit && <View style={styles.radioButtonInner} />}
+                    </View>
+                    <Text style={styles.radioText}>SL HIT</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>...</Text>
+                <TouchableOpacity style={styles.addLegButton}>
+                  <Ionicons name="add" size={16} color="#fff" />
+                  <Text style={styles.addLegText}>+ ADD LEG</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </>
+        )}
+
+        {/* Enhanced Risk Management */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Risk Management</Text>
+          <Text style={styles.sectionTitle}>Risk : Reward</Text>
           
-          <View style={styles.riskRow}>
-            <View style={styles.riskInputContainer}>
-              <Text style={styles.riskLabel}>Risk : Reward</Text>
-              <TextInput
-                style={styles.riskInput}
-                value={riskRewardRatio}
-                onChangeText={setRiskRewardRatio}
-                placeholder="1:3"
-              />
+          <View style={styles.conditionRow}>
+            <Text style={styles.conditionLabel}>Risk : Reward :- 1:3</Text>
+            <TextInput
+              style={styles.riskInput}
+              value={riskRewardRatio}
+              onChangeText={setRiskRewardRatio}
+              placeholder="1:3"
+            />
+          </View>
+
+          <View style={styles.conditionRow}>
+            <Text style={styles.conditionLabel}>OVERALL Stop Lose</Text>
+            <View style={styles.toggleContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  overallStopLoss && styles.toggleButtonActive
+                ]}
+                onPress={() => setOverallStopLoss(!overallStopLoss)}
+              >
+                <Text style={[
+                  styles.toggleText,
+                  overallStopLoss && styles.toggleTextActive
+                ]}>
+                  {overallStopLoss ? 'ON' : 'OFF'}
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
 
-          <View style={styles.riskRow}>
-            <View style={styles.riskInputContainer}>
-              <Text style={styles.riskLabel}>Overall Stop Loss (%)</Text>
-              <TextInput
-                style={styles.riskInput}
-                value={overallStopLoss}
-                onChangeText={setOverallStopLoss}
-                placeholder="0.1%"
-                keyboardType="numeric"
-              />
-            </View>
-            <View style={styles.riskInputContainer}>
-              <Text style={styles.riskLabel}>Overall Profit (%)</Text>
-              <TextInput
-                style={styles.riskInput}
-                value={overallProfit}
-                onChangeText={setOverallProfit}
-                placeholder="0.5%"
-                keyboardType="numeric"
-              />
+          <View style={styles.conditionRow}>
+            <Text style={styles.conditionLabel}>Max Lose</Text>
+            <TextInput
+              style={styles.riskInput}
+              value={maxLossAmount}
+              onChangeText={setMaxLossAmount}
+              placeholder="1000"
+              keyboardType="numeric"
+            />
+          </View>
+
+          <View style={styles.conditionRow}>
+            <Text style={styles.conditionLabel}>OVERALL Profit</Text>
+            <View style={styles.toggleContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  overallProfit && styles.toggleButtonActive
+                ]}
+                onPress={() => setOverallProfit(!overallProfit)}
+              >
+                <Text style={[
+                  styles.toggleText,
+                  overallProfit && styles.toggleTextActive
+                ]}>
+                  {overallProfit ? 'ON' : 'OFF'}
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
 
-          <View style={styles.riskRow}>
-            <View style={styles.riskInputContainer}>
-              <Text style={styles.riskLabel}>Max Loss (₹)</Text>
-              <TextInput
-                style={styles.riskInput}
-                value={maxLossAmount}
-                onChangeText={setMaxLossAmount}
-                placeholder="1000"
-                keyboardType="numeric"
-              />
-            </View>
-            <View style={styles.riskInputContainer}>
-              <Text style={styles.riskLabel}>Max Profit (₹)</Text>
-              <TextInput
-                style={styles.riskInput}
-                value={maxProfitAmount}
-                onChangeText={setMaxProfitAmount}
-                placeholder="5000"
-                keyboardType="numeric"
-              />
-            </View>
+          <View style={styles.conditionRow}>
+            <Text style={styles.conditionLabel}>Max Profit</Text>
+            <TextInput
+              style={styles.riskInput}
+              value={maxProfitAmount}
+              onChangeText={setMaxProfitAmount}
+              placeholder="5000"
+              keyboardType="numeric"
+            />
           </View>
         </View>
 
@@ -778,16 +1325,26 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
 
                     <View style={styles.formRow}>
                       <Text style={styles.formLabel}>Instrument</Text>
-                      <View style={styles.pickerContainer}>
-                        <Picker
-                          selectedValue={currentEditingLeg.instrument}
-                          onValueChange={(value) => setCurrentEditingLeg(prev => prev ? {...prev, instrument: value} : null)}
-                          style={styles.picker}
-                        >
+                      <View style={styles.dropdownContainer}>
+                        <ScrollView style={styles.dropdownScroll}>
                           {selectedInstruments.map((instrument) => (
-                            <Picker.Item key={instrument} label={instrument} value={instrument} />
+                            <TouchableOpacity
+                              key={instrument}
+                              style={[
+                                styles.dropdownOption,
+                                currentEditingLeg.instrument === instrument && styles.selectedDropdownOption
+                              ]}
+                              onPress={() => setCurrentEditingLeg(prev => (prev ? { ...prev, instrument } : null))}
+                            >
+                              <Text style={[
+                                styles.dropdownOptionText,
+                                currentEditingLeg.instrument === instrument && styles.selectedDropdownOptionText
+                              ]}>
+                                {instrument}
+                              </Text>
+                            </TouchableOpacity>
                           ))}
-                        </Picker>
+                        </ScrollView>
                       </View>
                     </View>
                   </View>
@@ -799,19 +1356,29 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
                       
                       <View style={styles.formRow}>
                         <Text style={styles.formLabel}>Candle Type</Text>
-                        <View style={styles.pickerContainer}>
-                          <Picker
-                            selectedValue={currentEditingLeg.entryCondition?.candleType}
-                            onValueChange={(value) => setCurrentEditingLeg(prev => prev ? {
-                              ...prev, 
-                              entryCondition: {...prev.entryCondition!, candleType: value}
-                            } : null)}
-                            style={styles.picker}
-                          >
+                        <View style={styles.dropdownContainer}>
+                          <ScrollView style={styles.dropdownScroll}>
                             {candlePatterns.map((pattern) => (
-                              <Picker.Item key={pattern.id} label={pattern.name} value={pattern.name} />
+                              <TouchableOpacity
+                                key={pattern.id}
+                                style={[
+                                  styles.dropdownOption,
+                                  currentEditingLeg.entryCondition?.candleType === pattern.name && styles.selectedDropdownOption
+                                ]}
+                                onPress={() => setCurrentEditingLeg(prev => (prev ? {
+                                  ...prev,
+                                  entryCondition: { ...prev.entryCondition!, candleType: pattern.name }
+                                } : null))}
+                              >
+                                <Text style={[
+                                  styles.dropdownOptionText,
+                                  currentEditingLeg.entryCondition?.candleType === pattern.name && styles.selectedDropdownOptionText
+                                ]}>
+                                  {pattern.name}
+                                </Text>
+                              </TouchableOpacity>
                             ))}
-                          </Picker>
+                          </ScrollView>
                         </View>
                       </View>
 
@@ -887,19 +1454,29 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
                       <>
                         <View style={styles.formRow}>
                           <Text style={styles.formLabel}>Exit Candle Type</Text>
-                          <View style={styles.pickerContainer}>
-                            <Picker
-                              selectedValue={currentEditingLeg.exitCondition?.candleType}
-                              onValueChange={(value) => setCurrentEditingLeg(prev => prev ? {
-                                ...prev,
-                                exitCondition: {...prev.exitCondition!, candleType: value}
-                              } : null)}
-                              style={styles.picker}
-                            >
+                          <View style={styles.dropdownContainer}>
+                            <ScrollView style={styles.dropdownScroll}>
                               {candlePatterns.map((pattern) => (
-                                <Picker.Item key={pattern.id} label={pattern.name} value={pattern.name} />
+                                <TouchableOpacity
+                                  key={pattern.id}
+                                  style={[
+                                    styles.dropdownOption,
+                                    currentEditingLeg.exitCondition?.candleType === pattern.name && styles.selectedDropdownOption
+                                  ]}
+                                  onPress={() => setCurrentEditingLeg(prev => prev ? {
+                                    ...prev,
+                                    exitCondition: {...prev.exitCondition!, candleType: pattern.name}
+                                  } : null)}
+                                >
+                                  <Text style={[
+                                    styles.dropdownOptionText,
+                                    currentEditingLeg.exitCondition?.candleType === pattern.name && styles.selectedDropdownOptionText
+                                  ]}>
+                                    {pattern.name}
+                                  </Text>
+                                </TouchableOpacity>
                               ))}
-                            </Picker>
+                            </ScrollView>
                           </View>
                         </View>
 
@@ -1051,6 +1628,66 @@ const TradingStrategy = ({ onStrategyCreated }: TradingStrategyProps) => {
           </View>
         </View>
       )}
+
+      {/* Universal Dropdown Modal */}
+      <Modal visible={showCandleColorModal || showCandleTimingModal || showLotSizeModal || showMoneynessModal || showAtmStrikeModal || showSlTypeModal || showSlTrailModal || showTimeRangeModal} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Option</Text>
+              <TouchableOpacity 
+                onPress={() => {
+                  setShowCandleColorModal(false);
+                  setShowCandleTimingModal(false);
+                  setShowLotSizeModal(false);
+                  setShowMoneynessModal(false);
+                  setShowAtmStrikeModal(false);
+                  setShowSlTypeModal(false);
+                  setShowSlTrailModal(false);
+                  setShowTimeRangeModal(false);
+                }}
+                style={styles.closeButton}
+              >
+                <Text style={styles.closeButtonText}>×</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.modalContent}>
+              {(() => {
+                let options: string[] = [];
+                if (showCandleColorModal) options = candleColors;
+                else if (showCandleTimingModal) options = candleTimings;
+                else if (showLotSizeModal) options = lotSizes;
+                else if (showMoneynessModal) options = moneynessTypes;
+                else if (showAtmStrikeModal) options = atmStrikes;
+                else if (showSlTypeModal) options = slTypes;
+                else if (showSlTrailModal) options = slTrailTypes;
+                else if (showTimeRangeModal) options = timeRanges;
+
+                return options.map((option) => (
+                  <TouchableOpacity
+                    key={option}
+                    style={styles.dropdownOption}
+                    onPress={() => {
+                      handleDropdownSelect(currentDropdownType, option);
+                      setShowCandleColorModal(false);
+                      setShowCandleTimingModal(false);
+                      setShowLotSizeModal(false);
+                      setShowMoneynessModal(false);
+                      setShowAtmStrikeModal(false);
+                      setShowSlTypeModal(false);
+                      setShowSlTrailModal(false);
+                      setShowTimeRangeModal(false);
+                    }}
+                  >
+                    <Text style={styles.dropdownOptionText}>{option}</Text>
+                  </TouchableOpacity>
+                ));
+              })()}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -1614,6 +2251,116 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+  },
+  realTimeChartHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  closeChartButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#f5f5f5',
+  },
+  dropdownContainer: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    maxHeight: 150,
+  },
+  dropdownScroll: {
+    maxHeight: 150,
+  },
+  dropdownOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  selectedDropdownOption: {
+    backgroundColor: '#e3f2fd',
+  },
+  dropdownOptionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  selectedDropdownOptionText: {
+    color: '#1976d2',
+    fontWeight: '600',
+  },
+  // Enhanced Candle Strategy Styles
+  conditionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingVertical: 8,
+  },
+  conditionLabel: {
+    fontSize: 14,
+    color: '#666',
+    flex: 1,
+    marginRight: 12,
+  },
+  conditionControls: {
+    flexDirection: 'row',
+    gap: 8,
+    flex: 1,
+  },
+  dropdownWrapper: {
+    flex: 1,
+    minWidth: 80,
+  },
+  dropdownButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  dropdownText: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
+  },
+  okButton: {
+    backgroundColor: '#4caf50',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  okButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  toggleContainer: {
+    alignItems: 'flex-end',
+  },
+  toggleButton: {
+    backgroundColor: '#e0e0e0',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    minWidth: 50,
+    alignItems: 'center',
+  },
+  toggleButtonActive: {
+    backgroundColor: '#4caf50',
+  },
+  toggleText: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '600',
+  },
+  toggleTextActive: {
+    color: '#fff',
   },
 });
 

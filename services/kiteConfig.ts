@@ -49,6 +49,9 @@ export const KITE_ENDPOINTS = {
   
   // Market depth
   MARKET_DEPTH: '/quote/ohlc',
+  
+  // WebSocket
+  WEBSOCKET_URL: '/market/websocket',
 };
 
 // Trading constants

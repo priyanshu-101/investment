@@ -360,7 +360,7 @@ export function StrategiesScreen() {
 
       {/* Main Content */}
       {activeTab === 'Create Strategy' ? (
-        <TradingStrategy onStrategyCreated={handleStrategyCreated} />
+        <TradingStrategy onStrategyCreated={handleStrategyCreated} navigation={navigation} />
       ) : (
         <ScrollView 
           style={styles.contentContainer}

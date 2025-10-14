@@ -15,6 +15,7 @@ function AppLayout() {
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="auth" />
           <Stack.Screen name="index" />
+          <Stack.Screen name="chart-screen" />
         </Stack>
         <StatusBar style="dark" />
       </ThemeProvider>
