@@ -1,6 +1,6 @@
 import { StrategyTemplate } from '@/components/screens/StrategyTemplate';
-import React, { useEffect, useRef } from 'react';
-import { Animated, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, Image, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Header } from '../header';
 import { IndicesSlider } from '../indices-slider';
 import { ProductsSection } from '../products-section';
@@ -63,6 +63,7 @@ export function HomeScreen() {
         }),
       ])
     ).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -92,56 +93,10 @@ export function HomeScreen() {
 
 
                 <View style={styles.papersContainer}>
-                  <Animated.View
-                    style={[
-                      styles.paper,
-                      styles.redPaper,
-                      {
-                        transform: [
-                          { rotate: '-12deg' },
-                          {
-                            translateY: floatAnim1.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [0, -10],
-                            })
-                          }
-                        ]
-                      }
-                    ]}
-                  />
-                  <Animated.View
-                    style={[
-                      styles.paper,
-                      styles.whitePaper,
-                      {
-                        transform: [
-                          { rotate: '2deg' },
-                          {
-                            translateY: floatAnim2.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [0, -8],
-                            })
-                          }
-                        ]
-                      }
-                    ]}
-                  />
-                  <Animated.View
-                    style={[
-                      styles.paper,
-                      styles.orangePaper,
-                      {
-                        transform: [
-                          { rotate: '18deg' },
-                          {
-                            translateY: floatAnim3.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [0, -12],
-                            })
-                          }
-                        ]
-                      }
-                    ]}
+                  <Image
+                    source={require('@/assets/images/Logo.png')}
+                    style={styles.paper}
+                    resizeMode="contain"
                   />
                 </View>
               </View>
@@ -268,15 +223,9 @@ const styles = StyleSheet.create({
   },
   papersContainer: { position: 'absolute', top: 10, left: 60, right: 60, zIndex: 1 },
   paper: {
-    width: 45,
-    height: 65,
-    borderRadius: 6,
-    position: 'absolute',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
+    width: 100,
+    height: 125,
+
   },
   redPaper: { backgroundColor: '#FF6B6B', left: -8, top: 0, zIndex: 3 },
   whitePaper: { backgroundColor: '#FFFFFF', left: 12, top: 8, zIndex: 2 },
