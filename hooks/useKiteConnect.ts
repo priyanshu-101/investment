@@ -118,28 +118,40 @@ export const useKiteConnect = (): UseKiteConnectState & UseKiteConnectActions =>
 
   const handleAuthCallback = async (url: string) => {
     try {
+      // Only handle Kite Connect URLs - check for specific patterns
+      if (!url.includes('request_token=') || (!url.includes('kite.trade') && !url.includes('zerodha'))) {
+        return; // Not a valid Kite Connect callback, ignore silently
+      }
+
       const urlObj = new URL(url);
       const requestToken = urlObj.searchParams.get('request_token');
       const status = urlObj.searchParams.get('status');
 
-      if (status === 'success' && requestToken) {
-        setState(prev => ({ ...prev, isLoading: true }));
-        
-        // Exchange request token for access token
-        const { access_token } = await kiteConnect.generateSession(requestToken);
-        
-        if (access_token) {
-          setState(prev => ({ ...prev, isAuthenticated: true }));
-          await fetchUserData();
-          Alert.alert('Success', 'Successfully logged in to Kite Connect!');
+      // Only process if this is a valid Kite Connect callback
+      if (requestToken && status) {
+        if (status === 'success' && requestToken) {
+          setState(prev => ({ ...prev, isLoading: true }));
+          
+          // Exchange request token for access token
+          const { access_token } = await kiteConnect.generateSession(requestToken);
+          
+          if (access_token) {
+            setState(prev => ({ ...prev, isAuthenticated: true }));
+            await fetchUserData();
+            Alert.alert('Success', 'Successfully logged in to Kite Connect!');
+          }
+        } else {
+          const errorDescription = urlObj.searchParams.get('error_description') || 'Authentication failed';
+          Alert.alert('Login Failed', errorDescription);
         }
-      } else {
-        const errorDescription = urlObj.searchParams.get('error_description') || 'Authentication failed';
-        Alert.alert('Login Failed', errorDescription);
       }
+      // If no request_token or status, it's not a Kite Connect callback - ignore silently
     } catch (error) {
       console.error('Error handling auth callback:', error);
-      Alert.alert('Error', 'Failed to complete authentication');
+      // Only show error if this was actually a Kite Connect URL
+      if (url.includes('kite.trade') || url.includes('request_token=')) {
+        Alert.alert('Error', 'Failed to complete authentication');
+      }
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
     }
