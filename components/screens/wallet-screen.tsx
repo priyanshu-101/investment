@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useState } from 'react';
 import {
     Modal,
     ScrollView,
@@ -8,29 +9,133 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { useAuth } from '../../contexts/AuthContext';
+
+interface WalletData {
+  balance: number;
+  totalAdded: number;
+  totalWithdrawn: number;
+  totalProfit: number;
+  transactions: Array<{
+    id: number;
+    type: 'credit' | 'debit';
+    amount: number;
+    description: string;
+    date: string;
+    status: string;
+  }>;
+}
 
 export default function WalletScreen() {
+  const { user } = useAuth();
   const [showAddMoney, setShowAddMoney] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [amount, setAmount] = useState('');
-  const [walletBalance] = useState(50000); // Mock balance
+  const [walletData, setWalletData] = useState<WalletData>({
+    balance: 0,
+    totalAdded: 0,
+    totalWithdrawn: 0,
+    totalProfit: 0,
+    transactions: []
+  });
 
-  const transactions = [
-    { id: 1, type: 'credit', amount: 10000, description: 'Added money', date: '2024-01-15', status: 'completed' },
-    { id: 2, type: 'debit', amount: 5000, description: 'Strategy investment', date: '2024-01-14', status: 'completed' },
-    { id: 3, type: 'credit', amount: 2500, description: 'Strategy profit', date: '2024-01-13', status: 'completed' },
-    { id: 4, type: 'debit', amount: 1000, description: 'Withdrawal fee', date: '2024-01-12', status: 'completed' },
-    { id: 5, type: 'credit', amount: 15000, description: 'Added money', date: '2024-01-10', status: 'completed' },
-  ];
+  // Load wallet data on mount
+  useEffect(() => {
+    loadWalletData();
+  }, [user]);
 
-  const handleAddMoney = () => {
-    console.log('Adding money:', amount);
+  const loadWalletData = async () => {
+    if (!user) return;
+
+    try {
+      const walletKey = `wallet_data_${user.id}`;
+      const savedWallet = await AsyncStorage.getItem(walletKey);
+      
+      if (savedWallet) {
+        const parsedWallet = JSON.parse(savedWallet);
+        setWalletData(parsedWallet);
+      } else {
+        // Initialize with default values for new users
+        const defaultWallet: WalletData = {
+          balance: 50000,
+          totalAdded: 75000,
+          totalWithdrawn: 25000,
+          totalProfit: 7500,
+          transactions: [
+            { id: 1, type: 'credit', amount: 10000, description: 'Added money', date: '2024-01-15', status: 'completed' },
+            { id: 2, type: 'debit', amount: 5000, description: 'Strategy investment', date: '2024-01-14', status: 'completed' },
+            { id: 3, type: 'credit', amount: 2500, description: 'Strategy profit', date: '2024-01-13', status: 'completed' },
+            { id: 4, type: 'debit', amount: 1000, description: 'Withdrawal fee', date: '2024-01-12', status: 'completed' },
+            { id: 5, type: 'credit', amount: 15000, description: 'Added money', date: '2024-01-10', status: 'completed' }
+          ]
+        };
+        
+        await AsyncStorage.setItem(walletKey, JSON.stringify(defaultWallet));
+        setWalletData(defaultWallet);
+      }
+    } catch (error) {
+      console.error('Error loading wallet data:', error);
+    }
+  };
+
+  const saveWalletData = async (updatedData: WalletData) => {
+    if (!user) return;
+
+    try {
+      const walletKey = `wallet_data_${user.id}`;
+      await AsyncStorage.setItem(walletKey, JSON.stringify(updatedData));
+      setWalletData(updatedData);
+    } catch (error) {
+      console.error('Error saving wallet data:', error);
+    }
+  };
+
+  const handleAddMoney = async () => {
+    const addAmount = parseFloat(amount);
+    if (isNaN(addAmount) || addAmount <= 0) return;
+
+    const newTransaction = {
+      id: Date.now(),
+      type: 'credit' as const,
+      amount: addAmount,
+      description: 'Added money',
+      date: new Date().toISOString().split('T')[0],
+      status: 'completed'
+    };
+
+    const updatedData = {
+      ...walletData,
+      balance: walletData.balance + addAmount,
+      totalAdded: walletData.totalAdded + addAmount,
+      transactions: [newTransaction, ...walletData.transactions]
+    };
+
+    await saveWalletData(updatedData);
     setShowAddMoney(false);
     setAmount('');
   };
 
-  const handleWithdraw = () => {
-    console.log('Withdrawing money:', amount);
+  const handleWithdraw = async () => {
+    const withdrawAmount = parseFloat(amount);
+    if (isNaN(withdrawAmount) || withdrawAmount <= 0 || withdrawAmount > walletData.balance) return;
+
+    const newTransaction = {
+      id: Date.now(),
+      type: 'debit' as const,
+      amount: withdrawAmount,
+      description: 'Withdrawal',
+      date: new Date().toISOString().split('T')[0],
+      status: 'completed'
+    };
+
+    const updatedData = {
+      ...walletData,
+      balance: walletData.balance - withdrawAmount,
+      totalWithdrawn: walletData.totalWithdrawn + withdrawAmount,
+      transactions: [newTransaction, ...walletData.transactions]
+    };
+
+    await saveWalletData(updatedData);
     setShowWithdraw(false);
     setAmount('');
   };
@@ -47,7 +152,7 @@ export default function WalletScreen() {
       {/* Wallet Balance Card */}
       <View style={styles.balanceCard}>
         <Text style={styles.balanceLabel}>Available Balance</Text>
-        <Text style={styles.balanceAmount}>₹{walletBalance.toLocaleString()}</Text>
+        <Text style={styles.balanceAmount}>₹{walletData.balance.toLocaleString()}</Text>
         <View style={styles.buttonRow}>
           <TouchableOpacity 
             style={[styles.actionButton, styles.addButton]}
@@ -67,15 +172,15 @@ export default function WalletScreen() {
       {/* Quick Stats */}
       <View style={styles.statsContainer}>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>₹75,000</Text>
+          <Text style={styles.statValue}>₹{walletData.totalAdded.toLocaleString()}</Text>
           <Text style={styles.statLabel}>Total Added</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>₹25,000</Text>
+          <Text style={styles.statValue}>₹{walletData.totalWithdrawn.toLocaleString()}</Text>
           <Text style={styles.statLabel}>Total Withdrawn</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>₹7,500</Text>
+          <Text style={styles.statValue}>₹{walletData.totalProfit.toLocaleString()}</Text>
           <Text style={styles.statLabel}>Total Profit</Text>
         </View>
       </View>
@@ -83,7 +188,7 @@ export default function WalletScreen() {
       {/* Transaction History */}
       <View style={styles.transactionContainer}>
         <Text style={styles.sectionTitle}>Recent Transactions</Text>
-        {transactions.map((transaction) => (
+        {walletData.transactions.map((transaction) => (
           <View key={transaction.id} style={styles.transactionItem}>
             <View style={styles.transactionLeft}>
               <View style={[
@@ -184,7 +289,7 @@ export default function WalletScreen() {
             />
             
             <Text style={styles.withdrawNote}>
-              Available balance: ₹{walletBalance.toLocaleString()}
+              Available balance: ₹{walletData.balance.toLocaleString()}
             </Text>
 
             <View style={styles.modalButtonRow}>

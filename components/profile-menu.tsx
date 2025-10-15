@@ -1,6 +1,6 @@
-import React from 'react';
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
+import { formatCurrency, useProfileData } from '../hooks/useProfileData';
 
 interface ProfileMenuProps {
   visible: boolean;
@@ -10,6 +10,8 @@ interface ProfileMenuProps {
 
 export function ProfileMenu({ visible, onClose, onNavigate }: ProfileMenuProps) {
   const { user, isAuthenticated } = useAuth();
+  const { wallet, backtest, portfolio, isLoading, refreshData } = useProfileData();
+
   const menuItems = [
     { 
       icon: '👤', 
@@ -20,16 +22,23 @@ export function ProfileMenu({ visible, onClose, onNavigate }: ProfileMenuProps) 
     { 
       icon: '💳', 
       title: 'Wallet', 
-      value: '₹ 0.00',
+      value: formatCurrency(wallet.balance),
       color: '#4A90E2',
       screen: 'Wallet'
     },
     { 
       icon: '📊', 
       title: 'Backtest', 
-      value: '50.00',
+      value: `${backtest.credits} credits`,
       color: '#4A90E2',
       screen: 'Backtest'
+    },
+    { 
+      icon: '📈', 
+      title: 'Portfolio', 
+      value: formatCurrency(portfolio.totalValue),
+      color: '#4A90E2',
+      screen: 'Portfolio'
     },
     { 
       icon: '📱', 
@@ -77,6 +86,10 @@ export function ProfileMenu({ visible, onClose, onNavigate }: ProfileMenuProps) 
     onNavigate(screen); // Then navigate to the screen
   };
 
+  const handleRefreshData = async () => {
+    await refreshData();
+  };
+
   return (
     <Modal
       visible={visible}
@@ -94,6 +107,19 @@ export function ProfileMenu({ visible, onClose, onNavigate }: ProfileMenuProps) 
             {isAuthenticated && user && (
               <>
                 <View style={styles.userInfo}>
+                  <View style={styles.refreshContainer}>
+                    <TouchableOpacity 
+                      style={styles.refreshButton}
+                      onPress={handleRefreshData}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <ActivityIndicator size="small" color="#4A90E2" />
+                      ) : (
+                        <Text style={styles.refreshText}>↻</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </>
             )}
@@ -210,6 +236,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 12,
+    justifyContent: 'flex-end',
+  },
+  refreshContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  refreshButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f0f0f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 'auto',
+  },
+  refreshText: {
+    fontSize: 16,
+    color: '#4A90E2',
+    fontWeight: 'bold',
   },
   userAvatar: {
     width: 48,
