@@ -18,6 +18,11 @@ export interface StrategyApiData {
   expectedReturn?: number;
   backtestedFrom?: string;
   instruments?: string[];
+  // Enhanced fields for candle-based strategies
+  strategyType?: string;
+  fullStrategyData?: any; // Complete strategy configuration
+  createdAt?: string;
+  userId?: string;
 }
 
 class StrategiesApiService {

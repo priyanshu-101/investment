@@ -2,17 +2,17 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useStrategies } from '../../hooks/useStrategies';
@@ -72,9 +72,38 @@ export function StrategiesScreen() {
     }
   };
 
+  const deleteStrategy = async (strategyId: string) => {
+    try {
+      if (!user?.id) return;
+      
+      Alert.alert(
+        'Delete Strategy',
+        'Are you sure you want to delete this strategy? This action cannot be undone.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              const updatedStrategies = createdStrategies.filter(s => s.id !== strategyId);
+              setCreatedStrategies(updatedStrategies);
+              await saveCreatedStrategies(updatedStrategies);
+              
+              Alert.alert('Success', 'Strategy deleted successfully');
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Error deleting strategy:', error);
+      Alert.alert('Error', 'Failed to delete strategy');
+    }
+  };
+
   const tabs = [
     'Create Strategy',
     'My Strategies',
+    'Candle Strategies',
     'Deployed Strategies',
     'Strategy Template',
     'My Portfolio',
@@ -92,7 +121,15 @@ export function StrategiesScreen() {
     
     switch (activeTab) {
       case 'My Strategies':
-        filteredStrategies = allStrategies;
+        filteredStrategies = createdStrategies;
+        break;
+      case 'Candle Strategies':
+        // Filter for candle-based strategies from both created and API strategies
+        filteredStrategies = allStrategies.filter(s => 
+          s.strategyType === 'Candle Based' || 
+          s.category === 'Candle Based' ||
+          (s.fullStrategyData && s.fullStrategyData.selectedStrategyType === 'Candle Based')
+        );
         break;
       case 'Deployed Strategies':
         filteredStrategies = allStrategies.filter(s => s.isActive === true);
@@ -186,12 +223,17 @@ export function StrategiesScreen() {
       performance: [],
       isActive: false,
       risk: 'Medium' as 'Medium',
-      category: 'Custom',
+      category: strategyData.selectedStrategyType || 'Custom',
       description: `${strategyData.selectedStrategyType} strategy created on ${new Date().toLocaleDateString()}`,
       minInvestment: 25000,
       expectedReturn: 15,
       backtestedFrom: new Date().toISOString().split('T')[0],
       instruments: strategyData.instruments || [],
+      // Enhanced strategy data for candle-based strategies
+      strategyType: strategyData.selectedStrategyType,
+      fullStrategyData: strategyData, // Store complete strategy configuration
+      createdAt: new Date().toISOString(),
+      userId: user.id,
     };
 
     const updatedStrategies = [newStrategy, ...createdStrategies];
@@ -210,12 +252,27 @@ export function StrategiesScreen() {
   const StrategyCard = ({ strategy, onSubscribe }: { 
     strategy: StrategyApiData; 
     onSubscribe: (id: string, name: string) => void; 
-  }) => (
+  }) => {
+    const isCandleStrategy = strategy.strategyType === 'Candle Based' || 
+                           strategy.category === 'Candle Based' ||
+                           (strategy.fullStrategyData && strategy.fullStrategyData.selectedStrategyType === 'Candle Based');
+    
+    const candleData = strategy.fullStrategyData;
+    const isUserOwned = strategy.userId === user?.id;
+    
+    return (
     <TouchableOpacity style={styles.strategyCard}>
       <View style={styles.cardHeader}>
         <View>
           <ThemedText style={styles.strategyName}>{strategy.name}</ThemedText>
-          <ThemedText style={styles.strategyCategory}>{strategy.category}</ThemedText>
+          <ThemedText style={styles.strategyCategory}>
+            {strategy.category}
+            {isCandleStrategy && (
+              <ThemedText style={{ color: '#4A90E2', fontSize: 12, marginLeft: 8 }}>
+                📊 Candle-Based
+              </ThemedText>
+            )}
+          </ThemedText>
         </View>
         <View style={[styles.riskBadge, { backgroundColor: getRiskColor(strategy.risk) }]}>
           <ThemedText style={styles.riskText}>{strategy.risk}</ThemedText>
@@ -248,6 +305,29 @@ export function StrategiesScreen() {
         </View>
       </View>
 
+      {isCandleStrategy && candleData && (
+        <View style={styles.candleDetails}>
+          <View style={styles.candleDetailRow}>
+            <ThemedText style={styles.candleDetailLabel}>Interval:</ThemedText>
+            <ThemedText style={styles.candleDetailValue}>{candleData.selectedInterval || '1M'}</ThemedText>
+          </View>
+          <View style={styles.candleDetailRow}>
+            <ThemedText style={styles.candleDetailLabel}>Order Legs:</ThemedText>
+            <ThemedText style={styles.candleDetailValue}>{candleData.orderLegs?.length || 0}</ThemedText>
+          </View>
+          <View style={styles.candleDetailRow}>
+            <ThemedText style={styles.candleDetailLabel}>Instruments:</ThemedText>
+            <ThemedText style={styles.candleDetailValue}>{candleData.instruments?.length || 0}</ThemedText>
+          </View>
+          {candleData.riskManagement && (
+            <View style={styles.candleDetailRow}>
+              <ThemedText style={styles.candleDetailLabel}>Risk/Reward:</ThemedText>
+              <ThemedText style={styles.candleDetailValue}>{candleData.riskManagement.riskRewardRatio || '1:3'}</ThemedText>
+            </View>
+          )}
+        </View>
+      )}
+
       {strategy.description && (
         <ThemedText style={styles.description} numberOfLines={2}>
           {strategy.description}
@@ -261,17 +341,28 @@ export function StrategiesScreen() {
             {strategy.isActive ? 'Active' : 'Inactive'}
           </ThemedText>
         </View>
-        <TouchableOpacity 
-          style={styles.subscribeButton}
-          onPress={() => onSubscribe(strategy.id, strategy.name)}
-        >
-          <ThemedText style={styles.subscribeButtonText}>
-            {strategy.isActive ? 'Deploy' : 'Subscribe'}
-          </ThemedText>
-        </TouchableOpacity>
+        <View style={styles.actionButtons}>
+          {isUserOwned && (
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={() => deleteStrategy(strategy.id)}
+            >
+              <ThemedText style={styles.deleteButtonText}>Delete</ThemedText>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={styles.subscribeButton}
+            onPress={() => onSubscribe(strategy.id, strategy.name)}
+          >
+            <ThemedText style={styles.subscribeButtonText}>
+              {strategy.isActive ? 'Deploy' : 'Subscribe'}
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
       </View>
     </TouchableOpacity>
-  );
+    );
+  };
 
   const getRiskColor = (risk: string) => {
     switch (risk) {
@@ -651,4 +742,42 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
   },
   createButtonText: { fontSize: 14, color: '#4a4aff', fontWeight: '500' },
+  candleDetails: {
+    backgroundColor: '#f8f9fa',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  candleDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  candleDetailLabel: {
+    fontSize: 11,
+    color: '#666',
+    fontWeight: '500',
+  },
+  candleDetailValue: {
+    fontSize: 11,
+    color: '#333',
+    fontWeight: '600',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  deleteButton: {
+    backgroundColor: '#ef4444',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  deleteButtonText: {
+    fontSize: 12,
+    color: '#fff',
+    fontWeight: '600',
+  },
 });
