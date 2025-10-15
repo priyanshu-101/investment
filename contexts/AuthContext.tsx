@@ -39,28 +39,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const checkAuthState = async () => {
     try {
+      console.log('Checking auth state...');
       const currentUser = await AsyncStorage.getItem('currentUser');
       if (currentUser) {
-        setUser(JSON.parse(currentUser));
+        const parsedUser = JSON.parse(currentUser);
+        console.log('Found stored user:', parsedUser.email);
+        setUser(parsedUser);
+      } else {
+        console.log('No stored user found');
+        setUser(null);
       }
     } catch (error) {
       console.error('Error checking auth state:', error);
+      setUser(null);
     } finally {
+      console.log('Auth check complete, setting loading to false');
       setLoading(false);
     }
   };
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
+      console.log('Login attempt for:', email);
       const existingUsers = await AsyncStorage.getItem('users');
       const users = existingUsers ? JSON.parse(existingUsers) : [];
       
       const foundUser = users.find((u: User) => u.email === email && u.password === password);
       
       if (foundUser) {
+        console.log('Login successful, setting user:', foundUser.email);
         await AsyncStorage.setItem('currentUser', JSON.stringify(foundUser));
         setUser(foundUser);
         return true;
+      } else {
+        console.log('Login failed - user not found or invalid credentials');
       }
       return false;
     } catch (error) {

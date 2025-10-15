@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Button, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -15,7 +15,9 @@ export default function AuthScreen() {
   const [info, setInfo] = useState('');
 
   useEffect(() => {
+    console.log('Auth screen - authLoading:', authLoading, 'isAuthenticated:', isAuthenticated);
     if (!authLoading && isAuthenticated) {
+      console.log('Auth screen - redirecting to main app');
       router.replace('/');
     }
   }, [isAuthenticated, authLoading]);

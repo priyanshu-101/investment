@@ -11,13 +11,13 @@ function AppLayout() {
   return (
     <KiteConnectProvider>
       <ThemeProvider value={DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="auth" />
-        <Stack.Screen name="index" />
-        <Stack.Screen name="chart-screen" />
-        <Stack.Screen name="live-chart-screen" />
-        <Stack.Screen name="subscriptions" />
-      </Stack>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="auth" />
+          <Stack.Screen name="index" />
+          <Stack.Screen name="chart-screen" />
+          <Stack.Screen name="live-chart-screen" />
+          <Stack.Screen name="subscriptions" />
+        </Stack>
         <StatusBar style="dark" />
       </ThemeProvider>
     </KiteConnectProvider>
