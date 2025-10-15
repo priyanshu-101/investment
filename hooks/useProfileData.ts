@@ -42,6 +42,7 @@ interface ProfileMenuData {
   isLoading: boolean;
   error: string | null;
   refreshData: () => Promise<void>;
+  refreshBacktestData: () => Promise<void>;
 }
 
 export const useProfileData = (): ProfileMenuData => {
@@ -180,6 +181,17 @@ export const useProfileData = (): ProfileMenuData => {
     }
   }, [user, loadWalletData, loadBacktestData, kiteAuthenticated, refreshKiteData]);
 
+  // Refresh only backtest data
+  const refreshBacktestData = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      await loadBacktestData();
+    } catch (error) {
+      console.error('Error refreshing backtest data:', error);
+    }
+  }, [user, loadBacktestData]);
+
   // Load data on mount and when user changes
   useEffect(() => {
     if (user) {
@@ -193,7 +205,8 @@ export const useProfileData = (): ProfileMenuData => {
     portfolio: portfolioData,
     isLoading,
     error,
-    refreshData
+    refreshData,
+    refreshBacktestData
   };
 };
 

@@ -4,19 +4,19 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  Image,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { useAuth } from '../../contexts/AuthContext';
@@ -111,6 +111,35 @@ export function BacktestScreen() {
       setCredits(newCredits);
     } catch (error) {
       console.error('Error saving credits:', error);
+    }
+  };
+
+  const saveBacktestRunData = async (newCredits: number, results: BacktestResult) => {
+    if (!user) return;
+    
+    try {
+      const creditsKey = `backtest_credits_${user.id}`;
+      const runsKey = `backtest_runs_${user.id}`;
+      const lastResultKey = `backtest_last_result_${user.id}`;
+
+      // Get current run count
+      const currentRuns = await AsyncStorage.getItem(runsKey);
+      const newRuns = (currentRuns ? parseInt(currentRuns, 10) : 0) + 1;
+
+      // Save all backtest data
+      await Promise.all([
+        AsyncStorage.setItem(creditsKey, newCredits.toString()),
+        AsyncStorage.setItem(runsKey, newRuns.toString()),
+        AsyncStorage.setItem(lastResultKey, JSON.stringify({
+          strategy: results.strategy,
+          totalReturn: results.totalReturn,
+          winRate: results.winRate
+        }))
+      ]);
+
+      setCredits(newCredits);
+    } catch (error) {
+      console.error('Error saving backtest run data:', error);
     }
   };
 
@@ -300,9 +329,9 @@ export function BacktestScreen() {
         const mockResults = generateMockData(strategyDetails, getMonthsFromTimeframe(selectedTimeframe));
         setBacktestResults(mockResults);
         
-        // Deduct credits and save
+        // Deduct credits and save comprehensive backtest data
         const newCredits = credits - requiredCredits;
-        await saveUserCredits(newCredits);
+        await saveBacktestRunData(newCredits, mockResults);
         
         Alert.alert('Success', 'Backtest completed successfully!');
       }

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, useProfileData } from '../hooks/useProfileData';
@@ -10,7 +11,7 @@ interface ProfileMenuProps {
 
 export function ProfileMenu({ visible, onClose, onNavigate }: ProfileMenuProps) {
   const { user, isAuthenticated } = useAuth();
-  const { wallet, backtest, portfolio, isLoading, refreshData } = useProfileData();
+  const { wallet, backtest, portfolio, isLoading, refreshData, refreshBacktestData } = useProfileData();
 
   const menuItems = [
     { 
@@ -89,6 +90,13 @@ export function ProfileMenu({ visible, onClose, onNavigate }: ProfileMenuProps) 
   const handleRefreshData = async () => {
     await refreshData();
   };
+
+  // Refresh backtest data when profile menu becomes visible
+  useEffect(() => {
+    if (visible && isAuthenticated) {
+      refreshBacktestData();
+    }
+  }, [visible, isAuthenticated, refreshBacktestData]);
 
   return (
     <Modal
