@@ -1,21 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 // Note: Using React Native's built-in Picker for now
 // For production, consider using @react-native-picker/picker
 import { kiteConnect } from '../../services/kiteConnect';
 import { marketDataService } from '../../services/marketDataApi';
+import { PasswordModal } from '../password-modal';
 
 interface CandlePattern {
   id: string;
@@ -50,7 +51,7 @@ interface TradingStrategyProps {
 
 const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps) => {
   // Existing state
-  const [selectedStrategyType, setSelectedStrategyType] = useState('Candle Based');
+  const [selectedStrategyType, setSelectedStrategyType] = useState('Time Based');
   const [selectedChartType, setSelectedChartType] = useState('Candle');
   const [selectedOrderType, setSelectedOrderType] = useState('MIS');
   const [selectedTransactionType, setSelectedTransactionType] = useState('Buy');
@@ -119,6 +120,28 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
   const [liveQuotes, setLiveQuotes] = useState<any>({});
   const [candleData, setCandleData] = useState<any>({});
   const [loadingMarketData, setLoadingMarketData] = useState(false);
+
+  // Password protection for candle strategy
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [isPasswordVerified, setIsPasswordVerified] = useState(false);
+
+  // Password verification handlers
+  const handlePasswordSuccess = () => {
+    setIsPasswordVerified(true);
+    setSelectedStrategyType('Candle Based');
+  };
+
+  const handlePasswordClose = () => {
+    setShowPasswordModal(false);
+  };
+
+  const handleStrategyTypePress = (type: string) => {
+    if (type === 'Candle Based' && !isPasswordVerified) {
+      setShowPasswordModal(true);
+    } else {
+      setSelectedStrategyType(type);
+    }
+  };
 
   const strategyTypes = ['Candle Based', 'Time Based', 'Indicator Based'];
   const chartTypes = ['Candle', 'Bars', 'Hollow candles', 'Line', 'OHLC'];
@@ -487,14 +510,24 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
                   styles.tab,
                   selectedStrategyType === type && styles.activeTab
                 ]}
-                onPress={() => setSelectedStrategyType(type)}
+                onPress={() => handleStrategyTypePress(type)}
               >
-                <Text style={[
-                  styles.tabText,
-                  selectedStrategyType === type && styles.activeTabText
-                ]}>
-                  {type}
-                </Text>
+                <View style={styles.tabContent}>
+                  <Text style={[
+                    styles.tabText,
+                    selectedStrategyType === type && styles.activeTabText
+                  ]}>
+                    {type}
+                  </Text>
+                  {type === 'Candle Based' && !isPasswordVerified && (
+                    <Ionicons 
+                      name="lock-closed" 
+                      size={16} 
+                      color={selectedStrategyType === type ? "#fff" : "#666"} 
+                      style={styles.lockIcon}
+                    />
+                  )}
+                </View>
               </TouchableOpacity>
             ))}
           </View>
@@ -1713,6 +1746,15 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
           </View>
         </View>
       </Modal>
+
+      {/* Password Protection Modal */}
+      <PasswordModal
+        visible={showPasswordModal}
+        onClose={handlePasswordClose}
+        onSuccess={handlePasswordSuccess}
+        title="Access Candle Strategy"
+        message="This feature requires password verification. Please enter your password to continue."
+      />
     </SafeAreaView>
   );
 };
@@ -1757,6 +1799,14 @@ const styles = StyleSheet.create({
   },
   activeTabText: {
     color: '#1976d2',
+  },
+  tabContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lockIcon: {
+    marginLeft: 6,
   },
   selectedInstruments: {
     flexDirection: 'row',
