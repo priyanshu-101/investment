@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useAuth } from '../contexts/AuthContext';
+import { StrategyApiData } from '../services/strategiesApi';
 
 type ProductCategory = {
   id: string;
@@ -210,14 +213,98 @@ const productsByCategory: Record<ProductCategoryId, Product[]> = {
 
 export function ProductsSection() {
   const [activeCategory, setActiveCategory] = useState('Index Algo');
+  const [userStrategies, setUserStrategies] = useState<StrategyApiData[]>([]);
+  const [showStrategiesModal, setShowStrategiesModal] = useState(false);
+  const [selectedProductStrategies, setSelectedProductStrategies] = useState<StrategyApiData[]>([]);
+  const [selectedProductTitle, setSelectedProductTitle] = useState('');
+  const { user } = useAuth();
 
   const handleCategoryChange = (categoryId: string) => {
     setActiveCategory(categoryId);
   };
 
+  // Load user strategies from AsyncStorage
+  const loadUserStrategies = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      const key = `createdStrategies_${user.id}`;
+      const stored = await AsyncStorage.getItem(key);
+      if (stored) {
+        const strategies = JSON.parse(stored);
+        setUserStrategies(strategies);
+        console.log(`Loaded ${strategies.length} user strategies`);
+      }
+    } catch (error) {
+      console.error('Error loading user strategies:', error);
+    }
+  }, [user?.id]);
+
+  // Load strategies when component mounts or user changes
+  useEffect(() => {
+    loadUserStrategies();
+  }, [user?.id, loadUserStrategies]);
+
+  // Map product IDs to instrument keywords for filtering
+  const getProductInstrumentKeywords = (productId: string): string[] => {
+    const productInstrumentMap: Record<string, string[]> = {
+      'nifty': ['NIFTY', 'NIFTY50'],
+      'bank-nifty': ['BANKNIFTY', 'BANK NIFTY'],
+      'fin-nifty': ['FINNIFTY', 'FIN NIFTY'],
+      'sensex': ['SENSEX'],
+      'bankex': ['BANKEX'],
+      'midcap-nifty': ['MIDCPNIFTY', 'MIDCAP NIFTY'],
+      'stock-intraday': ['RELIANCE', 'TCS', 'INFY', 'HDFC', 'ICICIBANK'],
+      'stock-option': ['CE', 'PE'],
+      'stock-btst': ['RELIANCE', 'TCS', 'INFY', 'HDFC', 'ICICIBANK'],
+      'stock-positional': ['RELIANCE', 'TCS', 'INFY', 'HDFC', 'ICICIBANK'],
+      'stock-future': ['FUT'],
+      'silver-mcx': ['SILVER'],
+      'crude-oil-mcx': ['CRUDE', 'CRUDE OIL'],
+      'gold-mcx': ['GOLD'],
+      'custom-strategy': ['CUSTOM'],
+    };
+    return productInstrumentMap[productId] || [];
+  };
+
+  // Filter strategies by product
+  const getStrategiesForProduct = (productId: string): StrategyApiData[] => {
+    const instrumentKeywords = getProductInstrumentKeywords(productId);
+    
+    return userStrategies.filter(strategy => {
+      const instruments = strategy.instruments || strategy.fullStrategyData?.instruments || [];
+      
+      // Check if any instrument matches the product keywords
+      return instruments.some((instrument: string) => 
+        instrumentKeywords.some(keyword => 
+          instrument.toUpperCase().includes(keyword.toUpperCase())
+        )
+      );
+    });
+  };
+
   const handleProductClick = (product: Product) => {
-    if (product.isPlaceholder) return; 
-    console.log(`Clicked on ${product.title} in ${activeCategory} category`);
+    console.log(`Product clicked: ${product.title} (${product.id})`);
+    
+    if (product.isPlaceholder) {
+      console.log('Product is placeholder, ignoring click');
+      return; 
+    }
+    
+    if (!user?.id) {
+      console.log('User not authenticated');
+      Alert.alert('Authentication Required', 'Please log in to view strategies');
+      return;
+    }
+
+    // Get strategies for this product
+    const productStrategies = getStrategiesForProduct(product.id);
+    console.log(`Found ${productStrategies.length} strategies for ${product.title}:`, productStrategies);
+    
+    // Set the strategies and show modal
+    setSelectedProductStrategies(productStrategies);
+    setSelectedProductTitle(product.title);
+    setShowStrategiesModal(true);
   };
 
   const currentProducts = productsByCategory[activeCategory as keyof typeof productsByCategory] || [];
@@ -304,6 +391,67 @@ export function ProductsSection() {
           )}
         </View>
       </View>
+
+      {/* Strategies Modal */}
+      <Modal
+        visible={showStrategiesModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowStrategiesModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Strategies for {selectedProductTitle}</Text>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setShowStrategiesModal(false)}
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.strategiesList}>
+              {selectedProductStrategies.length > 0 ? (
+                selectedProductStrategies.map((strategy) => (
+                  <View key={strategy.id} style={styles.strategyCard}>
+                    <View style={styles.strategyHeader}>
+                      <Text style={styles.strategyName}>{strategy.name}</Text>
+                      <View style={[
+                        styles.statusBadge,
+                        { backgroundColor: strategy.isActive ? '#22c55e' : '#6b7280' }
+                      ]}>
+                        <Text style={styles.statusText}>
+                          {strategy.isActive ? 'Active' : 'Inactive'}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.strategyDescription}>{strategy.description}</Text>
+                    <View style={styles.strategyDetails}>
+                      <Text style={styles.strategyDetail}>Type: {strategy.strategyType || strategy.category}</Text>
+                      <Text style={styles.strategyDetail}>
+                        Instruments: {(strategy.instruments || []).join(', ')}
+                      </Text>
+                      <Text style={styles.strategyDetail}>
+                        Created: {new Date(strategy.createdAt || '').toLocaleDateString()}
+                      </Text>
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <View style={styles.emptyStrategies}>
+                  <Text style={styles.emptyStrategiesText}>
+                    No strategies found for {selectedProductTitle}
+                  </Text>
+                  <Text style={styles.emptyStrategiesSubtext}>
+                    Create a strategy with {selectedProductTitle} instruments to see it here.
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -424,5 +572,109 @@ const styles = StyleSheet.create({
     color: '#64748b',
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    width: '90%',
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+    flex: 1,
+  },
+  closeButton: {
+    padding: 4,
+  },
+  closeButtonText: {
+    fontSize: 20,
+    color: '#6b7280',
+    fontWeight: 'bold',
+  },
+  strategiesList: {
+    maxHeight: 400,
+    padding: 16,
+  },
+  strategyCard: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  strategyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  strategyName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+    flex: 1,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusText: {
+    fontSize: 12,
+    color: 'white',
+    fontWeight: '500',
+  },
+  strategyDescription: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  strategyDetails: {
+    gap: 4,
+  },
+  strategyDetail: {
+    fontSize: 12,
+    color: '#9ca3af',
+  },
+  emptyStrategies: {
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyStrategiesText: {
+    fontSize: 16,
+    color: '#6b7280',
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptyStrategiesSubtext: {
+    fontSize: 14,
+    color: '#9ca3af',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

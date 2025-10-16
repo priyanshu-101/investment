@@ -29,6 +29,7 @@ export function StrategiesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [createdStrategies, setCreatedStrategies] = useState<StrategyApiData[]>([]);
+  const [productFilter, setProductFilter] = useState<any>(null);
 
   const { user, isAuthenticated } = useAuth();
   const {
@@ -38,6 +39,57 @@ export function StrategiesScreen() {
     refreshStrategies,
     subscribeToStrategy
   } = useStrategies();
+
+  // Handle product filtering from AsyncStorage
+  useEffect(() => {
+    const checkForProductFilter = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const storedFilter = await AsyncStorage.getItem(`productFilter_${user.id}`);
+        if (storedFilter) {
+          const filter = JSON.parse(storedFilter);
+          // Check if filter is recent (within last 30 seconds)
+          if (Date.now() - filter.timestamp < 30000) {
+            setProductFilter(filter);
+            setActiveTab('My Strategies'); // Switch to My Strategies tab to show filtered results
+            // Clear the stored filter after using it
+            await AsyncStorage.removeItem(`productFilter_${user.id}`);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking for product filter:', error);
+      }
+    };
+
+    const unsubscribe = navigation.addListener('focus', checkForProductFilter);
+    checkForProductFilter(); // Also check on mount
+
+    // Set up polling to check for new filters every 2 seconds
+    const pollInterval = setInterval(checkForProductFilter, 2000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(pollInterval);
+    };
+  }, [navigation, user?.id]);
+
+  // Filter strategies based on product filter
+  const filterStrategiesByProduct = (strategies: StrategyApiData[]): StrategyApiData[] => {
+    if (!productFilter) return strategies;
+
+    return strategies.filter(strategy => {
+      const instruments = strategy.instruments || strategy.fullStrategyData?.instruments || [];
+      const instrumentKeywords = productFilter.instrumentKeywords || [];
+      
+      // Check if any instrument matches the product keywords
+      return instruments.some(instrument => 
+        instrumentKeywords.some(keyword => 
+          instrument.toUpperCase().includes(keyword.toUpperCase())
+        )
+      );
+    });
+  };
 
   // Generate dynamic performance data based on strategy configuration and market conditions
   const generateStrategyPerformance = useCallback(async (strategyType: string, strategyData: any) => {
@@ -362,6 +414,11 @@ export function StrategiesScreen() {
         filteredStrategies = allStrategies;
     }
 
+    // Apply product filter if active
+    if (productFilter) {
+      filteredStrategies = filterStrategiesByProduct(filteredStrategies);
+    }
+
     if (searchQuery.trim()) {
       filteredStrategies = filteredStrategies.filter(s =>
         s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -656,14 +713,28 @@ export function StrategiesScreen() {
         </TouchableOpacity>
       </View>
       {(activeTab === 'My Strategies' || activeTab === 'Deployed Strategies' || activeTab === 'Strategy Template') && (
-        <ThemedView style={styles.searchRow}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search Strategies"
-            placeholderTextColor="#999"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
+        <>
+          {productFilter && (
+            <View style={styles.productFilterBanner}>
+              <Text style={styles.productFilterText}>
+                Showing strategies for: {productFilter.productTitle}
+              </Text>
+              <TouchableOpacity 
+                style={styles.clearFilterButton}
+                onPress={() => setProductFilter(null)}
+              >
+                <Text style={styles.clearFilterText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          <ThemedView style={styles.searchRow}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search Strategies"
+              placeholderTextColor="#999"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
           <View style={{ position: 'relative' }}>
             <TouchableOpacity
               style={styles.sortButton}
@@ -690,6 +761,7 @@ export function StrategiesScreen() {
             )}
           </View>
         </ThemedView>
+        </>
       )}
 
       {/* Main Content */}
@@ -1022,5 +1094,33 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#fff',
     fontWeight: '600',
+  },
+  productFilterBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#1976d2',
+  },
+  productFilterText: {
+    fontSize: 14,
+    color: '#1976d2',
+    fontWeight: '500',
+    flex: 1,
+  },
+  clearFilterButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  clearFilterText: {
+    fontSize: 16,
+    color: '#1976d2',
+    fontWeight: 'bold',
   },
 });

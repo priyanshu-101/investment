@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -14,8 +15,10 @@ import {
 } from 'react-native';
 // Note: Using React Native's built-in Picker for now
 // For production, consider using @react-native-picker/picker
+import { useAuth } from '../../contexts/AuthContext';
 import { kiteConnect } from '../../services/kiteConnect';
 import { marketDataService } from '../../services/marketDataApi';
+import { StrategyApiData } from '../../services/strategiesApi';
 import { PasswordModal } from '../password-modal';
 
 interface CandlePattern {
@@ -50,6 +53,8 @@ interface TradingStrategyProps {
 }
 
 const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps) => {
+  const { user } = useAuth();
+  
   // Existing state
   const [selectedStrategyType, setSelectedStrategyType] = useState('Time Based');
   const [selectedChartType, setSelectedChartType] = useState('Candle');
@@ -413,7 +418,106 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
     setOrderLegs(prev => prev.filter(leg => leg.id !== id));
   };
 
-  const handleSaveStrategy = () => {
+  // Map strategy types to product categories
+  const getStrategyCategory = (strategyType: string, instruments: string[]): string => {
+    // Check if instruments contain index-related symbols
+    const indexKeywords = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY', 'SENSEX'];
+    const hasIndexInstruments = instruments.some(instrument => 
+      indexKeywords.some(keyword => instrument.toUpperCase().includes(keyword))
+    );
+
+    // Check if instruments contain commodity-related symbols
+    const commodityKeywords = ['GOLD', 'SILVER', 'CRUDE', 'NATURALGAS', 'COPPER'];
+    const hasCommodityInstruments = instruments.some(instrument => 
+      commodityKeywords.some(keyword => instrument.toUpperCase().includes(keyword))
+    );
+
+    // Check if instruments contain FNO-related symbols (options/futures)
+    const fnoKeywords = ['CE', 'PE', 'FUT'];
+    const hasFnoInstruments = instruments.some(instrument => 
+      fnoKeywords.some(keyword => instrument.toUpperCase().includes(keyword))
+    );
+
+    // Determine category based on strategy type and instruments
+    if (strategyType === 'Candle Based') {
+      if (hasIndexInstruments) return 'Index Algo';
+      if (hasCommodityInstruments) return 'Commodity Algo';
+      if (hasFnoInstruments) return 'FNO';
+      return 'Stock Algo';
+    } else if (strategyType === 'Time Based') {
+      if (hasIndexInstruments) return 'Index Algo';
+      if (hasCommodityInstruments) return 'Commodity Algo';
+      if (hasFnoInstruments) return 'FNO';
+      return 'Stock Algo';
+    } else if (strategyType === 'Indicator Based') {
+      return 'Deploy Strategy';
+    }
+
+    // Default fallback
+    return 'Stock Algo';
+  };
+
+  // Save strategy to user-specific storage organized by categories
+  const saveStrategyToStorage = async (strategyData: any) => {
+    if (!user?.id) {
+      Alert.alert('Error', 'User not authenticated. Please log in to save strategies.');
+      return false;
+    }
+
+    try {
+      // Determine the category for this strategy
+      const strategyCategory = getStrategyCategory(strategyData.selectedStrategyType, strategyData.instruments);
+      
+      // Create category-specific storage key
+      const categoryKey = `createdStrategies_${user.id}_${strategyCategory.replace(/\s+/g, '_')}`;
+      const existingStrategies = await AsyncStorage.getItem(categoryKey);
+      const strategies: StrategyApiData[] = existingStrategies ? JSON.parse(existingStrategies) : [];
+
+      // Create a new strategy object with proper structure
+      const newStrategy: StrategyApiData = {
+        id: Date.now().toString(),
+        name: strategyData.strategyName,
+        shortName: strategyData.strategyName.substring(0, 10) + '...',
+        category: strategyCategory, // Use the determined category
+        strategyType: strategyData.selectedStrategyType,
+        description: `${strategyData.selectedStrategyType} strategy for ${strategyData.instruments.join(', ')}`,
+        totalReturn: 0, // Will be calculated later
+        winRate: 0, // Will be calculated later
+        sharpeRatio: 0, // Will be calculated later
+        maxDrawdown: 0, // Will be calculated later
+        margin: 0, // Will be calculated later
+        performance: [], // Will be populated later
+        risk: 'Medium' as const,
+        isActive: false,
+        createdAt: new Date().toISOString(),
+        fullStrategyData: strategyData,
+        userId: user.id,
+        instruments: strategyData.instruments,
+      };
+
+      // Add the new strategy to the beginning of the array
+      const updatedStrategies = [newStrategy, ...strategies];
+      
+      // Save to category-specific AsyncStorage
+      await AsyncStorage.setItem(categoryKey, JSON.stringify(updatedStrategies));
+      
+      // Also save to the general strategies list for backward compatibility
+      const generalKey = `createdStrategies_${user.id}`;
+      const generalStrategies = await AsyncStorage.getItem(generalKey);
+      const allStrategies: StrategyApiData[] = generalStrategies ? JSON.parse(generalStrategies) : [];
+      const updatedAllStrategies = [newStrategy, ...allStrategies];
+      await AsyncStorage.setItem(generalKey, JSON.stringify(updatedAllStrategies));
+      
+      console.log(`Strategy saved to category: ${strategyCategory}`);
+      return true;
+    } catch (error) {
+      console.error('Error saving strategy:', error);
+      Alert.alert('Error', 'Failed to save strategy. Please try again.');
+      return false;
+    }
+  };
+
+  const handleSaveStrategy = async () => {
     if (!strategyName.trim()) {
       Alert.alert('Error', 'Please enter a strategy name');
       return;
@@ -465,6 +569,16 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
 
     console.log('Saving strategy:', strategyData);
     
+    // Save strategy to user-specific storage
+    const saveSuccess = await saveStrategyToStorage(strategyData);
+    
+    if (!saveSuccess) {
+      return; // Error already handled in saveStrategyToStorage
+    }
+    
+    // Get the category for display
+    const strategyCategory = getStrategyCategory(strategyData.selectedStrategyType, strategyData.instruments);
+    
     if (onStrategyCreated) {
       onStrategyCreated(strategyData);
     }
@@ -479,10 +593,10 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
           chartType: selectedChartType
         });
       } else {
-        Alert.alert('Success', 'Strategy created successfully! Navigate to Live Charts to view real-time data.');
+        Alert.alert('Success', `Strategy created and saved to ${strategyCategory} category! Navigate to Live Charts to view real-time data.`);
       }
     } else {
-      Alert.alert('Success', 'Strategy created successfully!', [
+      Alert.alert('Success', `Strategy created and saved to ${strategyCategory} category!`, [
         {
           text: 'OK',
           style: 'default'
