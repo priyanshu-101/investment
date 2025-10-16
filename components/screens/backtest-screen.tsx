@@ -2,21 +2,21 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { useAuth } from '../../contexts/AuthContext';
@@ -78,12 +78,7 @@ export function BacktestScreen() {
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
 
-  // Load user credits on mount
-  useEffect(() => {
-    loadUserCredits();
-  }, [user]);
-
-  const loadUserCredits = async () => {
+  const loadUserCredits = useCallback(async () => {
     if (!user) return;
     
     try {
@@ -100,7 +95,12 @@ export function BacktestScreen() {
     } catch (error) {
       console.error('Error loading credits:', error);
     }
-  };
+  }, [user]);
+
+  // Load user credits on mount
+  useEffect(() => {
+    loadUserCredits();
+  }, [user, loadUserCredits]);
 
   const saveUserCredits = async (newCredits: number) => {
     if (!user) return;
@@ -448,57 +448,76 @@ export function BacktestScreen() {
   };
 
   const exportToPDF = async () => {
-  if (!backtestResults) {
-    Alert.alert('Error', 'No backtest data to export');
-    return;
-  }
-
-  if (!isAuthenticated || !user) {
-    Alert.alert('Authentication Required', 'Please login to export reports');
-    return;
-  }
-
-  try {
-    console.log('=== Starting PDF Export ===');
-    
-    const sharingAvailable = await Sharing.isAvailableAsync();
-    console.log('Sharing available:', sharingAvailable);
-    
-    if (!sharingAvailable) {
-      Alert.alert('Error', 'Sharing is not available on this device');
+    if (!backtestResults) {
+      Alert.alert('Error', 'No backtest data to export');
       return;
     }
 
-    const htmlContent = generatePDFContent(backtestResults);
-    const filename = `backtest_${backtestResults.strategy.replace(/\s+/g, '_')}_${Date.now()}.html`;
-    const fileUri =  filename;
-    console.log('File URI:', fileUri);
-
-    console.log('Writing file...');
-    await FileSystem.writeAsStringAsync(fileUri, htmlContent);
-    console.log('File written successfully');
-    
-    const fileInfo = await FileSystem.getInfoAsync(fileUri);
-    console.log('File exists:', fileInfo.exists);
-    
-    if (!fileInfo.exists) {
-      throw new Error('File was not created successfully');
+    if (!isAuthenticated || !user) {
+      Alert.alert('Authentication Required', 'Please login to export reports');
+      return;
     }
 
-    console.log('Initiating share...');
-    await Sharing.shareAsync(fileUri);
-    
-    Alert.alert('Success', 'Report exported successfully!');
-  } catch (error) {
-    console.error('=== Export Error ===');
-    console.error('Error:', error);
-    
-    Alert.alert(
-      'Export Failed', 
-      `Unable to export report: ${error instanceof Error ? error.message : 'Unknown error'}`
-    );
-  }
-};
+    try {
+      console.log('=== Starting PDF Export ===');
+      console.log('Cache directory:', FileSystem.cacheDirectory);
+      console.log('Document directory:', FileSystem.documentDirectory);
+      
+      const sharingAvailable = await Sharing.isAvailableAsync();
+      console.log('Sharing available:', sharingAvailable);
+      
+      if (!sharingAvailable) {
+        Alert.alert('Error', 'Sharing is not available on this device');
+        return;
+      }
+
+      const htmlContent = generatePDFContent(backtestResults);
+      const filename = `backtest_${backtestResults.strategy.replace(/\s+/g, '_')}_${Date.now()}.html`;
+      
+      // Try different directory options
+      let fileUri: string;
+      if (FileSystem.cacheDirectory) {
+        fileUri = `${FileSystem.cacheDirectory}${filename}`;
+      } else if (FileSystem.documentDirectory) {
+        fileUri = `${FileSystem.documentDirectory}${filename}`;
+      } else {
+        // Fallback to a simple filename
+        fileUri = filename;
+      }
+      
+      console.log('File URI:', fileUri);
+
+      console.log('Writing file...');
+      await FileSystem.writeAsStringAsync(fileUri, htmlContent);
+      console.log('File written successfully');
+      
+      const fileInfo = await FileSystem.getInfoAsync(fileUri);
+      console.log('File exists:', fileInfo.exists);
+      if (fileInfo.exists && 'size' in fileInfo) {
+        console.log('File size:', fileInfo.size);
+      }
+      
+      if (!fileInfo.exists) {
+        throw new Error('File was not created successfully');
+      }
+
+      console.log('Initiating share...');
+      await Sharing.shareAsync(fileUri, {
+        mimeType: 'text/html',
+        dialogTitle: 'Share Backtest Report',
+      });
+      
+      Alert.alert('Success', 'Report exported successfully!');
+    } catch (error) {
+      console.error('=== Export Error ===');
+      console.error('Error:', error);
+      
+      Alert.alert(
+        'Export Failed', 
+        `Unable to export report: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  };
 
 const exportTransactions = async () => {
   if (!backtestResults) {
@@ -513,6 +532,8 @@ const exportTransactions = async () => {
 
   try {
     console.log('=== Starting Transaction Export ===');
+    console.log('Cache directory:', FileSystem.cacheDirectory);
+    console.log('Document directory:', FileSystem.documentDirectory);
     
     const sharingAvailable = await Sharing.isAvailableAsync();
     console.log('Sharing available:', sharingAvailable);
@@ -524,7 +545,18 @@ const exportTransactions = async () => {
 
     const csvContent = generateTransactionData(backtestResults);
     const filename = `transactions_${backtestResults.strategy.replace(/\s+/g, '_')}_${Date.now()}.csv`;
-    const fileUri =  filename;
+    
+    // Try different directory options
+    let fileUri: string;
+    if (FileSystem.cacheDirectory) {
+      fileUri = `${FileSystem.cacheDirectory}${filename}`;
+    } else if (FileSystem.documentDirectory) {
+      fileUri = `${FileSystem.documentDirectory}${filename}`;
+    } else {
+      // Fallback to a simple filename
+      fileUri = filename;
+    }
+    
     console.log('File URI:', fileUri);
 
     console.log('Writing file...');
@@ -533,13 +565,19 @@ const exportTransactions = async () => {
     
     const fileInfo = await FileSystem.getInfoAsync(fileUri);
     console.log('File exists:', fileInfo.exists);
+    if (fileInfo.exists && 'size' in fileInfo) {
+      console.log('File size:', fileInfo.size);
+    }
     
     if (!fileInfo.exists) {
       throw new Error('File was not created successfully');
     }
 
     console.log('Initiating share...');
-    await Sharing.shareAsync(fileUri);
+    await Sharing.shareAsync(fileUri, {
+      mimeType: 'text/csv',
+      dialogTitle: 'Share Transaction Data',
+    });
     
     Alert.alert('Success', 'Transaction data exported successfully!');
   } catch (error) {
