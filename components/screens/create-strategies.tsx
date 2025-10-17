@@ -2,16 +2,16 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 // Note: Using React Native's built-in Picker for now
 // For production, consider using @react-native-picker/picker
@@ -19,6 +19,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { kiteConnect } from '../../services/kiteConnect';
 import { marketDataService } from '../../services/marketDataApi';
 import { StrategyApiData } from '../../services/strategiesApi';
+import CandleChart from '../candlechart';
 import { PasswordModal } from '../password-modal';
 
 interface CandlePattern {
@@ -130,6 +131,11 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [isPasswordVerified, setIsPasswordVerified] = useState(false);
 
+  // Live candle chart state
+  const [showLiveChart, setShowLiveChart] = useState(false);
+  const [selectedChartInstrument, setSelectedChartInstrument] = useState<string>('');
+  const [detectedPatterns, setDetectedPatterns] = useState<string[]>([]);
+
   // Password verification handlers
   const handlePasswordSuccess = () => {
     setIsPasswordVerified(true);
@@ -138,6 +144,24 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
 
   const handlePasswordClose = () => {
     setShowPasswordModal(false);
+  };
+
+  // Handle candle pattern detection
+  const handleCandlePatternDetected = (pattern: string) => {
+    setDetectedPatterns(prev => {
+      if (!prev.includes(pattern)) {
+        return [...prev, pattern];
+      }
+      return prev;
+    });
+  };
+
+  // Show live chart for selected instrument
+  const showLiveChartForInstrument = (instrument: string) => {
+    setSelectedChartInstrument(instrument);
+    setShowLiveChart(true);
+    // Clear previous patterns when switching instruments
+    setDetectedPatterns([]);
   };
 
   const handleStrategyTypePress = (type: string) => {
@@ -366,8 +390,13 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
   useEffect(() => {
     if (selectedInstruments.length > 0) {
       fetchMarketData();
+      
+      // Auto-select first instrument for live chart if none selected
+      if (selectedStrategyType === 'Candle Based' && !selectedChartInstrument && selectedInstruments.length > 0) {
+        setSelectedChartInstrument(selectedInstruments[0]);
+      }
     }
-  }, [fetchMarketData, selectedInstruments.length]);
+  }, [fetchMarketData, selectedInstruments, selectedStrategyType, selectedChartInstrument]);
 
   const toggleDay = (day: string) => {
     setSelectedDays(prev => 
@@ -827,6 +856,129 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
           </View>
         )}
 
+        {/* Live Market Candle Display for Candle Based Strategies */}
+        {selectedStrategyType === 'Candle Based' && (
+          <View style={styles.section}>
+            <View style={styles.liveChartHeader}>
+              <Text style={styles.sectionTitle}>Live Market Candles</Text>
+              <View style={styles.liveChartControls}>
+                <TouchableOpacity 
+                  style={styles.liveChartToggle}
+                  onPress={() => setShowLiveChart(!showLiveChart)}
+                >
+                  <Ionicons 
+                    name={showLiveChart ? "eye-off" : "eye"} 
+                    size={16} 
+                    color="#1976d2" 
+                  />
+                  <Text style={styles.liveChartToggleText}>
+                    {showLiveChart ? 'Hide' : 'Show'} Live Chart
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* No Instruments Selected Message */}
+            {selectedInstruments.length === 0 && (
+              <View style={styles.noInstrumentsContainer}>
+                <Ionicons name="information-circle" size={24} color="#1976d2" />
+                <Text style={styles.noInstrumentsText}>
+                  Please select instruments above to view live market candles
+                </Text>
+              </View>
+            )}
+
+            {/* Detected Patterns Display */}
+            {detectedPatterns.length > 0 && (
+              <View style={styles.patternsContainer}>
+                <Text style={styles.patternsTitle}>Detected Patterns:</Text>
+                <View style={styles.patternsList}>
+                  {detectedPatterns.map((pattern, index) => (
+                    <View key={index} style={styles.patternChip}>
+                      <Text style={styles.patternText}>{pattern}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Instrument Selection for Live Chart */}
+            {showLiveChart && (
+              <View style={styles.instrumentChartSelector}>
+                <Text style={styles.chartSelectorLabel}>Select Instrument for Live Chart:</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.instrumentChartList}>
+                  {selectedInstruments.map((instrument) => (
+                    <TouchableOpacity
+                      key={instrument}
+                      style={[
+                        styles.instrumentChartButton,
+                        selectedChartInstrument === instrument && styles.selectedInstrumentChartButton
+                      ]}
+                      onPress={() => showLiveChartForInstrument(instrument)}
+                    >
+                      <Text style={[
+                        styles.instrumentChartText,
+                        selectedChartInstrument === instrument && styles.selectedInstrumentChartText
+                      ]}>
+                        {instrument}
+                      </Text>
+                      {liveQuotes[instrument] && (
+                        <Text style={styles.instrumentChartPrice}>
+                          ₹{liveQuotes[instrument].last_price?.toFixed(2)}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Live Candle Chart */}
+            {showLiveChart && selectedChartInstrument && (
+              <View style={styles.liveChartContainer}>
+                <CandleChart
+                  instrument={selectedChartInstrument}
+                  interval={selectedInterval}
+                  height={350}
+                  isRealTime={true}
+                  chartType={selectedChartType as 'Candle' | 'Bars' | 'Hollow candles' | 'Line' | 'OHLC'}
+                  onCandlePatternDetected={handleCandlePatternDetected}
+                  action={selectedTransactionType as 'Buy' | 'Sell' | 'Both'}
+                />
+              </View>
+            )}
+
+            {/* Market Status Indicator */}
+            {selectedInstruments.length > 0 && (
+              <View style={styles.marketStatusContainer}>
+                <View style={styles.marketStatusHeader}>
+                  <Ionicons name="pulse" size={16} color="#4CAF50" />
+                  <Text style={styles.marketStatusTitle}>Market Status</Text>
+                </View>
+                <View style={styles.marketStatusGrid}>
+                  {selectedInstruments.slice(0, 3).map((instrument) => {
+                    const quote = liveQuotes[instrument];
+                    return (
+                      <View key={instrument} style={styles.marketStatusItem}>
+                        <Text style={styles.marketStatusInstrument}>{instrument}</Text>
+                        <Text style={styles.marketStatusPrice}>
+                          ₹{quote?.last_price?.toFixed(2) || '0.00'}
+                        </Text>
+                        <Text style={[
+                          styles.marketStatusChange,
+                          quote?.net_change >= 0 ? styles.positiveChange : styles.negativeChange
+                        ]}>
+                          {quote?.net_change >= 0 ? '+' : ''}{quote?.net_change?.toFixed(2) || '0.00'}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+          </View>
+        )}
+
         {/* Enhanced Entry Conditions for Candle Based */}
         {selectedStrategyType === 'Candle Based' && (
           <View style={styles.section}>
@@ -884,7 +1036,7 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
 
             {/* Candle Time Selection */}
             <View style={styles.conditionRow}>
-              <Text style={styles.conditionLabel}>Select I/II Candle Time</Text>
+              <Text style={styles.conditionLabel}>Select II Candle Time</Text>
               <View style={styles.dropdownWrapper}>
                 <TouchableOpacity style={styles.dropdownButton}>
                   <Text style={styles.dropdownText}>{candleTimeSelection}</Text>
@@ -2601,6 +2753,179 @@ const styles = StyleSheet.create({
   selectedChartTypeOptionText: {
     color: '#1976d2',
     fontWeight: '600',
+  },
+  // Live Chart Styles
+  liveChartHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  liveChartControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  liveChartToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#1976d2',
+    gap: 6,
+  },
+  liveChartToggleText: {
+    fontSize: 14,
+    color: '#1976d2',
+    fontWeight: '600',
+  },
+  patternsContainer: {
+    marginBottom: 16,
+    padding: 12,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  patternsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  patternsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  patternChip: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  patternText: {
+    fontSize: 12,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  instrumentChartSelector: {
+    marginBottom: 16,
+  },
+  chartSelectorLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  instrumentChartList: {
+    paddingVertical: 8,
+  },
+  instrumentChartButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginRight: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    minWidth: 80,
+  },
+  selectedInstrumentChartButton: {
+    backgroundColor: '#1976d2',
+    borderColor: '#1976d2',
+  },
+  instrumentChartText: {
+    fontSize: 12,
+    color: '#333',
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  selectedInstrumentChartText: {
+    color: '#fff',
+  },
+  instrumentChartPrice: {
+    fontSize: 10,
+    color: '#666',
+    fontWeight: '500',
+  },
+  liveChartContainer: {
+    marginBottom: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  marketStatusContainer: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  marketStatusHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  marketStatusTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  marketStatusGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  marketStatusItem: {
+    flex: 1,
+    alignItems: 'center',
+    padding: 8,
+    backgroundColor: '#fff',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  marketStatusInstrument: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  marketStatusPrice: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 2,
+  },
+  marketStatusChange: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  noInstrumentsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e3f2fd',
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#1976d2',
+    marginBottom: 16,
+    gap: 12,
+  },
+  noInstrumentsText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#1976d2',
+    fontWeight: '500',
   },
 });
 
