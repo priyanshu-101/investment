@@ -60,6 +60,31 @@ export function OptionChainModal({
     return value > threshold ? '#1abc9c' : '#e74c3c';
   };
 
+  const calculateSummary = () => {
+    if (!optionChainData) return null;
+
+    const totalCallOI = optionChainData.strikes.reduce((sum, strike) => sum + strike.callOI, 0);
+    const totalPutOI = optionChainData.strikes.reduce((sum, strike) => sum + strike.putOI, 0);
+    const totalCallVolume = optionChainData.strikes.reduce((sum, strike) => sum + strike.callVolume, 0);
+    const totalPutVolume = optionChainData.strikes.reduce((sum, strike) => sum + strike.putVolume, 0);
+
+    const oiDifference = totalCallOI - totalPutOI;
+    const volumeDifference = totalCallVolume - totalPutVolume;
+    const putCallRatio = totalCallOI > 0 ? (totalPutOI / totalCallOI).toFixed(2) : '0.00';
+
+    return {
+      totalCallOI,
+      totalPutOI,
+      totalCallVolume,
+      totalPutVolume,
+      oiDifference,
+      volumeDifference,
+      putCallRatio,
+    };
+  };
+
+  const summary = calculateSummary();
+
   return (
     <Modal
       visible={visible}
@@ -182,6 +207,75 @@ export function OptionChainModal({
                 </View>
               </View>
             ))}
+
+            {/* Summary Footer */}
+            {summary && (
+              <View style={styles.summarySection}>
+                <View style={styles.summaryRow}>
+                  <View style={styles.summaryItem}>
+                    <Text style={styles.summaryLabel}>Total Call OI</Text>
+                    <Text style={styles.summaryValue}>
+                      {optionChainService.formatNumber(summary.totalCallOI)}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryItem}>
+                    <Text style={styles.summaryLabel}>Total Put OI</Text>
+                    <Text style={styles.summaryValue}>
+                      {optionChainService.formatNumber(summary.totalPutOI)}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryItem}>
+                    <Text style={styles.summaryLabel}>P/C Ratio</Text>
+                    <Text style={styles.summaryValue}>{summary.putCallRatio}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.summaryRow}>
+                  <View style={[styles.summaryItem, styles.differenceItem]}>
+                    <Text style={styles.summaryLabel}>OI Difference (Call - Put)</Text>
+                    <Text
+                      style={[
+                        styles.summaryValue,
+                        {
+                          color: summary.oiDifference >= 0 ? '#1abc9c' : '#e74c3c',
+                          fontWeight: '700',
+                        },
+                      ]}
+                    >
+                      {summary.oiDifference >= 0 ? '+' : ''}{optionChainService.formatNumber(Math.abs(summary.oiDifference))}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.summaryRow}>
+                  <View style={styles.summaryItem}>
+                    <Text style={styles.summaryLabel}>Total Call Volume</Text>
+                    <Text style={styles.summaryValue}>
+                      {optionChainService.formatNumber(summary.totalCallVolume)}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryItem}>
+                    <Text style={styles.summaryLabel}>Total Put Volume</Text>
+                    <Text style={styles.summaryValue}>
+                      {optionChainService.formatNumber(summary.totalPutVolume)}
+                    </Text>
+                  </View>
+                  <View style={[styles.summaryItem, styles.differenceItem]}>
+                    <Text style={styles.summaryLabel}>Vol Diff</Text>
+                    <Text
+                      style={[
+                        styles.summaryValue,
+                        {
+                          color: summary.volumeDifference >= 0 ? '#1abc9c' : '#e74c3c',
+                        },
+                      ]}
+                    >
+                      {summary.volumeDifference >= 0 ? '+' : ''}{optionChainService.formatNumber(Math.abs(summary.volumeDifference))}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
           </ScrollView>
         ) : null}
       </View>
@@ -311,5 +405,38 @@ const styles = StyleSheet.create({
     color: '#475569',
     textAlign: 'center',
     minWidth: 50,
+  },
+  summarySection: {
+    backgroundColor: '#f8fafc',
+    borderTopWidth: 2,
+    borderTopColor: '#1a1f71',
+    paddingHorizontal: 12,
+    paddingVertical: 16,
+    marginTop: 8,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  summaryItem: {
+    flex: 1,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+  },
+  differenceItem: {
+    paddingHorizontal: 4,
+  },
+  summaryLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#64748b',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1a1f71',
+    textAlign: 'center',
   },
 });
