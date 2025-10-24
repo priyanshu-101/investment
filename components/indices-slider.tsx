@@ -1,6 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useMarketData } from '../hooks/useMarketData';
+import { OptionChainModal } from './option-chain-modal';
 
 export function IndicesSlider() {
   const { 
@@ -15,6 +16,8 @@ export function IndicesSlider() {
   });
 
   const [refreshing, setRefreshing] = React.useState(false);
+  const [selectedIndex, setSelectedIndex] = React.useState<{ name: string; value: number } | null>(null);
+  const [optionChainVisible, setOptionChainVisible] = React.useState(false);
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
@@ -24,6 +27,14 @@ export function IndicesSlider() {
       setRefreshing(false);
     }
   }, [refreshData]);
+
+  const handleCardPress = (name: string, value: string) => {
+    const numericValue = parseFloat(value.replace(/,/g, ''));
+    if (!isNaN(numericValue)) {
+      setSelectedIndex({ name, value: numericValue });
+      setOptionChainVisible(true);
+    }
+  };
 
 
   return (
@@ -62,7 +73,12 @@ export function IndicesSlider() {
           </View>
         ) : (
           indices.map((item, idx) => (
-            <View key={item.name || idx} style={styles.card}>
+            <TouchableOpacity
+              key={item.name || idx}
+              style={styles.card}
+              onPress={() => handleCardPress(item.name, item.value)}
+              activeOpacity={0.7}
+            >
               <Text style={styles.name}>{item.name}</Text>
               <Text style={styles.value}>{item.value}</Text>
               <Text style={[styles.change, { color: item.color }]}> 
@@ -73,10 +89,19 @@ export function IndicesSlider() {
                   <ActivityIndicator size="small" color="#1a1f71" />
                 </View>
               )}
-            </View>
+            </TouchableOpacity>
           ))
         )}
       </ScrollView>
+
+      {selectedIndex && (
+        <OptionChainModal
+          visible={optionChainVisible}
+          indexName={selectedIndex.name}
+          underlyingPrice={selectedIndex.value}
+          onClose={() => setOptionChainVisible(false)}
+        />
+      )}
     </View>
   );
 }
