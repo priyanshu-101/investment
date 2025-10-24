@@ -53,7 +53,7 @@ const CandleChart: React.FC<CandleChartProps> = ({
   const [showChartTypeModal, setShowChartTypeModal] = useState(false);
   
   const wsRef = useRef<WebSocket | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const chartWidth = screenWidth - 32;
   const chartHeight = height - 60; // Reserve space for controls
@@ -619,10 +619,9 @@ const CandleChart: React.FC<CandleChartProps> = ({
                       y={path.bodyTop}
                       width={path.candleWidth}
                       height={Math.max(path.bodyHeight, 1)}
-                      color="transparent"
+                      color={color}
                       style="stroke"
                       strokeWidth={2}
-                      stroke={color}
                     />
                   </Group>
                 );
@@ -997,7 +996,7 @@ const styles = StyleSheet.create({
   activeTimeframeText: {
     color: '#fff',
   },
-  chartContainer: {
+  chartArea: {
     height: 300,
     padding: 16,
   },
@@ -1040,15 +1039,15 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
     bottom: 0,
-    width: 40, // axisPadding value
+    width: 40,
     zIndex: 10,
   },
   xAxisContainer: {
     position: 'absolute',
-    left: 40, // axisPadding value
+    left: 40,
     right: 0,
     bottom: 0,
-    height: 30, // bottomPadding value
+    height: 30,
     zIndex: 10,
   },
   axisLabel: {

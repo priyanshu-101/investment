@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-const ChartScreen: React.FC = () => {
+export const ChartScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Chart Screen</Text>
@@ -29,5 +29,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-
-export default ChartScreen;

@@ -4,15 +4,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useStrategies } from '../../hooks/useStrategies';
@@ -102,12 +102,12 @@ export function StrategiesScreen() {
     if (!productFilter) return strategies;
 
     return strategies.filter(strategy => {
-      const instruments = strategy.instruments || strategy.fullStrategyData?.instruments || [];
-      const instrumentKeywords = productFilter.instrumentKeywords || [];
+      const instruments: string[] = strategy.instruments || strategy.fullStrategyData?.instruments || [];
+      const instrumentKeywords: string[] = productFilter.instrumentKeywords || [];
       
       // Check if any instrument matches the product keywords
-      return instruments.some(instrument => 
-        instrumentKeywords.some(keyword => 
+      return instruments.some((instrument: string) => 
+        instrumentKeywords.some((keyword: string) => 
           instrument.toUpperCase().includes(keyword.toUpperCase())
         )
       );
@@ -739,14 +739,14 @@ export function StrategiesScreen() {
         <>
           {productFilter && (
             <View style={styles.productFilterBanner}>
-              <Text style={styles.productFilterText}>
+              <ThemedText style={styles.productFilterText}>
                 Showing strategies for: {productFilter.productTitle}
-              </Text>
+              </ThemedText>
               <TouchableOpacity 
                 style={styles.clearFilterButton}
                 onPress={() => setProductFilter(null)}
               >
-                <Text style={styles.clearFilterText}>✕</Text>
+                <ThemedText style={styles.clearFilterText}>✕</ThemedText>
               </TouchableOpacity>
             </View>
           )}
