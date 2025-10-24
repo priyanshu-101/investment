@@ -5,7 +5,12 @@ import { Header } from '../header';
 import { IndicesSlider } from '../indices-slider';
 import { ProductsSection } from '../products-section';
 
-export function HomeScreen() {
+interface HomeScreenProps {
+  onNavigateToStrategies?: () => void;
+  onNavigateToBrokers?: () => void;
+}
+
+export function HomeScreen({ onNavigateToStrategies, onNavigateToBrokers }: HomeScreenProps) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const floatAnim1 = useRef(new Animated.Value(0)).current;
   const floatAnim2 = useRef(new Animated.Value(0)).current;
@@ -137,14 +142,14 @@ export function HomeScreen() {
             </Animated.Text>
 
             <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-              <TouchableOpacity style={styles.addButton}>
+              <TouchableOpacity style={styles.addButton} onPress={onNavigateToBrokers}>
                 <Text style={styles.addButtonText}>+ Add Broker</Text>
               </TouchableOpacity>
             </Animated.View>
           </View>
         </Animated.View>
 
-        <ProductsSection />
+        <ProductsSection onNavigateToStrategies={onNavigateToStrategies} />
         <Animated.View style={{ opacity: fadeAnim, width: '100%' }}>
           <StrategyTemplate />
         </Animated.View>

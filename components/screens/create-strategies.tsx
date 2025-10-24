@@ -327,7 +327,7 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
       // First try to get market indices from API
       try {
         const marketIndices = await marketDataService.getMarketIndices();
-        const indexSymbols = marketIndices.map((index) => index.name.replace(/\s+/g, ''));
+        const indexSymbols = marketIndices.map((index) => index.name);
         instruments = [...instruments, ...indexSymbols];
       } catch (error) {
         console.log('Market indices API failed:', error);

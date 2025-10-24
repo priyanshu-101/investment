@@ -23,7 +23,10 @@ function MainScreen() {
   const renderContent = () => {
     switch (activeTab) {
       case 'Home':
-        return <HomeScreen />;
+        return <HomeScreen 
+          onNavigateToStrategies={() => setActiveTab('Strategies')} 
+          onNavigateToBrokers={() => setActiveTab('Brokers')}
+        />;
       case 'Brokers':
         return <BrokersScreen />;
       case 'Strategies':
@@ -33,7 +36,10 @@ function MainScreen() {
       case 'Reports':
         return <ReportsScreen />;
       default:
-        return <HomeScreen />;
+        return <HomeScreen 
+          onNavigateToStrategies={() => setActiveTab('Strategies')} 
+          onNavigateToBrokers={() => setActiveTab('Brokers')}
+        />;
     }
   };
 

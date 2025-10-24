@@ -30,6 +30,7 @@ const productCategories: ProductCategory[] = [
 ];
 
 const productsByCategory: Record<ProductCategoryId, Product[]> = {
+  'Deploy Strategy': [],
   'Index Algo': [
     {
       id: 'nifty',
@@ -142,29 +143,6 @@ const productsByCategory: Record<ProductCategoryId, Product[]> = {
       iconColor: '#d97706',
     },
   ],
-  'Deploy Strategy': [
-    {
-      id: 'custom-strategy',
-      title: 'Custom Strategy',
-      icon: '🎯',
-      backgroundColor: '#e8f2ff',
-      iconColor: '#4285f4',
-    },
-    {
-      id: 'backtest-strategy',
-      title: 'Backtest Strategy',
-      icon: '📊',
-      backgroundColor: '#e8fdf5',
-      iconColor: '#10b981',
-    },
-    {
-      id: 'live-strategy',
-      title: 'Live Strategy',
-      icon: '🔴',
-      backgroundColor: '#fef2f2',
-      iconColor: '#ef4444',
-    },
-  ],
   'FNO': [
     {
       id: 'futures',
@@ -211,7 +189,11 @@ const productsByCategory: Record<ProductCategoryId, Product[]> = {
   ],
 };
 
-export function ProductsSection() {
+interface ProductsSectionProps {
+  onNavigateToStrategies?: () => void;
+}
+
+export function ProductsSection({ onNavigateToStrategies }: ProductsSectionProps) {
   const [activeCategory, setActiveCategory] = useState('Index Algo');
   const [userStrategies, setUserStrategies] = useState<StrategyApiData[]>([]);
   const [showStrategiesModal, setShowStrategiesModal] = useState(false);
@@ -220,6 +202,17 @@ export function ProductsSection() {
   const { user } = useAuth();
 
   const handleCategoryChange = (categoryId: string) => {
+    if (categoryId === 'Deploy Strategy') {
+      // Set the active tab for Strategies screen and navigate
+      AsyncStorage.setItem('activeStrategiesTab', 'Deployed Strategies')
+        .then(() => {
+          if (onNavigateToStrategies) {
+            onNavigateToStrategies();
+          }
+        })
+        .catch(err => console.error('Error setting active tab:', err));
+      return;
+    }
     setActiveCategory(categoryId);
   };
 
@@ -262,7 +255,6 @@ export function ProductsSection() {
       'silver-mcx': ['SILVER'],
       'crude-oil-mcx': ['CRUDE', 'CRUDE OIL'],
       'gold-mcx': ['GOLD'],
-      'custom-strategy': ['CUSTOM'],
     };
     return productInstrumentMap[productId] || [];
   };

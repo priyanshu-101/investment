@@ -51,82 +51,64 @@ class MarketDataService {
   // Check API configuration status
   private readonly apiStatus = checkApiConfiguration();
 
-  // Indian market indices mapping
+  // Indian market indices mapping - ordered as per user specification
   private readonly indicesMapping = {
     'NIFTY 50': { symbol: '^NSEI', yahooSymbol: '%5ENSEI' },
+    'BANK NIFTY': { symbol: '^NSEBANK', yahooSymbol: 'NIFTY_BANK.NS' },
+    'FINNIFTY': { symbol: '^CNXFIN', yahooSymbol: 'NIFTY_FIN_SERVICE.NS' },
     'SENSEX': { symbol: '^BSESN', yahooSymbol: '%5EBSESN' },
-    'NIFTY BANK': { symbol: '^NSEBANK', yahooSymbol: 'NIFTY_BANK.NS' },
-    'NIFTY IT': { symbol: '^CNXIT', yahooSymbol: 'NIFTY_IT.NS' },
-    'NIFTY AUTO': { symbol: '^CNXAUTO', yahooSymbol: 'NIFTY_AUTO.NS' },
-    'NIFTY PHARMA': { symbol: '^CNXPHARMA', yahooSymbol: 'NIFTY_PHARMA.NS' },
-    'NIFTY FMCG': { symbol: '^CNXFMCG', yahooSymbol: 'NIFTY_FMCG.NS' },
-    'NIFTY METAL': { symbol: '^CNXMETAL', yahooSymbol: 'NIFTY_METAL.NS' },
+    'Nifty Midcap Select': { symbol: '^CNXMID', yahooSymbol: 'NIFTY_MIDCAP_100.NS' },
+    'BANKEX': { symbol: '^BSEBANK', yahooSymbol: 'BSE_BANKEX.NS' },
   };
 
-  // Fallback static data in case APIs fail
+  // Fallback static data in case APIs fail - ordered as per user specification
   private readonly fallbackData: IndexData[] = [
     {
       name: 'NIFTY 50',
       symbol: '^NSEI',
-      value: '25,156.10',
+      value: '25,285.35',
       change: '+86.90',
       percent: '+0.35%',
       color: '#1abc9c',
     },
     {
-      name: 'SENSEX',
-      symbol: '^BSESN',
-      value: '82,090.13',
-      change: '+304.39',
-      percent: '+0.37%',
-      color: '#1abc9c',
-    },
-    {
-      name: 'NIFTY BANK',
+      name: 'BANK NIFTY',
       symbol: '^NSEBANK',
-      value: '52,145.75',
+      value: '56,609.75',
       change: '+245.80',
       percent: '+0.47%',
       color: '#1abc9c',
     },
     {
-      name: 'NIFTY IT',
-      symbol: '^CNXIT',
-      value: '43,892.60',
-      change: '-156.25',
-      percent: '-0.36%',
-      color: '#e74c3c',
-    },
-    {
-      name: 'NIFTY AUTO',
-      symbol: '^CNXAUTO',
-      value: '26,785.45',
+      name: 'FINNIFTY',
+      symbol: '^CNXFIN',
+      value: '26,842.25',
       change: '+189.30',
       percent: '+0.71%',
       color: '#1abc9c',
     },
     {
-      name: 'NIFTY PHARMA',
-      symbol: '^CNXPHARMA',
-      value: '21,456.90',
+      name: 'SENSEX',
+      symbol: '^BSESN',
+      value: '82,500.82',
+      change: '+304.39',
+      percent: '+0.37%',
+      color: '#1abc9c',
+    },
+    {
+      name: 'Nifty Midcap Select',
+      symbol: '^CNXMID',
+      value: '13,149.55',
       change: '-89.15',
       percent: '-0.41%',
       color: '#e74c3c',
     },
     {
-      name: 'NIFTY FMCG',
-      symbol: '^CNXFMCG',
-      value: '58,234.85',
+      name: 'BANKEX',
+      symbol: '^BSEBANK',
+      value: '63,872.58',
       change: '+123.45',
       percent: '+0.21%',
-      color: '#1abc9c',
-    },
-    {
-      name: 'NIFTY METAL',
-      symbol: '^CNXMETAL',
-      value: '9,876.20',
-      change: '+67.80',
-      percent: '+0.69%',
       color: '#1abc9c',
     },
   ];
@@ -298,117 +280,43 @@ class MarketDataService {
     }
   }
 
-  // Simulated market data for demo purposes
+  // Simulated market data for demo purposes - ordered as per user specification
   private generateSimulatedData(): IndexData[] {
-    console.log('Generating simulated market data...');
+    console.log('Generating simulated market data with dynamic fluctuations...');
     
-    const simulatedIndices: IndexData[] = [
-      {
-        name: 'NIFTY 50',
-        symbol: '^NSEI',
-        value: '24,634.90',
-        change: '+86.90',
-        percent: '+0.35%',
-        color: '#1abc9c',
-        lastUpdated: new Date().toISOString(),
-      },
-      {
-        name: 'SENSEX',
-        symbol: '^BSESN', 
-        value: '80,364.94',
-        change: '+304.39',
-        percent: '+0.38%',
-        color: '#1abc9c',
-        lastUpdated: new Date().toISOString(),
-      },
-      {
-        name: 'NIFTY BANK',
-        symbol: '^NSEBANK',
-        value: '52,145.75',
-        change: '+245.80',
-        percent: '+0.47%',
-        color: '#1abc9c',
-        lastUpdated: new Date().toISOString(),
-      },
-      {
-        name: 'NIFTY IT',
-        symbol: '^CNXIT',
-        value: '43,892.60',
-        change: '-156.25',
-        percent: '-0.36%',
-        color: '#e74c3c',
-        lastUpdated: new Date().toISOString(),
-      },
-      {
-        name: 'NIFTY AUTO',
-        symbol: '^CNXAUTO',
-        value: '26,785.45',
-        change: '+189.30',
-        percent: '+0.71%',
-        color: '#1abc9c',
-        lastUpdated: new Date().toISOString(),
-      },
-      {
-        name: 'NIFTY PHARMA',
-        symbol: '^CNXPHARMA',
-        value: '21,456.90',
-        change: '-89.15',
-        percent: '-0.41%',
-        color: '#e74c3c',
-        lastUpdated: new Date().toISOString(),
-      },
-      {
-        name: 'NIFTY FMCG',
-        symbol: '^CNXFMCG',
-        value: '58,234.85',
-        change: '+123.45',
-        percent: '+0.21%',
-        color: '#1abc9c',
-        lastUpdated: new Date().toISOString(),
-      },
-      {
-        name: 'NIFTY METAL',
-        symbol: '^CNXMETAL',
-        value: '9,876.20',
-        change: '+67.80',
-        percent: '+0.69%',
-        color: '#1abc9c',
-        lastUpdated: new Date().toISOString(),
-      }
+    // Base values for each index
+    const baseIndices = [
+      { name: 'NIFTY 50', symbol: '^NSEI', baseValue: 25285.35, baseChange: 86.90 },
+      { name: 'BANK NIFTY', symbol: '^NSEBANK', baseValue: 56609.75, baseChange: 245.80 },
+      { name: 'FINNIFTY', symbol: '^CNXFIN', baseValue: 26842.25, baseChange: 189.30 },
+      { name: 'SENSEX', symbol: '^BSESN', baseValue: 82500.82, baseChange: 304.39 },
+      { name: 'Nifty Midcap Select', symbol: '^CNXMID', baseValue: 13149.55, baseChange: -89.15 },
+      { name: 'BANKEX', symbol: '^BSEBANK', baseValue: 63872.58, baseChange: 123.45 },
     ];
 
-    // Add more noticeable random variations for fast updates
-    return simulatedIndices.map(index => {
-      try {
-        const baseValue = parseFloat(index.value.replace(/,/g, ''));
-        
-        // More dynamic fluctuation for faster refresh (±1.5% change)
-        const fluctuation = (Math.random() - 0.5) * 0.03; // ±1.5% fluctuation
-        const newValue = baseValue * (1 + fluctuation);
-        
-        // Calculate new change with more variation
-        const baseChange = parseFloat(index.change.replace(/[+\-,]/g, ''));
-        const changeMultiplier = 1 + (Math.random() - 0.5) * 0.4; // ±20% variation in change
-        const newChange = baseChange * changeMultiplier * (fluctuation > 0 ? 1 : -1);
-        const changePercent = (newChange / baseValue) * 100;
+    const simulatedIndices: IndexData[] = baseIndices.map(index => {
+      // Add realistic random fluctuation (-0.5% to +0.5%)
+      const fluctuationPercent = (Math.random() - 0.5) * 1.0; // Random between -0.5% and +0.5%
+      const fluctuationValue = (index.baseValue * fluctuationPercent) / 100;
+      const currentValue = index.baseValue + fluctuationValue;
+      
+      // Calculate change based on previous close (current value - fluctuation)
+      const previousClose = index.baseValue;
+      const change = currentValue - previousClose;
+      const changePercent = (change / previousClose) * 100;
 
-        // Sometimes make it negative for realism
-        const shouldBeNegative = Math.random() < 0.3; // 30% chance of being negative
-        const finalChange = shouldBeNegative ? -Math.abs(newChange) : Math.abs(newChange);
-        const finalPercent = shouldBeNegative ? -Math.abs(changePercent) : Math.abs(changePercent);
-
-        return {
-          ...index,
-          value: this.formatIndianCurrency(newValue),
-          change: finalChange >= 0 ? `+${this.formatIndianCurrency(finalChange)}` : `-${this.formatIndianCurrency(Math.abs(finalChange))}`,
-          percent: `${finalChange >= 0 ? '+' : ''}${finalPercent.toFixed(2)}%`,
-          color: finalChange >= 0 ? '#1abc9c' : '#e74c3c',
-        };
-      } catch (error) {
-        console.error(`Error in simulation for ${index.name}:`, error);
-        return index; // Return original if calculation fails
-      }
+      return {
+        name: index.name,
+        symbol: index.symbol,
+        value: this.formatIndianCurrency(currentValue),
+        change: change >= 0 ? `+${this.formatIndianCurrency(Math.abs(change))}` : `-${this.formatIndianCurrency(Math.abs(change))}`,
+        percent: `${change >= 0 ? '+' : ''}${changePercent.toFixed(2)}%`,
+        color: change >= 0 ? '#1abc9c' : '#e74c3c',
+        lastUpdated: new Date().toISOString(),
+      };
     });
+
+    return simulatedIndices;
   }
 
   // Main method to fetch market data with fallback strategy

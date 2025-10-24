@@ -74,6 +74,29 @@ export function StrategiesScreen() {
     };
   }, [navigation, user?.id]);
 
+  // Check for active tab selection from AsyncStorage
+  useEffect(() => {
+    const checkForActiveTab = async () => {
+      try {
+        const storedTab = await AsyncStorage.getItem('activeStrategiesTab');
+        if (storedTab) {
+          setActiveTab(storedTab);
+          // Clear the stored tab after using it
+          await AsyncStorage.removeItem('activeStrategiesTab');
+        }
+      } catch (error) {
+        console.error('Error checking for active tab:', error);
+      }
+    };
+
+    const unsubscribe = navigation.addListener('focus', checkForActiveTab);
+    checkForActiveTab(); // Also check on mount
+
+    return () => {
+      unsubscribe();
+    };
+  }, [navigation]);
+
   // Filter strategies based on product filter
   const filterStrategiesByProduct = (strategies: StrategyApiData[]): StrategyApiData[] => {
     if (!productFilter) return strategies;
