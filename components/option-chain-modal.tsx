@@ -60,6 +60,21 @@ export function OptionChainModal({
     return value > threshold ? '#1abc9c' : '#e74c3c';
   };
 
+  const getMaxValues = () => {
+    if (!optionChainData) return {};
+    
+    const maxCallOI = Math.max(...optionChainData.strikes.map(s => s.callOI));
+    const maxCallLTP = Math.max(...optionChainData.strikes.map(s => s.callLTP));
+    const maxCallIV = Math.max(...optionChainData.strikes.map(s => s.callIV));
+    const maxPutOI = Math.max(...optionChainData.strikes.map(s => s.putOI));
+    const maxPutLTP = Math.max(...optionChainData.strikes.map(s => s.putLTP));
+    const maxPutIV = Math.max(...optionChainData.strikes.map(s => s.putIV));
+
+    return { maxCallOI, maxCallLTP, maxCallIV, maxPutOI, maxPutLTP, maxPutIV };
+  };
+
+  const maxValues = getMaxValues();
+
   const calculateSummary = () => {
     if (!optionChainData) return null;
 
@@ -182,26 +197,46 @@ export function OptionChainModal({
 
                 {/* CALL Side */}
                 <View style={styles.callSection}>
-                  <Text style={styles.cellText}>
+                  <Text style={[
+                    styles.cellText,
+                    strike.callOI === maxValues.maxCallOI && styles.highlightedCell
+                  ]}>
                     {optionChainService.formatNumber(strike.callOI)}
                   </Text>
-                  <Text style={styles.cellText}>
+                  <Text style={[
+                    styles.cellText,
+                    strike.callLTP === maxValues.maxCallLTP && styles.highlightedCell
+                  ]}>
                     {optionChainService.formatPrice(strike.callLTP)}
                   </Text>
-                  <Text style={[styles.cellText, { color: getTextColor(strike.callIV, 20) }]}>
+                  <Text style={[
+                    styles.cellText,
+                    { color: getTextColor(strike.callIV, 20) },
+                    strike.callIV === maxValues.maxCallIV && styles.highlightedCell
+                  ]}>
                     {strike.callIV.toFixed(2)}%
                   </Text>
                 </View>
 
                 {/* PUT Side */}
                 <View style={styles.putSection}>
-                  <Text style={[styles.cellText, { color: getTextColor(strike.putIV, 20) }]}>
+                  <Text style={[
+                    styles.cellText,
+                    { color: getTextColor(strike.putIV, 20) },
+                    strike.putIV === maxValues.maxPutIV && styles.highlightedCell
+                  ]}>
                     {strike.putIV.toFixed(2)}%
                   </Text>
-                  <Text style={styles.cellText}>
+                  <Text style={[
+                    styles.cellText,
+                    strike.putLTP === maxValues.maxPutLTP && styles.highlightedCell
+                  ]}>
                     {optionChainService.formatPrice(strike.putLTP)}
                   </Text>
-                  <Text style={styles.cellText}>
+                  <Text style={[
+                    styles.cellText,
+                    strike.putOI === maxValues.maxPutOI && styles.highlightedCell
+                  ]}>
                     {optionChainService.formatNumber(strike.putOI)}
                   </Text>
                 </View>
@@ -405,6 +440,14 @@ const styles = StyleSheet.create({
     color: '#475569',
     textAlign: 'center',
     minWidth: 50,
+  },
+  highlightedCell: {
+    backgroundColor: '#ffd700',
+    fontWeight: '700',
+    color: '#1a1f71',
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    borderRadius: 4,
   },
   summarySection: {
     backgroundColor: '#f8fafc',
