@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View, Linking } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, useProfileData } from '../hooks/useProfileData';
 
@@ -12,6 +12,7 @@ interface ProfileMenuProps {
 export function ProfileMenu({ visible, onClose, onNavigate }: ProfileMenuProps) {
   const { user, isAuthenticated } = useAuth();
   const { wallet, backtest, portfolio, isLoading, refreshData, refreshBacktestData } = useProfileData();
+  const [activeModal, setActiveModal] = useState<string | null>(null);
 
   const menuItems = [
     { 
@@ -83,8 +84,12 @@ export function ProfileMenu({ visible, onClose, onNavigate }: ProfileMenuProps) 
   ];
 
   const handleMenuItemPress = (screen: string) => {
-    onClose(); // Close the menu first
-    onNavigate(screen); // Then navigate to the screen
+    onClose();
+    onNavigate(screen);
+  };
+
+  const handleBottomItemPress = (screen: string) => {
+    setActiveModal(screen);
   };
 
   const handleRefreshData = async () => {
@@ -156,7 +161,7 @@ export function ProfileMenu({ visible, onClose, onNavigate }: ProfileMenuProps) 
               <TouchableOpacity 
                 key={index} 
                 style={styles.menuItem}
-                onPress={() => handleMenuItemPress(item.screen)}
+                onPress={() => handleBottomItemPress(item.screen)}
               >
                 <View style={styles.menuItemLeft}>
                   <View style={[styles.iconContainer, { backgroundColor: item.color }]}>
@@ -169,6 +174,80 @@ export function ProfileMenu({ visible, onClose, onNavigate }: ProfileMenuProps) 
           </View>
         </View>
       </TouchableOpacity>
+
+      <Modal
+        visible={activeModal === 'Tutorial'}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setActiveModal(null)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setActiveModal(null)}
+        >
+          <View style={styles.modalContent}>
+            <TouchableOpacity onPress={() => setActiveModal(null)}>
+              <Text style={styles.modalCloseButton}>✕</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>How to use?</Text>
+            <Text style={styles.modalText}>UPCOMING</Text>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      <Modal
+        visible={activeModal === 'Community'}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setActiveModal(null)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setActiveModal(null)}
+        >
+          <View style={styles.modalContent}>
+            <TouchableOpacity onPress={() => setActiveModal(null)}>
+              <Text style={styles.modalCloseButton}>✕</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Join Community</Text>
+            <Text style={styles.modalText}>UPCOMING</Text>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      <Modal
+        visible={activeModal === 'HelpDesk'}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setActiveModal(null)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setActiveModal(null)}
+        >
+          <View style={styles.modalContent}>
+            <TouchableOpacity onPress={() => setActiveModal(null)}>
+              <Text style={styles.modalCloseButton}>✕</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Help Desk</Text>
+            <View style={styles.contactContainer}>
+              <Text style={styles.contactLabel}>Email:</Text>
+              <TouchableOpacity onPress={() => Linking.openURL('mailto:satyamalgovestment@zohomail.com')}>
+                <Text style={styles.contactValue}>satyamalgovestment@zohomail.com</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.contactContainer}>
+              <Text style={styles.contactLabel}>WhatsApp:</Text>
+              <TouchableOpacity onPress={() => Linking.openURL('https://wa.me/919828618998')}>
+                <Text style={styles.contactValue}>+91 9828618998</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </Modal>
   );
 }
@@ -290,5 +369,58 @@ const styles = StyleSheet.create({
   memberSince: {
     fontSize: 12,
     color: '#666',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 20,
+    maxWidth: '80%',
+    width: 300,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalCloseButton: {
+    fontSize: 20,
+    color: '#666',
+    alignSelf: 'flex-end',
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 16,
+  },
+  modalText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    paddingVertical: 20,
+  },
+  contactContainer: {
+    marginVertical: 12,
+  },
+  contactLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 6,
+  },
+  contactValue: {
+    fontSize: 14,
+    color: '#4A90E2',
+    textDecorationLine: 'underline',
   },
 });
