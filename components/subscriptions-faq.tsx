@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal, Image } from 'react-native';
 
 const BANK_DETAILS = {
   accountHolder: 'Rajendra Kumar Burdak',
@@ -36,6 +36,9 @@ const PLANS = [
 ];
 
 export function SubscriptionsAndFAQ() {
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+
   const planPrices = useMemo(() => {
     return PLANS.map((p) => ({
       ...p,
@@ -43,6 +46,11 @@ export function SubscriptionsAndFAQ() {
       periodLabel: 'One-time payment',
     }));
   }, []);
+
+  const handleBuyCredits = (planKey: string) => {
+    setSelectedPlan(planKey);
+    setShowPaymentModal(true);
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
@@ -70,7 +78,10 @@ export function SubscriptionsAndFAQ() {
                   <Text key={idx} style={styles.featureText}>• {f}</Text>
                 ))}
                 <View style={{ height: 16 }} />
-                <TouchableOpacity style={styles.selectButton}>
+                <TouchableOpacity 
+                  style={styles.selectButton}
+                  onPress={() => handleBuyCredits(plan.key)}
+                >
                   <Text style={styles.selectButtonText}>Buy Credits</Text>
                 </TouchableOpacity>
               </View>
@@ -101,6 +112,60 @@ export function SubscriptionsAndFAQ() {
           </View>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={showPaymentModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowPaymentModal(false)}
+      >
+        <SafeAreaView style={styles.paymentModalContainer}>
+          <View style={styles.paymentModalHeader}>
+            <TouchableOpacity onPress={() => setShowPaymentModal(false)}>
+              <Text style={styles.paymentCloseButton}>✕</Text>
+            </TouchableOpacity>
+            <Text style={styles.paymentModalTitle}>Payment</Text>
+            <View style={{ width: 24 }} />
+          </View>
+
+          <ScrollView contentContainerStyle={styles.paymentModalContent}>
+            <View style={styles.phonepeContainer}>
+              <View style={styles.phonepeLogo}>
+                <Text style={styles.phonepeLogoText}>₹</Text>
+              </View>
+              <Text style={styles.phonepeText}>PhonePe</Text>
+            </View>
+
+            <Text style={styles.acceptedText}>ACCEPTED HERE</Text>
+
+            <View style={styles.qrContainer}>
+              <Image
+                source={require('../assets/images/qr-code.jpg')}
+                style={styles.qrCode}
+                resizeMode="contain"
+              />
+            </View>
+
+            <Text style={styles.scanText}>Scan & Pay Using PhonePe App</Text>
+
+            <View style={styles.detailsContainer}>
+              <Text style={styles.detailsTitle}>Payment Details</Text>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Name:</Text>
+                <Text style={styles.detailValue}>Rajendra Kumar Burdak</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>UPI:</Text>
+                <Text style={styles.detailValue}>9672093921@ybl</Text>
+              </View>
+            </View>
+
+            <View style={styles.copyrightContainer}>
+              <Text style={styles.copyrightText}>© 2025, All rights reserved</Text>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -219,6 +284,119 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#2c3e50',
     marginBottom: 8,
+  },
+
+  paymentModalContainer: {
+    flex: 1,
+    backgroundColor: 'white',
+  },
+  paymentModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
+  },
+  paymentCloseButton: {
+    fontSize: 24,
+    color: '#666',
+    fontWeight: '500',
+  },
+  paymentModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2c3e50',
+  },
+  paymentModalContent: {
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+  },
+  phonepeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  phonepeLogo: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#5F2E8A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  phonepeLogoText: {
+    fontSize: 28,
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  phonepeText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#2c3e50',
+  },
+  acceptedText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#5F2E8A',
+    marginBottom: 24,
+    letterSpacing: 1,
+  },
+  qrContainer: {
+    marginVertical: 20,
+    alignItems: 'center',
+  },
+  qrCode: {
+    width: 250,
+    height: 250,
+  },
+  scanText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginTop: 16,
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  detailsContainer: {
+    width: '100%',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: 16,
+    marginVertical: 20,
+  },
+  detailsTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#2c3e50',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 8,
+  },
+  detailLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+  },
+  detailValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2c3e50',
+  },
+  copyrightContainer: {
+    marginVertical: 16,
+  },
+  copyrightText: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
   },
 });
 
