@@ -75,6 +75,28 @@ export function OptionChainModal({
 
   const maxValues = getMaxValues();
 
+  const getOIHighlightColor = () => {
+    if (!optionChainData) return { callColor: '#475569', putColor: '#475569' };
+    
+    const totalCallOI = optionChainData.strikes.reduce((sum, strike) => sum + strike.callOI, 0);
+    const totalPutOI = optionChainData.strikes.reduce((sum, strike) => sum + strike.putOI, 0);
+    
+    if (totalCallOI > totalPutOI) {
+      return { callColor: '#1abc9c', putColor: '#e74c3c' };
+    } else if (totalPutOI > totalCallOI) {
+      return { callColor: '#e74c3c', putColor: '#1abc9c' };
+    }
+    return { callColor: '#475569', putColor: '#475569' };
+  };
+
+  const oiColors = getOIHighlightColor();
+
+  const isOutOfTheMoney = (strikePrice: number, atmStrike: number) => {
+    return strikePrice !== atmStrike;
+  };
+
+  const atmStrike = Math.round(underlyingPrice / 50) * 50;
+
   const calculateSummary = () => {
     if (!optionChainData) return null;
 
@@ -185,34 +207,38 @@ export function OptionChainModal({
                     styles.atTheMoneyRow,
                 ]}
               >
-                <Text
-                  style={[
-                    styles.strikeCell,
-                    strike.strikePrice === Math.round(underlyingPrice / 50) * 50 &&
-                      styles.atmStrike,
-                  ]}
-                >
-                  {strike.strikePrice}
-                </Text>
+                <View style={styles.strikeCellContainer}>
+                  <Text
+                    style={[
+                      styles.strikeCell,
+                      strike.strikePrice === atmStrike &&
+                        styles.atmStrike,
+                    ]}
+                  >
+                    {strike.strikePrice}
+                  </Text>
+                  {isOutOfTheMoney(strike.strikePrice, atmStrike) && (
+                    <Text style={styles.otmLabel}>OTM</Text>
+                  )}
+                </View>
 
                 {/* CALL Side */}
                 <View style={styles.callSection}>
                   <Text style={[
                     styles.cellText,
-                    strike.callOI === maxValues.maxCallOI && styles.highlightedCell
+                    strike.callOI === maxValues.maxCallOI && [
+                      styles.oiHighlightedCell,
+                      { backgroundColor: oiColors.callColor }
+                    ]
                   ]}>
                     {optionChainService.formatNumber(strike.callOI)}
                   </Text>
-                  <Text style={[
-                    styles.cellText,
-                    strike.callLTP === maxValues.maxCallLTP && styles.highlightedCell
-                  ]}>
+                  <Text style={styles.cellText}>
                     {optionChainService.formatPrice(strike.callLTP)}
                   </Text>
                   <Text style={[
                     styles.cellText,
-                    { color: getTextColor(strike.callIV, 20) },
-                    strike.callIV === maxValues.maxCallIV && styles.highlightedCell
+                    { color: getTextColor(strike.callIV, 20) }
                   ]}>
                     {strike.callIV.toFixed(2)}%
                   </Text>
@@ -222,20 +248,19 @@ export function OptionChainModal({
                 <View style={styles.putSection}>
                   <Text style={[
                     styles.cellText,
-                    { color: getTextColor(strike.putIV, 20) },
-                    strike.putIV === maxValues.maxPutIV && styles.highlightedCell
+                    { color: getTextColor(strike.putIV, 20) }
                   ]}>
                     {strike.putIV.toFixed(2)}%
                   </Text>
-                  <Text style={[
-                    styles.cellText,
-                    strike.putLTP === maxValues.maxPutLTP && styles.highlightedCell
-                  ]}>
+                  <Text style={styles.cellText}>
                     {optionChainService.formatPrice(strike.putLTP)}
                   </Text>
                   <Text style={[
                     styles.cellText,
-                    strike.putOI === maxValues.maxPutOI && styles.highlightedCell
+                    strike.putOI === maxValues.maxPutOI && [
+                      styles.oiHighlightedCell,
+                      { backgroundColor: oiColors.putColor }
+                    ]
                   ]}>
                     {optionChainService.formatNumber(strike.putOI)}
                   </Text>
@@ -413,8 +438,12 @@ const styles = StyleSheet.create({
   atTheMoneyRow: {
     backgroundColor: '#f0f4ff',
   },
-  strikeCell: {
+  strikeCellContainer: {
     width: 70,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  strikeCell: {
     fontSize: 13,
     fontWeight: '700',
     color: '#1e293b',
@@ -423,6 +452,12 @@ const styles = StyleSheet.create({
   atmStrike: {
     color: '#1a1f71',
     fontWeight: '800',
+  },
+  otmLabel: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: '#999',
+    marginTop: 2,
   },
   callSection: {
     flex: 1,
@@ -440,6 +475,13 @@ const styles = StyleSheet.create({
     color: '#475569',
     textAlign: 'center',
     minWidth: 50,
+  },
+  oiHighlightedCell: {
+    fontWeight: '700',
+    color: '#fff',
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    borderRadius: 4,
   },
   highlightedCell: {
     backgroundColor: '#ffd700',

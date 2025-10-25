@@ -48,6 +48,17 @@ interface OrderLeg {
   };
 }
 
+interface ExitLeg {
+  id: string;
+  action: 'Sell';
+  orderType: 'Market' | 'Limit' | 'SL' | 'SL-M';
+  quantity: string;
+  instrument: string;
+  condition?: string;
+  priceOffset?: string;
+  triggerType?: 'LTP' | 'Target' | 'OffsetFromEntry';
+}
+
 interface TradingStrategyProps {
   onStrategyCreated?: (strategyData: any) => void;
   navigation?: any;
@@ -109,6 +120,13 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
   const [exitCandleTiming, setExitCandleTiming] = useState('Start');
   const [exitCandleColor, setExitCandleColor] = useState('Green');
   const [exitSlHit, setExitSlHit] = useState(false);
+  
+  // Exit Condition Legs
+  const [exitLegsIndex, setExitLegsIndex] = useState<ExitLeg[]>([]);
+  const [exitLegsSelling, setExitLegsSelling] = useState<ExitLeg[]>([]);
+  const [showExitLegModal, setShowExitLegModal] = useState(false);
+  const [currentEditingExitLeg, setCurrentEditingExitLeg] = useState<ExitLeg | null>(null);
+  const [exitLegType, setExitLegType] = useState<'index' | 'selling'>('index');
   
   // Modal states for dropdowns
   const [showCandleColorModal, setShowCandleColorModal] = useState(false);
@@ -447,6 +465,54 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
     setOrderLegs(prev => prev.filter(leg => leg.id !== id));
   };
 
+  const addExitLeg = (type: 'index' | 'selling') => {
+    const newExitLeg: ExitLeg = {
+      id: Date.now().toString(),
+      action: 'Sell',
+      orderType: 'Market',
+      quantity: '1',
+      instrument: selectedInstruments[0] || '',
+      triggerType: 'LTP',
+      priceOffset: '10',
+      condition: 'When LTP ≥ Entry Price + 10',
+    };
+    setCurrentEditingExitLeg(newExitLeg);
+    setExitLegType(type);
+    setShowExitLegModal(true);
+  };
+
+  const saveExitLeg = (leg: ExitLeg) => {
+    if (exitLegType === 'index') {
+      const existingIndex = exitLegsIndex.findIndex(l => l.id === leg.id);
+      if (existingIndex >= 0) {
+        const updatedLegs = [...exitLegsIndex];
+        updatedLegs[existingIndex] = leg;
+        setExitLegsIndex(updatedLegs);
+      } else {
+        setExitLegsIndex(prev => [...prev, leg]);
+      }
+    } else {
+      const existingIndex = exitLegsSelling.findIndex(l => l.id === leg.id);
+      if (existingIndex >= 0) {
+        const updatedLegs = [...exitLegsSelling];
+        updatedLegs[existingIndex] = leg;
+        setExitLegsSelling(updatedLegs);
+      } else {
+        setExitLegsSelling(prev => [...prev, leg]);
+      }
+    }
+    setShowExitLegModal(false);
+    setCurrentEditingExitLeg(null);
+  };
+
+  const deleteExitLeg = (id: string, type: 'index' | 'selling') => {
+    if (type === 'index') {
+      setExitLegsIndex(prev => prev.filter(leg => leg.id !== id));
+    } else {
+      setExitLegsSelling(prev => prev.filter(leg => leg.id !== id));
+    }
+  };
+
   // Map strategy types to product categories
   const getStrategyCategory = (strategyType: string, instruments: string[]): string => {
     // Check if instruments contain index-related symbols
@@ -574,6 +640,14 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
       selectedInterval,
       instruments: selectedInstruments,
       orderLegs,
+      exitConditions: {
+        exitLegsIndex,
+        exitLegsSelling,
+        exitOptionType,
+        exitCandleTiming,
+        exitCandleColor,
+        exitSlHit,
+      },
       chartConfiguration: {
         supportedChartTypes: ['Candle', 'Bars', 'Hollow candles', 'Line', 'OHLC'],
         defaultChartType: selectedChartType,
@@ -1344,9 +1418,42 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
                 </View>
               </View>
 
+              {exitLegsIndex.map((leg) => (
+                <View key={leg.id} style={styles.orderLegCard}>
+                  <View style={styles.orderLegHeader}>
+                    <Text style={styles.orderLegTitle}>
+                      {leg.action} {leg.instrument} - {leg.quantity} Qty
+                    </Text>
+                    <View style={styles.orderLegActions}>
+                      <TouchableOpacity 
+                        onPress={() => {
+                          setCurrentEditingExitLeg(leg);
+                          setExitLegType('index');
+                          setShowExitLegModal(true);
+                        }}
+                        style={styles.editButton}
+                      >
+                        <Ionicons name="pencil" size={16} color="#1976d2" />
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        onPress={() => deleteExitLeg(leg.id, 'index')}
+                        style={styles.deleteButton}
+                      >
+                        <Ionicons name="trash" size={16} color="#f44336" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  <View style={styles.orderLegDetails}>
+                    <Text style={styles.conditionText}>
+                      {leg.condition}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+
               <View style={styles.conditionRow}>
                 <Text style={styles.conditionLabel}>...</Text>
-                <TouchableOpacity style={styles.addLegButton}>
+                <TouchableOpacity style={styles.addLegButton} onPress={() => addExitLeg('index')}>
                   <Ionicons name="add" size={16} color="#fff" />
                   <Text style={styles.addLegText}>+ ADD LEG</Text>
                 </TouchableOpacity>
@@ -1426,9 +1533,42 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
                 </View>
               </View>
 
+              {exitLegsSelling.map((leg) => (
+                <View key={leg.id} style={styles.orderLegCard}>
+                  <View style={styles.orderLegHeader}>
+                    <Text style={styles.orderLegTitle}>
+                      {leg.action} {leg.instrument} - {leg.quantity} Qty
+                    </Text>
+                    <View style={styles.orderLegActions}>
+                      <TouchableOpacity 
+                        onPress={() => {
+                          setCurrentEditingExitLeg(leg);
+                          setExitLegType('selling');
+                          setShowExitLegModal(true);
+                        }}
+                        style={styles.editButton}
+                      >
+                        <Ionicons name="pencil" size={16} color="#1976d2" />
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        onPress={() => deleteExitLeg(leg.id, 'selling')}
+                        style={styles.deleteButton}
+                      >
+                        <Ionicons name="trash" size={16} color="#f44336" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  <View style={styles.orderLegDetails}>
+                    <Text style={styles.conditionText}>
+                      {leg.condition}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+
               <View style={styles.conditionRow}>
                 <Text style={styles.conditionLabel}>...</Text>
-                <TouchableOpacity style={styles.addLegButton}>
+                <TouchableOpacity style={styles.addLegButton} onPress={() => addExitLeg('selling')}>
                   <Ionicons name="add" size={16} color="#fff" />
                   <Text style={styles.addLegText}>+ ADD LEG</Text>
                 </TouchableOpacity>
@@ -1787,6 +1927,147 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
                 onPress={() => currentEditingLeg && saveOrderLeg(currentEditingLeg)}
               >
                 <Text style={styles.modalButtonText}>Save Order Leg</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Exit Leg Modal */}
+      <Modal visible={showExitLegModal} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.orderLegModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {currentEditingExitLeg?.id ? 'Edit Exit Leg' : 'Add Exit Leg'}
+              </Text>
+              <TouchableOpacity 
+                onPress={() => {
+                  setShowExitLegModal(false);
+                  setCurrentEditingExitLeg(null);
+                }}
+                style={styles.closeButton}
+              >
+                <Text style={styles.closeButtonText}>×</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.orderLegForm}>
+              {currentEditingExitLeg && (
+                <>
+                  <View style={styles.formSection}>
+                    <Text style={styles.formSectionTitle}>Exit Order Details</Text>
+                    
+                    <View style={styles.formRow}>
+                      <Text style={styles.formLabel}>Action</Text>
+                      <View style={styles.radioContainer}>
+                        <TouchableOpacity
+                          style={styles.radioOption}
+                          onPress={() => setCurrentEditingExitLeg(prev => prev ? {...prev, action: 'Sell'} : null)}
+                        >
+                          <View style={styles.radioButton}>
+                            {currentEditingExitLeg.action === 'Sell' && <View style={styles.radioButtonInner} />}
+                          </View>
+                          <Text style={styles.radioText}>Sell</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    <View style={styles.formRow}>
+                      <Text style={styles.formLabel}>Quantity</Text>
+                      <TextInput
+                        style={styles.formInput}
+                        value={currentEditingExitLeg.quantity}
+                        onChangeText={(value) => setCurrentEditingExitLeg(prev => prev ? {...prev, quantity: value} : null)}
+                        placeholder="1"
+                        keyboardType="numeric"
+                      />
+                    </View>
+
+                    <View style={styles.formRow}>
+                      <Text style={styles.formLabel}>Instrument</Text>
+                      <View style={styles.dropdownContainer}>
+                        <ScrollView style={styles.dropdownScroll}>
+                          {selectedInstruments.map((instrument) => (
+                            <TouchableOpacity
+                              key={instrument}
+                              style={[
+                                styles.dropdownOption,
+                                currentEditingExitLeg.instrument === instrument && styles.selectedDropdownOption
+                              ]}
+                              onPress={() => setCurrentEditingExitLeg(prev => (prev ? { ...prev, instrument } : null))}
+                            >
+                              <Text style={[
+                                styles.dropdownOptionText,
+                                currentEditingExitLeg.instrument === instrument && styles.selectedDropdownOptionText
+                              ]}>
+                                {instrument}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={styles.formSection}>
+                    <Text style={styles.formSectionTitle}>Exit Trigger Condition</Text>
+                    
+                    <View style={styles.formRow}>
+                      <Text style={styles.formLabel}>Trigger Type</Text>
+                      <View style={styles.radioContainer}>
+                        {['LTP', 'Target', 'OffsetFromEntry'].map((type) => (
+                          <TouchableOpacity
+                            key={type}
+                            style={styles.radioOption}
+                            onPress={() => setCurrentEditingExitLeg(prev => prev ? {...prev, triggerType: type as 'LTP' | 'Target' | 'OffsetFromEntry'} : null)}
+                          >
+                            <View style={styles.radioButton}>
+                              {currentEditingExitLeg.triggerType === type && <View style={styles.radioButtonInner} />}
+                            </View>
+                            <Text style={styles.radioText}>{type}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+
+                    <View style={styles.formRow}>
+                      <Text style={styles.formLabel}>Price Offset (₹)</Text>
+                      <TextInput
+                        style={styles.formInput}
+                        value={currentEditingExitLeg.priceOffset}
+                        onChangeText={(value) => {
+                          const offset = value;
+                          let condition = '';
+                          if (currentEditingExitLeg.triggerType === 'LTP') {
+                            condition = `When LTP ≥ Entry Price + ${offset}`;
+                          } else if (currentEditingExitLeg.triggerType === 'Target') {
+                            condition = `When LTP ≥ ₹${offset}`;
+                          } else {
+                            condition = `When LTP ≥ Entry Price + ₹${offset}`;
+                          }
+                          setCurrentEditingExitLeg(prev => prev ? {...prev, priceOffset: value, condition} : null);
+                        }}
+                        placeholder="10"
+                        keyboardType="numeric"
+                      />
+                    </View>
+
+                    <View style={styles.formRow}>
+                      <Text style={styles.formLabel}>Condition Preview</Text>
+                      <Text style={styles.previewText}>{currentEditingExitLeg.condition}</Text>
+                    </View>
+                  </View>
+                </>
+              )}
+            </ScrollView>
+            
+            <View style={styles.modalFooter}>
+              <TouchableOpacity 
+                style={styles.modalButton}
+                onPress={() => currentEditingExitLeg && saveExitLeg(currentEditingExitLeg)}
+              >
+                <Text style={styles.modalButtonText}>Save Exit Leg</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -2926,6 +3207,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1976d2',
     fontWeight: '500',
+  },
+  previewText: {
+    fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic',
+    marginTop: 4,
   },
 });
 
