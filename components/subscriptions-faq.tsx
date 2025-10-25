@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal, Image } from 'react-native';
+import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal, Image, Linking } from 'react-native';
 
 const BANK_DETAILS = {
   accountHolder: 'Rajendra Kumar Burdak',
@@ -9,6 +9,27 @@ const BANK_DETAILS = {
   ifscCode: 'SBIN0032348',
   upi: '9672093921@ybl',
 };
+
+const UPI_METHODS = [
+  {
+    id: 'phonepe',
+    name: 'PhonePe',
+    icon: '₹',
+    color: '#5F2E8A',
+  },
+  {
+    id: 'googlepay',
+    name: 'Google Pay',
+    icon: '🔵',
+    color: '#4285F4',
+  },
+  {
+    id: 'paytm',
+    name: 'Paytm',
+    icon: '🌕',
+    color: '#1F51B6',
+  },
+];
 
 const PLANS = [
   {
@@ -50,6 +71,20 @@ export function SubscriptionsAndFAQ() {
   const handleBuyCredits = (planKey: string) => {
     setSelectedPlan(planKey);
     setShowPaymentModal(true);
+  };
+
+  const handleUPIPayment = async (method: string) => {
+    const upiID = BANK_DETAILS.upi;
+    const payeeName = BANK_DETAILS.accountHolder;
+    const amount = selectedPlan ? PLANS.find(p => p.key === selectedPlan)?.monthly || 0 : 0;
+    
+    const upiUrl = `upi://pay?pa=${upiID}&pn=${encodeURIComponent(payeeName)}&am=${amount}&tn=Investment%20Platform%20Payment`;
+    
+    try {
+      await Linking.openURL(upiUrl);
+    } catch (error) {
+      alert(`Unable to open UPI app. Please try again or use manual payment.`);
+    }
   };
 
   return (
@@ -147,6 +182,22 @@ export function SubscriptionsAndFAQ() {
             </View>
 
             <Text style={styles.scanText}>Scan & Pay Using PhonePe App</Text>
+
+            <Text style={styles.orText}>OR</Text>
+
+            <Text style={styles.upiMethodsTitle}>Pay with UPI</Text>
+            <View style={styles.upiMethodsContainer}>
+              {UPI_METHODS.map((method) => (
+                <TouchableOpacity 
+                  key={method.id}
+                  style={[styles.upiButton, { borderColor: method.color }]}
+                  onPress={() => handleUPIPayment(method.id)}
+                >
+                  <Text style={styles.upiIcon}>{method.icon}</Text>
+                  <Text style={styles.upiButtonText}>{method.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
             <View style={styles.detailsContainer}>
               <Text style={styles.detailsTitle}>Payment Details</Text>
@@ -396,6 +447,48 @@ const styles = StyleSheet.create({
   copyrightText: {
     fontSize: 12,
     color: '#999',
+    textAlign: 'center',
+  },
+
+  orText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#999',
+    marginVertical: 16,
+  },
+  upiMethodsTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#2c3e50',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+  },
+  upiMethodsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    marginBottom: 24,
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  upiButton: {
+    flex: 1,
+    minWidth: 100,
+    borderWidth: 2,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  upiIcon: {
+    fontSize: 24,
+    marginBottom: 8,
+  },
+  upiButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#2c3e50',
     textAlign: 'center',
   },
 });
