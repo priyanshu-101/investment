@@ -1,115 +1,48 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-const FAQ_DATA = [
-  {
-    id: 1,
-    question: "What is Algorooms' goal?",
-    answer:
-      'Algorooms aims to democratize algorithmic trading by providing accessible, powerful trading strategies and tools for both beginners and experienced traders.',
-  },
-  {
-    id: 2,
-    question: 'How does Algorooms help me?',
-    answer:
-      'Algorooms provides pre-built trading strategies, backtesting tools, real-time market analysis, and educational resources to help you make informed trading decisions.',
-  },
-  {
-    id: 3,
-    question: 'What are the available subscription plans?',
-    answer:
-      'We offer three plans: Free (basic features), Limited (enhanced features), and Unlimited (full access to all features and strategies).',
-  },
-  {
-    id: 4,
-    question: 'What features are included in the Free plan?',
-    answer:
-      'The Free plan includes access to basic market data, limited strategy templates, and basic backtesting capabilities.',
-  },
-  {
-    id: 5,
-    question: 'What features are included in the Unlimited plan?',
-    answer:
-      'The Unlimited plan includes all features: unlimited strategies, advanced backtesting, real-time alerts, priority support, and exclusive market insights.',
-  },
-  {
-    id: 6,
-    question: 'What features are included in the Limited plan?',
-    answer:
-      'The Limited plan includes enhanced market data, more strategy templates, advanced backtesting, and email support.',
-  },
-  {
-    id: 7,
-    question: 'Are there any restrictions on broker access?',
-    answer:
-      'Broker access depends on your subscription plan. Free users have limited broker integrations, while Unlimited users get access to all supported brokers.',
-  },
-  {
-    id: 8,
-    question: 'Is access to strategy templates included in all plans?',
-    answer:
-      'Yes, all plans include access to strategy templates, but the number and complexity vary by plan. Free users get basic templates, while Unlimited users get access to all premium strategies.',
-  },
-];
-
-const FAQItem = ({
-  item,
-  isExpanded,
-  onToggle,
-}: {
-  item: typeof FAQ_DATA[0];
-  isExpanded: boolean;
-  onToggle: () => void;
-}) => (
-  <View style={styles.faqItem}>
-    <TouchableOpacity style={styles.faqQuestion} onPress={onToggle}>
-      <Text style={styles.faqQuestionText}>{item.question}</Text>
-      <Text style={styles.faqIcon}>{isExpanded ? '−' : '+'}</Text>
-    </TouchableOpacity>
-    {isExpanded && (
-      <View style={styles.faqAnswer}>
-        <Text style={styles.faqAnswerText}>{item.answer}</Text>
-      </View>
-    )}
-  </View>
-);
+const BANK_DETAILS = {
+  accountHolder: 'Rajendra Kumar Burdak',
+  bank: 'SBI Bank',
+  branch: 'Sewad Bari',
+  accountNumber: '61239912933',
+  ifscCode: 'SBIN0032348',
+  upi: '9672093921@ybl',
+};
 
 const PLANS = [
   {
-    key: 'free',
-    name: 'Free',
-    monthly: 0,
-    yearly: 0,
-    features: ['Basic market data', 'Basic backtesting', 'Starter templates'],
+    key: 'basic',
+    name: 'Basic',
+    monthly: 499,
+    yearly: 499,
+    features: ['Unlimited Backtest for 7 days', 'Unlimited Portfolio Backtest for 7 days'],
   },
   {
-    key: 'limited',
-    name: 'Limited',
-    monthly: 19,
-    yearly: 180,
-    features: ['Enhanced market data', 'Advanced backtesting', 'More templates', 'Email support'],
-  },
-  {
-    key: 'unlimited',
-    name: 'Unlimited',
-    monthly: 39,
-    yearly: 360,
-    features: ['All premium strategies', 'Real-time alerts', 'Priority support', 'Exclusive insights'],
+    key: 'pro',
+    name: 'PRO',
+    monthly: 1499,
+    yearly: 1499,
+    features: ['Unlimited Backtest for 30 days', 'Unlimited Portfolio Backtest for 30 days'],
     popular: true,
+  },
+  {
+    key: 'proplus',
+    name: 'PRO+',
+    monthly: 2499,
+    yearly: 2499,
+    features: ['Unlimited Backtest for 90 days', 'Unlimited Portfolio Backtest for 90 days'],
   },
 ];
 
 export function SubscriptionsAndFAQ() {
-  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
-  const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
-
   const planPrices = useMemo(() => {
     return PLANS.map((p) => ({
       ...p,
-      price: billingPeriod === 'monthly' ? `$${p.monthly}/mo` : `$${p.yearly}/yr`,
-      periodLabel: billingPeriod === 'monthly' ? 'Billed monthly' : 'Billed annually',
+      price: `₹${p.monthly}`,
+      periodLabel: 'One-time payment',
     }));
-  }, [billingPeriod]);
+  }, []);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
@@ -118,22 +51,7 @@ export function SubscriptionsAndFAQ() {
         <View style={styles.subscriptionSection}>
           <Text style={styles.subscriptionTitle}>Choose Your Plan</Text>
           <View style={styles.subscriptionSubtitle}>
-            <Text style={styles.subtitleText}>Start free, upgrade anytime to unlock more features.</Text>
-          </View>
-
-          <View style={styles.periodSelector}>
-            <TouchableOpacity
-              style={[styles.periodTab, billingPeriod === 'monthly' && styles.periodTabActive]}
-              onPress={() => setBillingPeriod('monthly')}
-            >
-              <Text style={[styles.periodTabText, billingPeriod === 'monthly' && styles.periodTabTextActive]}>Monthly</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.periodTab, billingPeriod === 'yearly' && styles.periodTabActive]}
-              onPress={() => setBillingPeriod('yearly')}
-            >
-              <Text style={[styles.periodTabText, billingPeriod === 'yearly' && styles.periodTabTextActive]}>Yearly</Text>
-            </TouchableOpacity>
+            <Text style={styles.subtitleText}>Select a plan to unlock unlimited backtesting features.</Text>
           </View>
 
           <View style={styles.plansGrid}>
@@ -153,23 +71,34 @@ export function SubscriptionsAndFAQ() {
                 ))}
                 <View style={{ height: 16 }} />
                 <TouchableOpacity style={styles.selectButton}>
-                  <Text style={styles.selectButtonText}>Select</Text>
+                  <Text style={styles.selectButtonText}>Buy Credits</Text>
                 </TouchableOpacity>
               </View>
             ))}
           </View>
         </View>
 
-        <View style={styles.faqSection}>
-          <Text style={styles.faqSectionTitle}>Frequently Asked Questions</Text>
-          {FAQ_DATA.map((item) => (
-            <FAQItem
-              key={item.id}
-              item={item}
-              isExpanded={expandedFAQ === item.id}
-              onToggle={() => setExpandedFAQ(expandedFAQ === item.id ? null : item.id)}
-            />
-          ))}
+        <View style={styles.bankSection}>
+          <Text style={styles.bankSectionTitle}>Bank Account Details</Text>
+          <View style={styles.bankCard}>
+            <Text style={styles.bankLabel}>Account Holder</Text>
+            <Text style={styles.bankValue}>{BANK_DETAILS.accountHolder}</Text>
+            
+            <Text style={styles.bankLabel}>Bank</Text>
+            <Text style={styles.bankValue}>{BANK_DETAILS.bank}</Text>
+            
+            <Text style={styles.bankLabel}>Branch</Text>
+            <Text style={styles.bankValue}>{BANK_DETAILS.branch}</Text>
+            
+            <Text style={styles.bankLabel}>Account Number</Text>
+            <Text style={styles.bankValue}>{BANK_DETAILS.accountNumber}</Text>
+            
+            <Text style={styles.bankLabel}>IFSC Code</Text>
+            <Text style={styles.bankValue}>{BANK_DETAILS.ifscCode}</Text>
+            
+            <Text style={styles.bankLabel}>UPI</Text>
+            <Text style={styles.bankValue}>{BANK_DETAILS.upi}</Text>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -195,32 +124,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#2c3e50',
     textAlign: 'center',
-  },
-  periodSelector: {
-    flexDirection: 'row',
-    backgroundColor: '#f8f9fa',
-    borderRadius: 25,
-    padding: 4,
-    marginBottom: 24,
-  },
-  periodTab: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    alignItems: 'center',
-  },
-  periodTabActive: {
-    backgroundColor: '#4A90E2',
-  },
-  periodTabText: {
-    fontSize: 14,
-    color: '#6c757d',
-    fontWeight: '500',
-  },
-  periodTabTextActive: {
-    color: 'white',
-    fontWeight: '600',
   },
   plansGrid: {
     gap: 16,
@@ -282,58 +185,40 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  faqSection: {
+  bankSection: {
     marginTop: 8,
     marginBottom: 32,
   },
-  faqSectionTitle: {
+  bankSectionTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: '#2c3e50',
     marginBottom: 16,
     textAlign: 'center',
   },
-  faqItem: {
+  bankCard: {
     backgroundColor: 'white',
-    marginBottom: 12,
     borderRadius: 12,
-    overflow: 'hidden',
+    padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
   },
-  faqQuestion: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 18,
-    backgroundColor: 'white',
-  },
-  faqQuestionText: {
-    fontSize: 16,
+  bankLabel: {
+    fontSize: 12,
     fontWeight: '600',
-    color: '#2c3e50',
-    flex: 1,
-    paddingRight: 12,
-  },
-  faqIcon: {
-    fontSize: 20,
-    color: '#4A90E2',
-    fontWeight: '300',
-  },
-  faqAnswer: {
-    padding: 18,
-    paddingTop: 0,
-    backgroundColor: '#f8f9fa',
-    borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
-  },
-  faqAnswerText: {
-    fontSize: 14,
-    lineHeight: 20,
     color: '#6c757d',
+    marginTop: 12,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  bankValue: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#2c3e50',
+    marginBottom: 8,
   },
 });
 
