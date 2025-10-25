@@ -259,13 +259,6 @@ export function OptionChainModal({
                       {optionChainService.formatNumber(summary.totalPutOI)}
                     </Text>
                   </View>
-                  <View style={styles.summaryItem}>
-                    <Text style={styles.summaryLabel}>P/C Ratio</Text>
-                    <Text style={styles.summaryValue}>{summary.putCallRatio}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.summaryRow}>
                   <View style={[styles.summaryItem, styles.differenceItem]}>
                     <Text style={styles.summaryLabel}>OI Difference (Call - Put)</Text>
                     <Text
@@ -279,6 +272,13 @@ export function OptionChainModal({
                     >
                       {summary.oiDifference >= 0 ? '+' : ''}{optionChainService.formatNumber(Math.abs(summary.oiDifference))}
                     </Text>
+                  </View>
+                </View>
+
+                <View style={styles.summaryRow}>
+                  <View style={styles.summaryItem}>
+                    <Text style={styles.summaryLabel}>P/C Ratio</Text>
+                    <Text style={styles.summaryValue}>{summary.putCallRatio}</Text>
                   </View>
                 </View>
 
