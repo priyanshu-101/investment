@@ -1280,7 +1280,7 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
             </View>
 
             <View style={styles.conditionRow}>
-              <Text style={styles.conditionLabel}>THEN Previous-I / Previous-II High / Low ok</Text>
+              <Text style={styles.conditionLabel}>THEN Previous-I / Low ok</Text>
               <TouchableOpacity style={styles.okButton}>
                 <Text style={styles.okButtonText}>OK</Text>
               </TouchableOpacity>
