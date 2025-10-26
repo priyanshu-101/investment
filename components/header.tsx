@@ -1,7 +1,7 @@
 import { NavigationProp, ParamListBase, useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { ProfileMenu } from './profile-menu';
 
@@ -53,7 +53,8 @@ export function Header() {
     <>
       <View style={styles.container}>
         <TouchableOpacity style={styles.nameButton} onPress={() => navigation.navigate('Main', { activeTab: 'Home' })}>
-          <Text style={styles.nameText}>Investment</Text>
+          <Text style={styles.nameText}>SATYAM R ALGO</Text>
+          <Text style={styles.brandSubtitle}>BRAND OF TRUST</Text>
         </TouchableOpacity>
 
         <View style={styles.centerControls}>
@@ -128,9 +129,17 @@ const styles = StyleSheet.create({
     paddingRight: 12,
   },
   nameText: {
-    color: '#4A90E2',
+    color: '#00D9FF',
     fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  brandSubtitle: {
+    color: '#D946EF',
+    fontSize: 10,
     fontWeight: '600',
+    letterSpacing: 1.5,
+    marginTop: 2,
   },
   logoImage: {
     width: 100,
