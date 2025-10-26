@@ -16,6 +16,8 @@ interface AuthContextType {
   resetPassword: (email: string, newPassword: string) => Promise<boolean>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
+  hasSeenRiskDisclosure: boolean;
+  acceptRiskDisclosure: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,6 +33,7 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasSeenRiskDisclosure, setHasSeenRiskDisclosure] = useState(false);
 
   // Check if user is logged in on app start
   useEffect(() => {
@@ -49,6 +52,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('No stored user found');
         setUser(null);
       }
+
+      const riskDisclosureSeen = await AsyncStorage.getItem('riskDisclosureSeen');
+      setHasSeenRiskDisclosure(!!riskDisclosureSeen);
     } catch (error) {
       console.error('Error checking auth state:', error);
       setUser(null);
@@ -70,6 +76,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('Login successful, setting user:', foundUser.email);
         await AsyncStorage.setItem('currentUser', JSON.stringify(foundUser));
         setUser(foundUser);
+        setHasSeenRiskDisclosure(false);
+        await AsyncStorage.removeItem('riskDisclosureSeen');
         return true;
       } else {
         console.log('Login failed - user not found or invalid credentials');
@@ -146,9 +154,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async (): Promise<void> => {
     try {
       await AsyncStorage.removeItem('currentUser');
+      await AsyncStorage.removeItem('riskDisclosureSeen');
       setUser(null);
+      setHasSeenRiskDisclosure(false);
     } catch (error) {
       console.error('Logout error:', error);
+    }
+  };
+
+  const acceptRiskDisclosure = async (): Promise<void> => {
+    try {
+      await AsyncStorage.setItem('riskDisclosureSeen', 'true');
+      setHasSeenRiskDisclosure(true);
+    } catch (error) {
+      console.error('Error accepting risk disclosure:', error);
     }
   };
 
@@ -160,6 +179,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resetPassword,
     logout,
     isAuthenticated: !!user,
+    hasSeenRiskDisclosure,
+    acceptRiskDisclosure,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,4 +1,5 @@
 import { BottomNavigation } from '@/components/bottom-navigation';
+import { RiskDisclosureModal } from '@/components/risk-disclosure-modal';
 import {
     BacktestScreen,
     BrokersScreen,
@@ -52,7 +53,7 @@ function MainScreen() {
 }
 
 export default function App() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, hasSeenRiskDisclosure, acceptRiskDisclosure } = useAuth();
 
   useEffect(() => {
     // Only redirect if loading is complete and user is not authenticated
@@ -84,12 +85,18 @@ export default function App() {
 
   // User is authenticated, show main app
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Main" component={MainScreen} />
-      <Stack.Screen name="Profile" component={ProfileScreen} />
-      <Stack.Screen name="Wallet" component={WalletScreen} />
-      <Stack.Screen name="Backtest" component={BacktestScreen} />
-    </Stack.Navigator>
+    <>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Main" component={MainScreen} />
+        <Stack.Screen name="Profile" component={ProfileScreen} />
+        <Stack.Screen name="Wallet" component={WalletScreen} />
+        <Stack.Screen name="Backtest" component={BacktestScreen} />
+      </Stack.Navigator>
+      <RiskDisclosureModal
+        visible={!hasSeenRiskDisclosure}
+        onAccept={acceptRiskDisclosure}
+      />
+    </>
   );
 }
 
