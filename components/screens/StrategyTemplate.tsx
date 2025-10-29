@@ -1,11 +1,14 @@
 import React, { useEffect, useRef } from "react";
-import { ActivityIndicator, Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Defs, LinearGradient, Stop } from "react-native-svg";
 import { Area, CartesianChart, Line } from "victory-native";
 import { useStrategies } from "../../hooks/useStrategies";
+import { useBrokers } from "../../hooks/useBrokers";
 
 export function StrategyTemplate() {
   const { strategies, loading, error, refreshStrategies, subscribeToStrategy } = useStrategies();
+  const { connectedBrokers } = useBrokers();
+  const hasConnectedBroker = connectedBrokers.length > 0;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scrollViewRef = useRef<ScrollView>(null);
@@ -25,6 +28,14 @@ export function StrategyTemplate() {
     } catch (error) {
       console.error('Subscription error:', error);
     }
+  };
+
+  const handleLockedSubscription = () => {
+    Alert.alert(
+      "Connect Broker",
+      "Please connect at least one broker before running strategies.",
+      [{ text: "OK" }]
+    );
   };
 
   // Handle refresh with animation
@@ -101,6 +112,18 @@ export function StrategyTemplate() {
     if (value > 20000) return '#f59e0b'; // Orange for medium returns
     return '#ef4444'; // Red for low returns
   };
+
+  if (!hasConnectedBroker) {
+    return (
+      <View style={styles.lockedContainer}>
+        <Text style={styles.lockedTitle}>Connect a broker to continue</Text>
+        <Text style={styles.lockedSubtitle}>Add at least one broker before running strategies.</Text>
+        <TouchableOpacity style={styles.lockedButton} onPress={handleRefresh}>
+          <Text style={styles.lockedButtonText}>Refresh Brokers</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (loading) {
     return (
@@ -260,7 +283,16 @@ export function StrategyTemplate() {
               styles.button,
               { backgroundColor: strategy.isActive ? "#EAF1FF" : "#f3f4f6" }
             ]}
-            onPress={() => strategy.isActive && handleStrategySubscription(strategy.id)}
+            onPress={() => {
+              if (!hasConnectedBroker) {
+                handleLockedSubscription();
+                return;
+              }
+
+              if (strategy.isActive) {
+                handleStrategySubscription(strategy.id);
+              }
+            }}
             disabled={!strategy.isActive}
           >
             <Text style={[

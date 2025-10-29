@@ -217,7 +217,20 @@ class BrokersApiService {
       
       if (brokersFromAPI.length > 0) {
         console.log(`✅ Successfully fetched ${brokersFromAPI.length} brokers from API`);
-        return brokersFromAPI;
+      }
+
+      const fallbackBrokers = this.getFallbackBrokers();
+      const existingIds = new Set(brokersFromAPI.map(broker => broker.id));
+      const mergedBrokers = [...brokersFromAPI];
+
+      for (const fallback of fallbackBrokers) {
+        if (!existingIds.has(fallback.id)) {
+          mergedBrokers.push(fallback);
+        }
+      }
+
+      if (mergedBrokers.length > 0) {
+        return mergedBrokers;
       }
       
       console.warn('⚠️ No brokers found from external APIs');
@@ -323,6 +336,67 @@ class BrokersApiService {
   }
 
 
+  private getFallbackBrokers(): BrokerApiData[] {
+    const baseBrokers = [
+      {
+        id: 'angel_one',
+        name: 'Angel One',
+        shortName: 'Angel One',
+        features: ['Live Trading', 'API Trading', 'Portfolio Sync'],
+        supportedSegments: ['NSE', 'BSE', 'MCX'],
+        fees: { equity: 20, fno: 20, commodity: 20 }
+      },
+      {
+        id: 'zerodha_kite',
+        name: 'Zerodha Kite',
+        shortName: 'Kite',
+        features: ['Live Trading', 'API Trading', 'Portfolio Sync'],
+        supportedSegments: ['NSE', 'BSE', 'MCX'],
+        fees: { equity: 20, fno: 20, commodity: 20 }
+      },
+      {
+        id: 'groww',
+        name: 'Groww',
+        shortName: 'Groww',
+        features: ['Live Trading', 'Mutual Funds', 'Portfolio Sync'],
+        supportedSegments: ['NSE', 'BSE'],
+        fees: { equity: 20, fno: 20, commodity: 20 }
+      },
+      {
+        id: 'mstock',
+        name: 'mStock',
+        shortName: 'mStock',
+        features: ['Live Trading', 'Zero Brokerage', 'Portfolio Sync'],
+        supportedSegments: ['NSE', 'BSE'],
+        fees: { equity: 0, fno: 0, commodity: 0 }
+      },
+      {
+        id: 'bigul',
+        name: 'Bigul',
+        shortName: 'Bigul',
+        features: ['Live Trading', 'API Trading', 'Portfolio Sync'],
+        supportedSegments: ['NSE', 'BSE', 'MCX'],
+        fees: { equity: 20, fno: 20, commodity: 20 }
+      },
+      {
+        id: 'paytm_money',
+        name: 'Paytm Money',
+        shortName: 'Paytm',
+        features: ['Live Trading', 'Mutual Funds', 'Portfolio Sync'],
+        supportedSegments: ['NSE', 'BSE', 'MCX'],
+        fees: { equity: 20, fno: 20, commodity: 20 }
+      }
+    ];
+
+    return baseBrokers.map(broker => ({
+      ...broker,
+      logo: this.extractLogoFromName(broker.name),
+      color: this.generateColorFromName(broker.name),
+      bgColor: this.generateBgColorFromName(broker.name),
+      isConnected: false,
+      status: 'disconnected'
+    }));
+  }
 
   private async extractRealIndianBrokersFromAPI(data: any, apiType: string, contentType: string): Promise<BrokerApiData[]> {
     try {
