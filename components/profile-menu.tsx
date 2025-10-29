@@ -236,13 +236,13 @@ export function ProfileMenu({ visible, onClose, onNavigate }: ProfileMenuProps) 
             <View style={styles.contactContainer}>
               <Text style={styles.contactLabel}>Email:</Text>
               <TouchableOpacity onPress={() => Linking.openURL('mailto:satyamalgovestment@zohomail.com')}>
-                <Text style={styles.contactValue}>satyamalgovestment@zohomail.com</Text>
+                <Text style={styles.contactValue}>satyamalgoinvestment@zohomail.com</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.contactContainer}>
               <Text style={styles.contactLabel}>WhatsApp:</Text>
               <TouchableOpacity onPress={() => Linking.openURL('https://wa.me/919828618998')}>
-                <Text style={styles.contactValue}>+91 9828618998</Text>
+                <Text style={styles.contactValue}>+91 98286818998</Text>
               </TouchableOpacity>
             </View>
           </View>

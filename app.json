@@ -9,16 +9,18 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.priyanshu.myapp"
     },
     "android": {
+      "package": "com.priyanshu.myapp",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "edgeToEdgeEnabled": true,
+      "edgeToEdge": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -45,6 +47,10 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
-    "extra": {}
+    "extra": {
+      "eas": {
+        "projectId": "ecfc5d03-d84b-4ba9-9f5b-27cd2f799489"
+      }
+    }
   }
 }
