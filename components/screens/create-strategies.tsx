@@ -193,7 +193,7 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
   const strategyTypes = ['Candle Based', 'Time Based', 'Indicator Based'];
   const chartTypes = ['Candle', 'Bars', 'Hollow candles', 'Line', 'OHLC'];
   const orderTypes = ['MIS', 'CNC', 'BTST'];
-  const transactionTypes = ['Buy', 'Sell'];
+  const transactionTypes = ['Buy', 'Sell', 'Both'];
   const weekDays = ['MON', 'TUE', 'WED', 'THU', 'FRI'];
   const intervals = ['1M', '3M', '5M', '10M', '15M', '30M', '1H', '4H', '1Day'];
 
