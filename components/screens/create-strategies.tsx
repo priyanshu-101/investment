@@ -148,11 +148,11 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   const [showSlTrailModal, setShowSlTrailModal] = useState(false);
   const [showTimeRangeModal, setShowTimeRangeModal] = useState(false);
   const [showChartTypeModal, setShowChartTypeModal] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   const [showPreviousCandleModal, setShowPreviousCandleModal] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   const [showSameCandleModal, setShowSameCandleModal] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   const [showPreviousMinusOneModal, setShowPreviousMinusOneModal] = useState(false);
   const [currentDropdownType, setCurrentDropdownType] = useState('');
   
@@ -306,7 +306,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   const atmStrikes = ['ITM-5', 'ITM-3', 'ITM-2', 'ITM-1', 'ATM', 'OTM-1', 'OTM-2', 'OTM-3', 'OTM-5'];
   const slTypes = ['Previous Candle - High', 'Previous Candle - Low', 'SAME Candle - High', 'SAME Candle - Low'];
   const slTrailTypes = ['New', 'On Candle Close', 'On Candle Start'];
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   const highLowOptions = ['High', 'Low'];
   const timeRanges = ['1 sec to 10 sec', '1 sec to 30 sec', '1 sec to 60 sec', '5 sec to 30 sec'];
 
@@ -1297,13 +1297,25 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
               <Text style={styles.conditionLabel}>Select Candle II</Text>
               <View style={styles.conditionControls}>
                 <View style={styles.dropdownWrapper}>
-                  <TouchableOpacity style={styles.dropdownButton}>
+                  <TouchableOpacity 
+                    style={styles.dropdownButton}
+                    onPress={() => {
+                      setCurrentDropdownType('secondCandleColor');
+                      setShowCandleColorModal(true);
+                    }}
+                  >
                     <Text style={styles.dropdownText}>{secondCandleColor}</Text>
                     <Ionicons name="chevron-down" size={16} color="#666" />
                   </TouchableOpacity>
                 </View>
                 <View style={styles.dropdownWrapper}>
-                  <TouchableOpacity style={styles.dropdownButton}>
+                  <TouchableOpacity 
+                    style={styles.dropdownButton}
+                    onPress={() => {
+                      setCurrentDropdownType('secondCandleTiming');
+                      setShowCandleTimingModal(true);
+                    }}
+                  >
                     <Text style={styles.dropdownText}>{secondCandleTiming}</Text>
                     <Ionicons name="chevron-down" size={16} color="#666" />
                   </TouchableOpacity>
@@ -1315,7 +1327,13 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
             <View style={styles.conditionRow}>
               <Text style={styles.conditionLabel}>Select II Candle Time</Text>
               <View style={styles.dropdownWrapper}>
-                <TouchableOpacity style={styles.dropdownButton}>
+                <TouchableOpacity 
+                  style={styles.dropdownButton}
+                  onPress={() => {
+                    setCurrentDropdownType('candleTimeSelection');
+                    setShowCandleTimingModal(true);
+                  }}
+                >
                   <Text style={styles.dropdownText}>{candleTimeSelection}</Text>
                   <Ionicons name="chevron-down" size={16} color="#666" />
                 </TouchableOpacity>
@@ -1326,7 +1344,13 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
             <View style={styles.conditionRow}>
               <Text style={styles.conditionLabel}>Time Range</Text>
               <View style={styles.dropdownWrapper}>
-                <TouchableOpacity style={styles.dropdownButton}>
+                <TouchableOpacity 
+                  style={styles.dropdownButton}
+                  onPress={() => {
+                    setCurrentDropdownType('timeRange');
+                    setShowTimeRangeModal(true);
+                  }}
+                >
                   <Text style={styles.dropdownText}>{timeRange}</Text>
                   <Ionicons name="chevron-down" size={16} color="#666" />
                 </TouchableOpacity>
@@ -1423,7 +1447,13 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
             <View style={styles.conditionRow}>
               <Text style={styles.conditionLabel}>ATM/ITM/OTM</Text>
               <View style={styles.dropdownWrapper}>
-                <TouchableOpacity style={styles.dropdownButton}>
+                <TouchableOpacity 
+                  style={styles.dropdownButton}
+                  onPress={() => {
+                    setCurrentDropdownType('moneynessType');
+                    setShowMoneynessModal(true);
+                  }}
+                >
                   <Text style={styles.dropdownText}>{moneynessType}</Text>
                   <Ionicons name="chevron-down" size={16} color="#666" />
                 </TouchableOpacity>
@@ -2394,7 +2424,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
       </Modal>
 
       {/* Universal Dropdown Modal */}
-      <Modal visible={showCandleColorModal || showCandleTimingModal || showLotSizeModal || showMoneynessModal || showAtmStrikeModal || showSlTypeModal || showSlTrailModal || showTimeRangeModal} animationType="slide" transparent={true}>
+      <Modal visible={showCandleColorModal || showCandleTimingModal || showLotSizeModal || showMoneynessModal || showAtmStrikeModal || showSlTypeModal || showSlTrailModal || showTimeRangeModal || showSameCandleModal || showPreviousMinusOneModal || showPreviousCandleModal} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
@@ -2409,6 +2439,9 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                   setShowSlTypeModal(false);
                   setShowSlTrailModal(false);
                   setShowTimeRangeModal(false);
+                  setShowSameCandleModal(false);
+                  setShowPreviousMinusOneModal(false);
+                  setShowPreviousCandleModal(false);
                 }}
                 style={styles.closeButton}
               >
@@ -2427,6 +2460,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                 else if (showSlTypeModal) options = slTypes;
                 else if (showSlTrailModal) options = slTrailTypes;
                 else if (showTimeRangeModal) options = timeRanges;
+                else if (showSameCandleModal || showPreviousMinusOneModal || showPreviousCandleModal) options = highLowOptions;
 
                 return options.map((option) => (
                   <TouchableOpacity
@@ -2442,6 +2476,9 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                       setShowSlTypeModal(false);
                       setShowSlTrailModal(false);
                       setShowTimeRangeModal(false);
+                      setShowSameCandleModal(false);
+                      setShowPreviousMinusOneModal(false);
+                      setShowPreviousCandleModal(false);
                     }}
                   >
                     <Text style={styles.dropdownOptionText}>{option}</Text>
