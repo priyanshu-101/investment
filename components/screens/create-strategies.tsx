@@ -1245,32 +1245,12 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
               </View>
             )}
 
-            {/* Market Status Indicator */}
-            {selectedInstruments.length > 0 && (
-              <View style={styles.marketStatusContainer}>
-                <View style={styles.marketStatusHeader}>
-                  <Ionicons name="pulse" size={16} color="#4CAF50" />
-                  <Text style={styles.marketStatusTitle}>Market Status</Text>
-                </View>
-                <View style={styles.marketStatusGrid}>
-                  {selectedInstruments.slice(0, 3).map((instrument) => {
-                    const quote = liveQuotes[instrument];
-                    return (
-                      <View key={instrument} style={styles.marketStatusItem}>
-                        <Text style={styles.marketStatusInstrument}>{instrument}</Text>
-                        <Text style={styles.marketStatusPrice}>
-                          ₹{quote?.last_price?.toFixed(2) || '0.00'}
-                        </Text>
-                        <Text style={[
-                          styles.marketStatusChange,
-                          quote?.net_change >= 0 ? styles.positiveChange : styles.negativeChange
-                        ]}>
-                          {quote?.net_change >= 0 ? '+' : ''}{quote?.net_change?.toFixed(2) || '0.00'}
-                        </Text>
-                      </View>
-                    );
-                  })}
-                </View>
+            {/* Chart Type Indicator */}
+            {showLiveChart && selectedChartInstrument && (
+              <View style={styles.chartTypeIndicator}>
+                <Text style={styles.chartTypeIndicatorText}>
+                  Displaying: <Text style={styles.chartTypeIndicatorBold}>{selectedChartType}</Text> Chart
+                </Text>
               </View>
             )}
           </View>
@@ -3392,6 +3372,21 @@ const styles = StyleSheet.create({
     color: '#666',
     fontStyle: 'italic',
     marginTop: 4,
+  },
+  chartTypeIndicator: {
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#e3f2fd',
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  chartTypeIndicatorText: {
+    fontSize: 14,
+    color: '#1976d2',
+    fontWeight: '500',
+  },
+  chartTypeIndicatorBold: {
+    fontWeight: 'bold',
   },
 });
 
