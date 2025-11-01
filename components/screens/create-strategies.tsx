@@ -115,9 +115,12 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   const [expiryType, setExpiryType] = useState('Weekly');
   const [moneynessType, setMoneynessType] = useState('ATM');
   const [entryPriceType, setEntryPriceType] = useState('Market');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [atmStrike, setAtmStrike] = useState('OTM-1');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [stopLossType, setStopLossType] = useState('Previous Candle - High');
   const [slTrailType, setSlTrailType] = useState('On Candle Close');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [previousCandleSelection, setPreviousCandleSelection] = useState('High');
   const [sameCandleSelection, setSameCandleSelection] = useState('Low');
   const [previousMinusOneSelection, setPreviousMinusOneSelection] = useState('High');
@@ -145,8 +148,11 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   const [showSlTrailModal, setShowSlTrailModal] = useState(false);
   const [showTimeRangeModal, setShowTimeRangeModal] = useState(false);
   const [showChartTypeModal, setShowChartTypeModal] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [showPreviousCandleModal, setShowPreviousCandleModal] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [showSameCandleModal, setShowSameCandleModal] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [showPreviousMinusOneModal, setShowPreviousMinusOneModal] = useState(false);
   const [currentDropdownType, setCurrentDropdownType] = useState('');
   
@@ -300,6 +306,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   const atmStrikes = ['ITM-5', 'ITM-3', 'ITM-2', 'ITM-1', 'ATM', 'OTM-1', 'OTM-2', 'OTM-3', 'OTM-5'];
   const slTypes = ['Previous Candle - High', 'Previous Candle - Low', 'SAME Candle - High', 'SAME Candle - Low'];
   const slTrailTypes = ['New', 'On Candle Close', 'On Candle Start'];
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const highLowOptions = ['High', 'Low'];
   const timeRanges = ['1 sec to 10 sec', '1 sec to 30 sec', '1 sec to 60 sec', '5 sec to 30 sec'];
 
