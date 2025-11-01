@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -61,10 +61,13 @@ interface ExitLeg {
 
 interface TradingStrategyProps {
   onStrategyCreated?: (strategyData: any) => void;
+  onStrategyUpdated?: (strategy: StrategyApiData, strategyData: any) => void;
+  onEditComplete?: () => void;
+  editingStrategy?: StrategyApiData | null;
   navigation?: any;
 }
 
-const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps) => {
+const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete, editingStrategy, navigation }: TradingStrategyProps) => {
   const { user } = useAuth();
   
   // Existing state
@@ -84,6 +87,7 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
   const [availableInstruments, setAvailableInstruments] = useState<string[]>([]);
   const [loadingInstruments, setLoadingInstruments] = useState(false);
   const [instrumentSearchQuery, setInstrumentSearchQuery] = useState('');
+  const [activeEditingStrategy, setActiveEditingStrategy] = useState<StrategyApiData | null>(null);
 
   // Enhanced candle-based strategy state
   const [selectedInterval, setSelectedInterval] = useState('1M');
@@ -114,6 +118,9 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
   const [atmStrike, setAtmStrike] = useState('OTM-1');
   const [stopLossType, setStopLossType] = useState('Previous Candle - High');
   const [slTrailType, setSlTrailType] = useState('On Candle Close');
+  const [previousCandleSelection, setPreviousCandleSelection] = useState('High');
+  const [sameCandleSelection, setSameCandleSelection] = useState('Low');
+  const [previousMinusOneSelection, setPreviousMinusOneSelection] = useState('High');
   
   // Exit Conditions
   const [exitOptionType, setExitOptionType] = useState('CE');
@@ -138,6 +145,9 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
   const [showSlTrailModal, setShowSlTrailModal] = useState(false);
   const [showTimeRangeModal, setShowTimeRangeModal] = useState(false);
   const [showChartTypeModal, setShowChartTypeModal] = useState(false);
+  const [showPreviousCandleModal, setShowPreviousCandleModal] = useState(false);
+  const [showSameCandleModal, setShowSameCandleModal] = useState(false);
+  const [showPreviousMinusOneModal, setShowPreviousMinusOneModal] = useState(false);
   const [currentDropdownType, setCurrentDropdownType] = useState('');
   
   // Dynamic data from Zerodha
@@ -182,7 +192,81 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
     setDetectedPatterns([]);
   };
 
+  const resetForm = useCallback(() => {
+    setStrategyName('');
+    setSelectedStrategyType('Time Based');
+    setSelectedChartType('Candle');
+    setSelectedOrderType('MIS');
+    setSelectedTransactionType('Buy');
+    setStartTime('09:16');
+    setSquareOffTime('15:15');
+    setSelectedDays(['MON', 'TUE', 'WED', 'THU', 'FRI']);
+    setSelectedInstruments([]);
+    setShowInstrumentModal(false);
+    setInstrumentSearchQuery('');
+    setActiveEditingStrategy(null);
+    setSelectedInterval('1M');
+    setOrderLegs([]);
+    setShowOrderLegModal(false);
+    setCurrentEditingLeg(null);
+    setRiskRewardRatio('1:3');
+    setOverallStopLoss(true);
+    setOverallProfit(true);
+    setMaxLossAmount('1000');
+    setMaxProfitAmount('5000');
+    setFirstCandleColor('Green');
+    setFirstCandleTiming('Start');
+    setSecondCandleColor('Red');
+    setSecondCandleTiming('Close');
+    setCandleTimeSelection('Start');
+    setTimeRange('1 sec to 10 sec');
+    setSelectedOrderAction('Buy');
+    setLotSize('75');
+    setOptionType('CE');
+    setExpiryType('Weekly');
+    setMoneynessType('ATM');
+    setEntryPriceType('Market');
+    setAtmStrike('OTM-1');
+    setStopLossType('Previous Candle - High');
+    setSlTrailType('On Candle Close');
+    setPreviousCandleSelection('High');
+    setSameCandleSelection('Low');
+    setPreviousMinusOneSelection('High');
+    setExitOptionType('CE');
+    setExitCandleTiming('Start');
+    setExitCandleColor('Green');
+    setExitSlHit(false);
+    setExitLegsIndex([]);
+    setExitLegsSelling([]);
+    setShowExitLegModal(false);
+    setCurrentEditingExitLeg(null);
+    setExitLegType('index');
+    setShowCandleColorModal(false);
+    setShowCandleTimingModal(false);
+    setShowLotSizeModal(false);
+    setShowMoneynessModal(false);
+    setShowAtmStrikeModal(false);
+    setShowSlTypeModal(false);
+    setShowSlTrailModal(false);
+    setShowTimeRangeModal(false);
+    setShowChartTypeModal(false);
+    setShowPreviousCandleModal(false);
+    setShowSameCandleModal(false);
+    setShowPreviousMinusOneModal(false);
+    setCurrentDropdownType('');
+    setLiveQuotes({});
+    setCandleData({});
+    setShowLiveChart(false);
+    setSelectedChartInstrument('');
+    setDetectedPatterns([]);
+    setShowPasswordModal(false);
+    setIsPasswordVerified(false);
+  }, []);
+
   const handleStrategyTypePress = (type: string) => {
+    if (activeEditingStrategy) {
+      return;
+    }
     if (type === 'Candle Based' && !isPasswordVerified) {
       setShowPasswordModal(true);
     } else {
@@ -215,8 +299,58 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
   const moneynessTypes = ['ATM', 'ITM', 'OTM'];
   const atmStrikes = ['ITM-5', 'ITM-3', 'ITM-2', 'ITM-1', 'ATM', 'OTM-1', 'OTM-2', 'OTM-3', 'OTM-5'];
   const slTypes = ['Previous Candle - High', 'Previous Candle - Low', 'SAME Candle - High', 'SAME Candle - Low'];
-  const slTrailTypes = ['On Candle Close', 'On Candle Start', 'On Price Movement'];
+  const slTrailTypes = ['New', 'On Candle Close', 'On Candle Start'];
+  const highLowOptions = ['High', 'Low'];
   const timeRanges = ['1 sec to 10 sec', '1 sec to 30 sec', '1 sec to 60 sec', '5 sec to 30 sec'];
+
+  useEffect(() => {
+    if (editingStrategy) {
+      const data = editingStrategy.fullStrategyData || {};
+      const exitConditions = data.exitConditions || {};
+      const riskManagement = data.riskManagement || {};
+      const marketData = data.marketData || {};
+      const type = data.selectedStrategyType || editingStrategy.strategyType || 'Time Based';
+      setActiveEditingStrategy(editingStrategy);
+      setStrategyName(data.strategyName || editingStrategy.name || '');
+      setSelectedStrategyType(type);
+      setIsPasswordVerified(type === 'Candle Based');
+      setSelectedChartType(data.selectedChartType || data.chartConfiguration?.defaultChartType || 'Candle');
+      setSelectedOrderType(data.selectedOrderType || 'MIS');
+      setSelectedTransactionType(data.selectedTransactionType || 'Buy');
+      setStartTime(data.startTime || '09:16');
+      setSquareOffTime(data.squareOffTime || '15:15');
+      setSelectedDays(Array.isArray(data.selectedDays) && data.selectedDays.length ? data.selectedDays : ['MON', 'TUE', 'WED', 'THU', 'FRI']);
+      setSelectedInterval(data.selectedInterval || '1M');
+      setSelectedInstruments(Array.isArray(data.instruments) ? data.instruments : []);
+      setOrderLegs(Array.isArray(data.orderLegs) ? data.orderLegs : []);
+      setExitLegsIndex(Array.isArray(exitConditions.exitLegsIndex) ? exitConditions.exitLegsIndex : []);
+      setExitLegsSelling(Array.isArray(exitConditions.exitLegsSelling) ? exitConditions.exitLegsSelling : []);
+      setExitOptionType(exitConditions.exitOptionType || 'CE');
+      setExitCandleTiming(exitConditions.exitCandleTiming || 'Start');
+      setExitCandleColor(exitConditions.exitCandleColor || 'Green');
+      setExitSlHit(Boolean(exitConditions.exitSlHit));
+      setRiskRewardRatio(riskManagement.riskRewardRatio || '1:3');
+      setOverallStopLoss(typeof riskManagement.overallStopLoss === 'boolean' ? riskManagement.overallStopLoss : true);
+      setOverallProfit(typeof riskManagement.overallProfit === 'boolean' ? riskManagement.overallProfit : true);
+      setMaxLossAmount(riskManagement.maxLossAmount || '1000');
+      setMaxProfitAmount(riskManagement.maxProfitAmount || '5000');
+      setLiveQuotes(marketData.liveQuotes || {});
+      setCandleData(marketData.candleData || {});
+      setShowLiveChart(false);
+      setDetectedPatterns([]);
+      setSelectedChartInstrument(data.selectedChartInstrument || (Array.isArray(data.instruments) && data.instruments.length ? data.instruments[0] : ''));
+      setShowInstrumentModal(false);
+      setShowOrderLegModal(false);
+      setShowExitLegModal(false);
+      setCurrentEditingLeg(null);
+      setCurrentEditingExitLeg(null);
+      setExitLegType('index');
+      setInstrumentSearchQuery('');
+      setShowPasswordModal(false);
+    } else {
+      setActiveEditingStrategy(null);
+    }
+  }, [editingStrategy]);
 
   // Helper function for chart icons
   const getChartIcon = (chartType: string) => {
@@ -271,6 +405,15 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
         break;
       case 'slTrailType':
         setSlTrailType(value);
+        break;
+      case 'previousCandle':
+        setPreviousCandleSelection(value);
+        break;
+      case 'sameCandle':
+        setSameCandleSelection(value);
+        break;
+      case 'previousMinusOne':
+        setPreviousMinusOneSelection(value);
         break;
     }
   };
@@ -553,35 +696,94 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
   };
 
   // Save strategy to user-specific storage organized by categories
-  const saveStrategyToStorage = async (strategyData: any) => {
+  const saveStrategyToStorage = async (
+    strategyData: any,
+    existingStrategy?: StrategyApiData | null
+  ): Promise<{ strategy: StrategyApiData; category: string } | false> => {
     if (!user?.id) {
       Alert.alert('Error', 'User not authenticated. Please log in to save strategies.');
       return false;
     }
 
     try {
-      // Determine the category for this strategy
       const strategyCategory = getStrategyCategory(strategyData.selectedStrategyType, strategyData.instruments);
-      
-      // Create category-specific storage key
       const categoryKey = `createdStrategies_${user.id}_${strategyCategory.replace(/\s+/g, '_')}`;
-      const existingStrategies = await AsyncStorage.getItem(categoryKey);
-      const strategies: StrategyApiData[] = existingStrategies ? JSON.parse(existingStrategies) : [];
+      const generalKey = `createdStrategies_${user.id}`;
 
-      // Create a new strategy object with proper structure
+      if (existingStrategy) {
+        const updatedStrategy: StrategyApiData = {
+          ...existingStrategy,
+          name: strategyData.strategyName,
+          shortName: strategyData.strategyName.substring(0, 10) + '...',
+          category: strategyCategory,
+          strategyType: strategyData.selectedStrategyType,
+          description: `${strategyData.selectedStrategyType} strategy for ${strategyData.instruments.join(', ')}`,
+          fullStrategyData: strategyData,
+          instruments: strategyData.instruments,
+        };
+
+        const generalStrategiesRaw = await AsyncStorage.getItem(generalKey);
+        const generalStrategies: StrategyApiData[] = generalStrategiesRaw ? JSON.parse(generalStrategiesRaw) : [];
+        const updatedGeneral = generalStrategies.map((strategy) =>
+          strategy.id === existingStrategy.id ? updatedStrategy : strategy
+        );
+        await AsyncStorage.setItem(generalKey, JSON.stringify(updatedGeneral));
+
+        const previousCategory = existingStrategy.category;
+        if (previousCategory) {
+          const previousCategoryKey = `createdStrategies_${user.id}_${previousCategory.replace(/\s+/g, '_')}`;
+          const previousCategoryRaw = await AsyncStorage.getItem(previousCategoryKey);
+          if (previousCategoryRaw) {
+            let previousStrategies: StrategyApiData[] = JSON.parse(previousCategoryRaw);
+            if (previousCategory === strategyCategory) {
+              previousStrategies = previousStrategies.map((strategy) =>
+                strategy.id === existingStrategy.id ? updatedStrategy : strategy
+              );
+              await AsyncStorage.setItem(previousCategoryKey, JSON.stringify(previousStrategies));
+            } else {
+              previousStrategies = previousStrategies.filter((strategy) => strategy.id !== existingStrategy.id);
+              await AsyncStorage.setItem(previousCategoryKey, JSON.stringify(previousStrategies));
+            }
+          }
+        }
+
+        if (strategyCategory !== previousCategory) {
+          const currentCategoryRaw = await AsyncStorage.getItem(categoryKey);
+          const currentCategoryStrategies: StrategyApiData[] = currentCategoryRaw ? JSON.parse(currentCategoryRaw) : [];
+          const updatedCategory = [
+            updatedStrategy,
+            ...currentCategoryStrategies.filter((strategy) => strategy.id !== existingStrategy.id),
+          ];
+          await AsyncStorage.setItem(categoryKey, JSON.stringify(updatedCategory));
+        } else {
+          const currentCategoryRaw = await AsyncStorage.getItem(categoryKey);
+          const currentCategoryStrategies: StrategyApiData[] = currentCategoryRaw ? JSON.parse(currentCategoryRaw) : [];
+          const updatedCategory = currentCategoryStrategies.map((strategy) =>
+            strategy.id === existingStrategy.id ? updatedStrategy : strategy
+          );
+          await AsyncStorage.setItem(categoryKey, JSON.stringify(updatedCategory));
+        }
+
+        console.log(`Strategy updated in category: ${strategyCategory}`);
+        return { strategy: updatedStrategy, category: strategyCategory };
+      }
+
+      const existingStrategiesRaw = await AsyncStorage.getItem(categoryKey);
+      const strategies: StrategyApiData[] = existingStrategiesRaw ? JSON.parse(existingStrategiesRaw) : [];
+
       const newStrategy: StrategyApiData = {
         id: Date.now().toString(),
         name: strategyData.strategyName,
         shortName: strategyData.strategyName.substring(0, 10) + '...',
-        category: strategyCategory, // Use the determined category
+        category: strategyCategory,
         strategyType: strategyData.selectedStrategyType,
         description: `${strategyData.selectedStrategyType} strategy for ${strategyData.instruments.join(', ')}`,
-        totalReturn: 0, // Will be calculated later
-        winRate: 0, // Will be calculated later
-        sharpeRatio: 0, // Will be calculated later
-        maxDrawdown: 0, // Will be calculated later
-        margin: 0, // Will be calculated later
-        performance: [], // Will be populated later
+        totalReturn: 0,
+        winRate: 0,
+        sharpeRatio: 0,
+        maxDrawdown: 0,
+        margin: 0,
+        performance: [],
         risk: 'Medium' as const,
         isActive: false,
         createdAt: new Date().toISOString(),
@@ -590,21 +792,16 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
         instruments: strategyData.instruments,
       };
 
-      // Add the new strategy to the beginning of the array
       const updatedStrategies = [newStrategy, ...strategies];
-      
-      // Save to category-specific AsyncStorage
       await AsyncStorage.setItem(categoryKey, JSON.stringify(updatedStrategies));
-      
-      // Also save to the general strategies list for backward compatibility
-      const generalKey = `createdStrategies_${user.id}`;
-      const generalStrategies = await AsyncStorage.getItem(generalKey);
-      const allStrategies: StrategyApiData[] = generalStrategies ? JSON.parse(generalStrategies) : [];
+
+      const generalStrategiesRaw = await AsyncStorage.getItem(generalKey);
+      const allStrategies: StrategyApiData[] = generalStrategiesRaw ? JSON.parse(generalStrategiesRaw) : [];
       const updatedAllStrategies = [newStrategy, ...allStrategies];
       await AsyncStorage.setItem(generalKey, JSON.stringify(updatedAllStrategies));
-      
+
       console.log(`Strategy saved to category: ${strategyCategory}`);
-      return true;
+      return { strategy: newStrategy, category: strategyCategory };
     } catch (error) {
       console.error('Error saving strategy:', error);
       Alert.alert('Error', 'Failed to save strategy. Please try again.');
@@ -667,13 +864,13 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
         liveQuotes,
         candleData,
       },
-      createdAt: new Date().toISOString(),
+      createdAt: activeEditingStrategy ? activeEditingStrategy.createdAt : new Date().toISOString(),
     };
 
     console.log('Saving strategy:', strategyData);
     
     // Save strategy to user-specific storage
-    const saveSuccess = await saveStrategyToStorage(strategyData);
+    const saveSuccess = await saveStrategyToStorage(strategyData, activeEditingStrategy);
     
     if (!saveSuccess) {
       return; // Error already handled in saveStrategyToStorage
@@ -682,35 +879,54 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
     // Get the category for display
     const strategyCategory = getStrategyCategory(strategyData.selectedStrategyType, strategyData.instruments);
     
-    if (onStrategyCreated) {
-      onStrategyCreated(strategyData);
-    }
-
-    if (selectedStrategyType === 'Candle Based') {
-      // Navigate to live chart screen for candle-based strategies
-      if (navigation) {
-        navigation.navigate('live-chart-screen', {
-          strategyData: JSON.stringify(strategyData),
-          instruments: JSON.stringify(selectedInstruments),
-          interval: selectedInterval,
-          chartType: selectedChartType
-        });
-      } else {
-        Alert.alert('Success', `Strategy created and saved to ${strategyCategory} category! Navigate to Live Charts to view real-time data.`);
+    if (activeEditingStrategy) {
+      // Update existing strategy
+      if (onStrategyUpdated) {
+        onStrategyUpdated(activeEditingStrategy, strategyData);
       }
-    } else {
-      Alert.alert('Success', `Strategy created and saved to ${strategyCategory} category!`, [
+      
+      if (onEditComplete) {
+        onEditComplete();
+      }
+
+      Alert.alert('Success', `Strategy updated successfully in ${strategyCategory} category!`, [
         {
           text: 'OK',
-          style: 'default'
+          onPress: () => {
+            resetForm();
+          }
         }
       ]);
+    } else {
+      // Create new strategy
+      if (onStrategyCreated) {
+        onStrategyCreated(strategyData);
+      }
+
+      if (selectedStrategyType === 'Candle Based') {
+        // Navigate to live chart screen for candle-based strategies
+        if (navigation) {
+          navigation.navigate('live-chart-screen', {
+            strategyData: JSON.stringify(strategyData),
+            instruments: JSON.stringify(selectedInstruments),
+            interval: selectedInterval,
+            chartType: selectedChartType
+          });
+        } else {
+          Alert.alert('Success', `Strategy created and saved to ${strategyCategory} category! Navigate to Live Charts to view real-time data.`);
+        }
+      } else {
+        Alert.alert('Success', `Strategy created and saved to ${strategyCategory} category!`, [
+          {
+            text: 'OK',
+            style: 'default'
+          }
+        ]);
+      }
+      
+      // Reset form for new strategy
+      resetForm();
     }
-    
-    // Reset form
-    setStrategyName('');
-    setOrderLegs([]);
-    setSelectedInstruments([]);
   };
 
   return (
@@ -1247,24 +1463,22 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
             </View>
 
             {/* ATM Options */}
-            <View style={styles.conditionRow}>
-              <Text style={styles.conditionLabel}>ATM Options</Text>
-              <View style={styles.dropdownWrapper}>
-                <TouchableOpacity style={styles.dropdownButton}>
-                  <Text style={styles.dropdownText}>{atmStrike}</Text>
-                  <Ionicons name="chevron-down" size={16} color="#666" />
-                </TouchableOpacity>
-              </View>
-            </View>
 
-            {/* Stop Loss Configuration */}
             <View style={styles.conditionRow}>
-              <Text style={styles.conditionLabel}>SL - Previous Candle - High / SAME Candle - Low</Text>
-              <View style={styles.dropdownWrapper}>
-                <TouchableOpacity style={styles.dropdownButton}>
-                  <Text style={styles.dropdownText}>{stopLossType}</Text>
-                  <Ionicons name="chevron-down" size={16} color="#666" />
-                </TouchableOpacity>
+              <Text style={styles.conditionLabel}>SAME Candle</Text>
+              <View style={styles.conditionControls}>
+                <View style={styles.dropdownWrapper}>
+                  <TouchableOpacity 
+                    style={styles.dropdownButton}
+                    onPress={() => {
+                      setCurrentDropdownType('sameCandle');
+                      setShowSameCandleModal(true);
+                    }}
+                  >
+                    <Text style={styles.dropdownText}>{sameCandleSelection}</Text>
+                    <Ionicons name="chevron-down" size={16} color="#666" />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
 
@@ -1272,7 +1486,13 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
             <View style={styles.conditionRow}>
               <Text style={styles.conditionLabel}>SL Trail</Text>
               <View style={styles.dropdownWrapper}>
-                <TouchableOpacity style={styles.dropdownButton}>
+                <TouchableOpacity 
+                  style={styles.dropdownButton}
+                  onPress={() => {
+                    setCurrentDropdownType('slTrailType');
+                    setShowSlTrailModal(true);
+                  }}
+                >
                   <Text style={styles.dropdownText}>{slTrailType}</Text>
                   <Ionicons name="chevron-down" size={16} color="#666" />
                 </TouchableOpacity>
@@ -1280,10 +1500,24 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
             </View>
 
             <View style={styles.conditionRow}>
-              <Text style={styles.conditionLabel}>THEN Previous-I / Low ok</Text>
-              <TouchableOpacity style={styles.okButton}>
-                <Text style={styles.okButtonText}>OK</Text>
-              </TouchableOpacity>
+              <Text style={styles.conditionLabel}>THEN Previous-1</Text>
+              <View style={styles.conditionControls}>
+                <View style={styles.dropdownWrapper}>
+                  <TouchableOpacity 
+                    style={styles.dropdownButton}
+                    onPress={() => {
+                      setCurrentDropdownType('previousMinusOne');
+                      setShowPreviousMinusOneModal(true);
+                    }}
+                  >
+                    <Text style={styles.dropdownText}>{previousMinusOneSelection}</Text>
+                    <Ionicons name="chevron-down" size={16} color="#666" />
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity style={styles.okButton}>
+                  <Text style={styles.okButtonText}>OK</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         )}
@@ -1579,68 +1813,6 @@ const TradingStrategy = ({ onStrategyCreated, navigation }: TradingStrategyProps
 
         {/* Enhanced Risk Management */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Risk : Reward</Text>
-          
-          <View style={styles.conditionRow}>
-            <Text style={styles.conditionLabel}>Risk : Reward :- 1:3</Text>
-            <TextInput
-              style={styles.riskInput}
-              value={riskRewardRatio}
-              onChangeText={setRiskRewardRatio}
-              placeholder="1:3"
-            />
-          </View>
-
-          <View style={styles.conditionRow}>
-            <Text style={styles.conditionLabel}>OVERALL Stop Lose</Text>
-            <View style={styles.toggleContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.toggleButton,
-                  overallStopLoss && styles.toggleButtonActive
-                ]}
-                onPress={() => setOverallStopLoss(!overallStopLoss)}
-              >
-                <Text style={[
-                  styles.toggleText,
-                  overallStopLoss && styles.toggleTextActive
-                ]}>
-                  {overallStopLoss ? 'ON' : 'OFF'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.conditionRow}>
-            <Text style={styles.conditionLabel}>Max Lose</Text>
-            <TextInput
-              style={styles.riskInput}
-              value={maxLossAmount}
-              onChangeText={setMaxLossAmount}
-              placeholder="1000"
-              keyboardType="numeric"
-            />
-          </View>
-
-          <View style={styles.conditionRow}>
-            <Text style={styles.conditionLabel}>OVERALL Profit</Text>
-            <View style={styles.toggleContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.toggleButton,
-                  overallProfit && styles.toggleButtonActive
-                ]}
-                onPress={() => setOverallProfit(!overallProfit)}
-              >
-                <Text style={[
-                  styles.toggleText,
-                  overallProfit && styles.toggleTextActive
-                ]}>
-                  {overallProfit ? 'ON' : 'OFF'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
 
           <View style={styles.conditionRow}>
             <Text style={styles.conditionLabel}>Max Profit</Text>

@@ -30,6 +30,7 @@ export function StrategiesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [createdStrategies, setCreatedStrategies] = useState<StrategyApiData[]>([]);
   const [productFilter, setProductFilter] = useState<any>(null);
+  const [editingStrategy, setEditingStrategy] = useState<StrategyApiData | null>(null);
 
   const { user, isAuthenticated } = useAuth();
   const {
@@ -559,9 +560,18 @@ export function StrategiesScreen() {
     }
   };
 
-  const StrategyCard = ({ strategy, onSubscribe }: { 
+  const handleEditStrategy = (strategy: StrategyApiData) => {
+    if (strategy.userId !== user?.id) {
+      return;
+    }
+    setEditingStrategy(strategy);
+    setActiveTab('Create Strategy');
+  };
+
+  const StrategyCard = ({ strategy, onSubscribe, onEdit }: { 
     strategy: StrategyApiData; 
     onSubscribe: (id: string, name: string) => void; 
+    onEdit: (strategy: StrategyApiData) => void; 
   }) => {
     const isCustomStrategy = strategy.strategyType === 'Candle Based' || strategy.strategyType === 'Time Based' || strategy.strategyType === 'Indicator Based' ||
                            strategy.category === 'Candle Based' || strategy.category === 'Time Based' || strategy.category === 'Indicator Based' ||
@@ -665,6 +675,14 @@ export function StrategiesScreen() {
           </ThemedText>
         </View>
         <View style={styles.actionButtons}>
+          {isUserOwned && (
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => onEdit(strategy)}
+            >
+              <ThemedText style={styles.editButtonText}>Edit</ThemedText>
+            </TouchableOpacity>
+          )}
           {isUserOwned && (
             <TouchableOpacity
               style={styles.deleteButton}
@@ -833,6 +851,7 @@ export function StrategiesScreen() {
                   key={strategy.id} 
                   strategy={strategy} 
                   onSubscribe={handleSubscribeToStrategy}
+                  onEdit={handleEditStrategy}
                 />
               ))}
             </View>
@@ -1106,6 +1125,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  editButton: {
+    backgroundColor: '#1d4ed8',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  editButtonText: {
+    fontSize: 12,
+    color: '#fff',
+    fontWeight: '600',
   },
   deleteButton: {
     backgroundColor: '#ef4444',
