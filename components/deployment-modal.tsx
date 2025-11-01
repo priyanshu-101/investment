@@ -10,6 +10,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useBrokers } from '../hooks/useBrokers';
 
 interface DeploymentModalProps {
   visible: boolean;
@@ -36,6 +37,8 @@ export function DeploymentModal({
   onClose,
   onDeploy,
 }: DeploymentModalProps) {
+  const { connectedBrokers } = useBrokers();
+
   const [formData, setFormData] = useState<DeploymentData>({
     quantityMultiplier: 1,
     maxProfit: 0,
@@ -48,7 +51,6 @@ export function DeploymentModal({
 
   const [loading, setLoading] = useState(false);
   const [brokerDropdownOpen, setBrokerDropdownOpen] = useState(false);
-  const brokers = ['Zerodha', 'Angel', 'Shoonya'];
 
   useEffect(() => {
     // Reset form when modal opens
@@ -179,18 +181,24 @@ export function DeploymentModal({
 
               {brokerDropdownOpen && (
                 <View style={styles.brokerDropdown}>
-                  {brokers.map((broker) => (
-                    <TouchableOpacity
-                      key={broker}
-                      style={styles.brokerDropdownItem}
-                      onPress={() => {
-                        setFormData({ ...formData, brokerName: broker });
-                        setBrokerDropdownOpen(false);
-                      }}
-                    >
-                      <Text style={styles.brokerDropdownItemText}>{broker}</Text>
-                    </TouchableOpacity>
-                  ))}
+                  {connectedBrokers.length > 0 ? (
+                    connectedBrokers.map((broker) => (
+                      <TouchableOpacity
+                        key={broker.id}
+                        style={styles.brokerDropdownItem}
+                        onPress={() => {
+                          setFormData({ ...formData, brokerName: broker.name });
+                          setBrokerDropdownOpen(false);
+                        }}
+                      >
+                        <Text style={styles.brokerDropdownItemText}>{broker.name}</Text>
+                      </TouchableOpacity>
+                    ))
+                  ) : (
+                    <View style={styles.brokerDropdownItem}>
+                      <Text style={styles.brokerDropdownItemText}>No brokers connected</Text>
+                    </View>
+                  )}
                 </View>
               )}
             </View>

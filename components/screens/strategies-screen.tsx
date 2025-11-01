@@ -31,7 +31,6 @@ export function StrategiesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [createdStrategies, setCreatedStrategies] = useState<StrategyApiData[]>([]);
   const [productFilter, setProductFilter] = useState<any>(null);
-  const [editingStrategy, setEditingStrategy] = useState<StrategyApiData | null>(null);
   const [deploymentModalVisible, setDeploymentModalVisible] = useState(false);
   const [selectedStrategyForDeployment, setSelectedStrategyForDeployment] = useState<{
     id: string;
@@ -596,7 +595,7 @@ export function StrategiesScreen() {
     if (strategy.userId !== user?.id) {
       return;
     }
-    setEditingStrategy(strategy);
+    // TODO: Implement edit functionality
     setActiveTab('Create Strategy');
   };
 
