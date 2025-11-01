@@ -24,6 +24,26 @@ const BrokerSelectionModal: React.FC<BrokerSelectionModalProps> = ({ visible, on
   const [apiKey, setApiKey] = useState('');
   const [apiSecretKey, setApiSecretKey] = useState('');
 
+  const brokerRedirectUrls: Record<string, string> = {
+    'angel one': 'https://www.angelone.in/',
+    'aliceblue': 'https://www.paytmmoney.com/',
+    'shoonya': 'https://bigul.co/',
+    'finvasia': 'https://groww.in/',
+    'tradejini': 'https://groww.in/',
+    'fyers': 'https://kite.zerodha.com/',
+    'dhan': 'https://www.angelone.in/',
+    'upstox': 'https://www.paytmmoney.com/',
+    'paytm money': 'https://www.paytmmoney.com/',
+    'bigul': 'https://bigul.co/',
+    'groww': 'https://groww.in/',
+    'zerodha': 'https://kite.zerodha.com/',
+    'default': 'https://www.angelone.in/',
+  };
+
+  const getRedirectUrl = (brokerName: string): string => {
+    return brokerRedirectUrls[brokerName.toLowerCase()] || brokerRedirectUrls['default'];
+  };
+
   const filteredBrokers = brokers
     .filter(broker => broker.name.toLowerCase() >= 'angel one'.toLowerCase())
     .filter(broker => broker.name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -235,7 +255,7 @@ const BrokerSelectionModal: React.FC<BrokerSelectionModalProps> = ({ visible, on
                       <Ionicons name="copy-outline" size={20} color="#6B7280" />
                     </TouchableOpacity>
                     <ThemedText style={styles.urlText}>
-                      https://web.algorooms.com/connect-broker
+                      {selectedBroker ? getRedirectUrl(selectedBroker.name) : 'https://web.algorooms.com/connect-broker'}
                     </ThemedText>
                   </View>
                 </View>
