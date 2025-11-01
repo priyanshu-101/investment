@@ -74,14 +74,24 @@ export function BrokersScreen() {
     setShowBrokerModal(false);
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const userName = user?.email?.split('@')[0] || 'User';
 
   return (
     <ThemedView style={[styles.container, styles.whiteBackground]}>
       <Header />
-      <ThemedText type="title" style={[styles.titleText, styles.blackText]}>
-        Brokers
-      </ThemedText>
+      <View style={styles.headerSection}>
+        <ThemedText type="title" style={[styles.titleText, styles.blackText]}>
+          Brokers
+        </ThemedText>
+        <TouchableOpacity 
+          style={styles.topAddButton}
+          onPress={handleAddBroker}
+          activeOpacity={0.7}
+        >
+          <ThemedText style={styles.topAddButtonText}>+ Add Broker</ThemedText>
+        </TouchableOpacity>
+      </View>
       
       <View style={styles.contentContainer}>
         {loading ? (
@@ -98,7 +108,7 @@ export function BrokersScreen() {
             </TouchableOpacity>
           </View>
         ) : connectedBrokers.length === 0 ? (
-          <>
+          <View style={styles.noBrokersContainer}>
             <View style={styles.illustrationContainer}>
               <Image 
                 source={require('@/assets/images/Logo.png')} 
@@ -110,134 +120,85 @@ export function BrokersScreen() {
             <ThemedText style={styles.noBrokersText}>
               No Brokers connected. Please connect your brokers!
             </ThemedText>
-            
-            <TouchableOpacity 
-              style={styles.addButton}
-              onPress={handleAddBroker}
-              activeOpacity={0.7}
-            >
-              <View style={styles.buttonContent}>
-                <ThemedText style={styles.plusIcon}>+</ThemedText>
-                <ThemedText style={styles.buttonText}>Connect Broker</ThemedText>
-              </View>
-            </TouchableOpacity>
-          </>
+          </View>
         ) : (
           <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
             <View style={styles.brokersListContainer}>
               {connectedBrokers.map((broker, index) => (
-                <View key={`${broker.id}-${index}`} style={styles.connectedBrokerCard}>
-                  {/* Header with Broker Name and Disconnect */}
-                  <View style={styles.cardTopSection}>
-                    <ThemedText style={styles.welcomeText}>Hello {userName},</ThemedText>
-                    <TouchableOpacity 
-                      style={styles.disconnectButton}
-                      onPress={() => handleDisconnectBroker(broker.id)}
-                    >
-                      <ThemedText style={styles.disconnectText}>×</ThemedText>
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Subscription Warning */}
-                  <ThemedText style={styles.subscriptionWarning}>
-                    Time to renew! Your subscription has expired.
-                  </ThemedText>
-
-                  {/* Broker Name Chip */}
-                  <View style={styles.brokerChip}>
-                    <View style={[styles.brokerChipLogo, { backgroundColor: broker.bgColor || '#E3F2FD' }]}>
-                      <ThemedText style={[styles.brokerChipLogoText, { color: broker.color || '#1976D2' }]}>
+                <View key={`${broker.id}-${index}`} style={styles.brokerCardLarge}>
+                  {/* Left Section - Logo */}
+                  <View style={styles.cardLeftSection}>
+                    <View style={[styles.brokerLogoBig, { backgroundColor: broker.bgColor || '#E3F2FD' }]}>
+                      <ThemedText style={[styles.brokerLogoBigText, { color: broker.color || '#1976D2' }]}>
                         {broker.logo || 'A'}
                       </ThemedText>
                     </View>
-                    <ThemedText style={styles.brokerChipText}>
-                      {broker.name} ({broker.userId || 'R10111359'})
-                    </ThemedText>
                   </View>
 
-                  {/* Navigation Arrows */}
-                  <View style={styles.navigationContainer}>
-                    <TouchableOpacity style={styles.navArrow}>
-                      <ThemedText style={styles.navArrowText}>‹</ThemedText>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.navArrow}>
-                      <ThemedText style={styles.navArrowText}>›</ThemedText>
-                    </TouchableOpacity>
+                  {/* Center Section - Broker Info */}
+                  <View style={styles.brokerInfoSmall}>
+                    <ThemedText style={styles.brokerNameLarge}>{broker.name}</ThemedText>
+                    <ThemedText style={styles.brokerIdText}>{broker.userId || 'R10111359'}</ThemedText>
                   </View>
 
-                  {/* Broker Details Row */}
-                  <View style={styles.detailsRow}>
-                    <View style={styles.detailSection}>
-                      <ThemedText style={styles.detailLabel}>{broker.name}</ThemedText>
-                      <ThemedText style={styles.detailValue}>{broker.userId || 'R10111359'}</ThemedText>
-                    </View>
-                    <View style={styles.performanceSection}>
-                      <ThemedText style={styles.detailLabel}>Strategies Performance</ThemedText>
-                      <ThemedText style={styles.performanceValue}>₹0.00</ThemedText>
-                    </View>
+                  {/* Performance Section */}
+                  <View style={styles.performanceSectionHorizontal}>
+                    <ThemedText style={styles.performanceLabel}>Strategy Performance</ThemedText>
+                    <ThemedText style={styles.performanceValue}>0.00 ↗</ThemedText>
                   </View>
 
-                  {/* Feature Toggles */}
-                  <View style={styles.togglesContainer}>
-                    {/* Terminal */}
-                    <View style={styles.toggleSection}>
-                      <View style={styles.toggleLabelContainer}>
+                  {/* Right Section - Toggles and Menu */}
+                  <View style={styles.cardRightSectionHorizontal}>
+                    {/* Terminal Indicator */}
+                    <View style={styles.toggleGroupVerticalSmall}>
+                      <View style={styles.toggleGroupHorizontal}>
                         <View style={styles.terminalDot} />
-                        <ThemedText style={styles.toggleLabel}>Terminal</ThemedText>
-                        <ThemedText style={styles.infoIcon}>ℹ</ThemedText>
-                      </View>
-                      <View style={styles.toggleRow}>
-                        <ThemedText style={styles.toggleOffText}>Off</ThemedText>
                         <TouchableOpacity 
                           style={[
-                            styles.toggleSwitch,
-                            brokerToggles[broker.id]?.terminal && styles.toggleSwitchOn
+                            styles.largeToggle,
+                            brokerToggles[broker.id]?.terminal && styles.largeToggleOn
                           ]}
                           onPress={() => toggleTerminal(broker.id)}
                         >
                           <View style={[
-                            styles.toggleThumb,
-                            brokerToggles[broker.id]?.terminal && styles.toggleThumbOn
+                            styles.largeToggleThumb,
+                            brokerToggles[broker.id]?.terminal && styles.largeToggleThumbOn
                           ]} />
                         </TouchableOpacity>
-                        <ThemedText style={styles.toggleOnText}>On</ThemedText>
                       </View>
+                      <ThemedText style={styles.toggleLabelSmall}>Terminal</ThemedText>
                     </View>
 
-                    {/* Trading Engine */}
-                    <View style={styles.toggleSection}>
-                      <View style={styles.toggleLabelContainer}>
+                    {/* Trading Indicator */}
+                    <View style={styles.toggleGroupVerticalSmall}>
+                      <View style={styles.toggleGroupHorizontal}>
                         <View style={styles.tradingDot} />
-                        <ThemedText style={styles.toggleLabel}>Trading Engine</ThemedText>
-                      </View>
-                      <View style={styles.toggleRow}>
-                        <ThemedText style={styles.toggleOffText}>Off</ThemedText>
                         <TouchableOpacity 
                           style={[
-                            styles.toggleSwitch,
-                            brokerToggles[broker.id]?.trading && styles.toggleSwitchOn
+                            styles.largeToggle,
+                            brokerToggles[broker.id]?.trading && styles.largeToggleOn
                           ]}
                           onPress={() => toggleTrading(broker.id)}
                         >
                           <View style={[
-                            styles.toggleThumb,
-                            brokerToggles[broker.id]?.trading && styles.toggleThumbOn
+                            styles.largeToggleThumb,
+                            brokerToggles[broker.id]?.trading && styles.largeToggleThumbOn
                           ]} />
                         </TouchableOpacity>
-                        <ThemedText style={styles.toggleOnText}>On</ThemedText>
                       </View>
+                      <ThemedText style={styles.toggleLabelSmall}>Trading Engine</ThemedText>
                     </View>
+
+                    {/* Menu Button */}
+                    <TouchableOpacity 
+                      style={styles.menuButtonLarge}
+                      onPress={() => handleDisconnectBroker(broker.id)}
+                    >
+                      <ThemedText style={styles.menuButtonTextLarge}>⋯</ThemedText>
+                    </TouchableOpacity>
                   </View>
                 </View>
               ))}
-              
-              <TouchableOpacity 
-                style={styles.addAnotherButton}
-                onPress={handleAddBroker}
-                activeOpacity={0.7}
-              >
-                <ThemedText style={styles.addAnotherText}>+ Add Another Broker</ThemedText>
-              </TouchableOpacity>
             </View>
           </ScrollView>
         )}
@@ -266,8 +227,26 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1E3A8A',
     textAlign: 'left',
+    paddingHorizontal: 0,
+    marginBottom: 0,
+  },
+  headerSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 20,
     marginBottom: 20,
+  },
+  topAddButton: {
+    backgroundColor: '#1E3A8A',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  topAddButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   blackText: {
     color: '#1E3A8A',
@@ -275,6 +254,11 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     paddingHorizontal: 20,
+  },
+  noBrokersContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scrollContainer: {
     flex: 1,
@@ -284,6 +268,113 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingTop: 16,
     paddingBottom: 20,
+    gap: 16,
+  },
+  brokerCardLarge: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+    minHeight: 80,
+    gap: 12,
+  },
+  cardLeftSection: {
+    alignItems: 'center',
+  },
+  brokerLogoBig: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brokerLogoBigText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+  },
+  brokerInfoSmall: {
+    minWidth: 120,
+  },
+  brokerNameLarge: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 2,
+  },
+  brokerIdText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  performanceSectionHorizontal: {
+    alignItems: 'center',
+    minWidth: 140,
+  },
+  performanceLabel: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    marginBottom: 1,
+  },
+  performanceValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  cardRightSectionHorizontal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 'auto',
+    gap: 12,
+  },
+  toggleGroupHorizontal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  toggleGroupVerticalSmall: {
+    alignItems: 'center',
+    gap: 3,
+  },
+  toggleLabelSmall: {
+    fontSize: 9,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  largeToggle: {
+    width: 44,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#D1D5DB',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  largeToggleOn: {
+    backgroundColor: '#48BB78',
+  },
+  largeToggleThumb: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#FFFFFF',
+    marginLeft: 3,
+  },
+  largeToggleThumbOn: {
+    marginLeft: 'auto',
+    marginRight: 3,
+  },
+  menuButtonLarge: {
+    padding: 6,
+  },
+  menuButtonTextLarge: {
+    fontSize: 20,
+    color: '#6B7280',
+    fontWeight: 'bold',
   },
   connectedBrokerCard: {
     backgroundColor: '#1E3A6A',
@@ -375,15 +466,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   detailValue: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  performanceSection: {
-    flex: 1,
-    alignItems: 'flex-end',
-  },
-  performanceValue: {
     fontSize: 14,
     color: '#FFFFFF',
     fontWeight: '600',
@@ -572,12 +654,6 @@ const styles = StyleSheet.create({
     color: '#4A90E2',
     fontSize: 16,
     fontWeight: '600',
-  },
-
-  // Enhanced Broker Card Styles
-  brokerInfo: {
-    flex: 1,
-    marginLeft: 12,
   },
   brokerUserId: {
     fontSize: 12,

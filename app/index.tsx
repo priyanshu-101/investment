@@ -10,12 +10,12 @@ import {
 import ProfileScreen from '@/components/screens/profile-screen';
 import WalletScreen from '@/components/screens/wallet-screen';
 import { ThemedView } from '@/components/themed-view';
+import { useBrokers } from '@/hooks/useBrokers';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { router } from 'expo-router';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
-import { useBrokers } from '@/hooks/useBrokers';
 
 const Stack = createNativeStackNavigator();
 
