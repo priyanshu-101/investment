@@ -15,16 +15,19 @@ import { router } from 'expo-router';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
+import { useBrokers } from '@/hooks/useBrokers';
 
 const Stack = createNativeStackNavigator();
 
 function MainScreen() {
   const [activeTab, setActiveTab] = React.useState<'Home' | 'Brokers' | 'Strategies' | 'Backtest' | 'Reports'>('Home');
+  const { connectedBrokers } = useBrokers();
 
   const renderContent = () => {
     switch (activeTab) {
       case 'Home':
         return <HomeScreen 
+          connectedBrokers={connectedBrokers}
           onNavigateToStrategies={() => setActiveTab('Strategies')} 
           onNavigateToBrokers={() => setActiveTab('Brokers')}
         />;
@@ -38,6 +41,7 @@ function MainScreen() {
         return <ReportsScreen />;
       default:
         return <HomeScreen 
+          connectedBrokers={connectedBrokers}
           onNavigateToStrategies={() => setActiveTab('Strategies')} 
           onNavigateToBrokers={() => setActiveTab('Brokers')}
         />;

@@ -1,22 +1,57 @@
 import { StrategyTemplate } from '@/components/screens/StrategyTemplate';
-import { useEffect, useRef } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useEffect, useRef, useState } from 'react';
 import { Animated, Image, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Header } from '../header';
 import { IndicesSlider } from '../indices-slider';
 import { ProductsSection } from '../products-section';
 
+interface Broker {
+  id: string;
+  name: string;
+  userId?: string;
+  bgColor?: string;
+  color?: string;
+  logo?: string;
+}
+
 interface HomeScreenProps {
+  connectedBrokers?: Broker[];
   onNavigateToStrategies?: () => void;
   onNavigateToBrokers?: () => void;
 }
 
-export function HomeScreen({ onNavigateToStrategies, onNavigateToBrokers }: HomeScreenProps) {
+export function HomeScreen({ connectedBrokers = [], onNavigateToStrategies, onNavigateToBrokers }: HomeScreenProps) {
+  const { user } = useAuth();
+  const [brokerToggles, setBrokerToggles] = useState<Record<string, { terminal: boolean; trading: boolean }>>({});
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const floatAnim1 = useRef(new Animated.Value(0)).current;
   const floatAnim2 = useRef(new Animated.Value(0)).current;
   const floatAnim3 = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const titleAnim = useRef(new Animated.Value(0)).current;
+
+  const toggleTerminal = (brokerId: string) => {
+    setBrokerToggles(prev => ({
+      ...prev,
+      [brokerId]: {
+        ...prev[brokerId],
+        terminal: !prev[brokerId]?.terminal
+      }
+    }));
+  };
+
+  const toggleTrading = (brokerId: string) => {
+    setBrokerToggles(prev => ({
+      ...prev,
+      [brokerId]: {
+        ...prev[brokerId],
+        trading: !prev[brokerId]?.trading
+      }
+    }));
+  };
+
+  const userName = user?.email?.split('@')[0] || 'User';
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -92,61 +127,172 @@ export function HomeScreen({ onNavigateToStrategies, onNavigateToBrokers }: Home
 
         {/* Animated Card */}
         <Animated.View style={[styles.mainContent, { opacity: fadeAnim }]}>
-          <View style={styles.cardContainer}>
-            <View style={styles.illustrationContainer}>
-              <View style={styles.handsContainer}>
-
-
-                <View style={styles.papersContainer}>
-                  <Image
-                    source={require('@/assets/images/Logo.png')}
-                    style={styles.paper}
-                    resizeMode="contain"
-                  />
+          {connectedBrokers.length === 0 ? (
+            // Show "Add Broker" card when no brokers are connected
+            <View style={styles.cardContainer}>
+              <View style={styles.illustrationContainer}>
+                <View style={styles.handsContainer}>
+                  <View style={styles.papersContainer}>
+                    <Image
+                      source={require('@/assets/images/Logo.png')}
+                      style={styles.paper}
+                      resizeMode="contain"
+                    />
+                  </View>
                 </View>
               </View>
+
+              <Animated.Text
+                style={[
+                  styles.title,
+                  {
+                    opacity: titleAnim,
+                    transform: [{
+                      translateY: titleAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [30, 0],
+                      })
+                    }]
+                  }
+                ]}
+              >
+                Add new Broker
+              </Animated.Text>
+
+              <Animated.Text
+                style={[
+                  styles.subtitle,
+                  {
+                    opacity: titleAnim,
+                    transform: [{
+                      translateY: titleAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [20, 0],
+                      })
+                    }]
+                  }
+                ]}
+              >
+                No brokers added at the moment
+              </Animated.Text>
+
+              <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+                <TouchableOpacity style={styles.addButton} onPress={onNavigateToBrokers}>
+                  <Text style={styles.addButtonText}>+ Add Broker</Text>
+                </TouchableOpacity>
+              </Animated.View>
             </View>
+          ) : (
+            // Show connected brokers cards
+            <ScrollView style={styles.brokersContainer} scrollEnabled={false}>
+              {connectedBrokers.map((broker, index) => (
+                <View key={`${broker.id}-${index}`} style={styles.brokerCard}>
+                  {/* Header with Welcome Message */}
+                  <View style={styles.cardTopSection}>
+                    <Text style={styles.welcomeText}>Hello {userName},</Text>
+                  </View>
 
-            <Animated.Text
-              style={[
-                styles.title,
-                {
-                  opacity: titleAnim,
-                  transform: [{
-                    translateY: titleAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [30, 0],
-                    })
-                  }]
-                }
-              ]}
-            >
-              Add new Broker
-            </Animated.Text>
+                  {/* Subscription Warning */}
+                  <Text style={styles.subscriptionWarning}>
+                    Time to renew! Your subscription has expired.
+                  </Text>
 
-            <Animated.Text
-              style={[
-                styles.subtitle,
-                {
-                  opacity: titleAnim,
-                  transform: [{
-                    translateY: titleAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [20, 0],
-                    })
-                  }]
-                }
-              ]}
-            >
-              No brokers added at the moment
-            </Animated.Text>
+                  {/* Navigation Dots */}
+                  <View style={styles.dotsContainer}>
+                    <View style={[styles.dot, styles.activeDot]} />
+                    <View style={styles.dot} />
+                    <View style={styles.dot} />
+                  </View>
 
-            <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-              <TouchableOpacity style={styles.addButton} onPress={onNavigateToBrokers}>
-                <Text style={styles.addButtonText}>+ Add Broker</Text>
-              </TouchableOpacity>
-            </Animated.View>
-          </View>
+                  {/* Broker Chip with Navigation */}
+                  <View style={styles.brokerChipContainer}>
+                    <TouchableOpacity style={styles.navArrow}>
+                      <Text style={styles.navArrowText}>‹</Text>
+                    </TouchableOpacity>
+                    
+                    <View style={styles.brokerChip}>
+                      <View style={[styles.brokerChipLogo, { backgroundColor: broker.bgColor || '#E3F2FD' }]}>
+                        <Text style={[styles.brokerChipLogoText, { color: broker.color || '#1976D2' }]}>
+                          {broker.logo || 'A'}
+                        </Text>
+                      </View>
+                      <Text style={styles.brokerChipText}>
+                        {broker.name} ({broker.userId || 'R10111359'})
+                      </Text>
+                    </View>
+
+                    <TouchableOpacity style={styles.navArrow}>
+                      <Text style={styles.navArrowText}>›</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Broker Details Row */}
+                  <View style={styles.detailsRow}>
+                    <View style={styles.detailSection}>
+                      <Text style={styles.detailLabel}>{broker.name}</Text>
+                      <Text style={styles.detailValue}>{broker.userId || 'R10111359'}</Text>
+                    </View>
+                    <View style={styles.performanceSection}>
+                      <Text style={styles.detailLabel}>Strategies Performance</Text>
+                      <Text style={styles.performanceValue}>₹0.00</Text>
+                    </View>
+                  </View>
+
+                  {/* Feature Toggles */}
+                  <View style={styles.togglesContainer}>
+                    {/* Terminal */}
+                    <View style={styles.toggleSection}>
+                      <View style={styles.toggleLabelContainer}>
+                        <View style={styles.terminalDot} />
+                        <Text style={styles.toggleLabel}>Terminal</Text>
+                        <Text style={styles.infoIcon}>ℹ</Text>
+                      </View>
+                      <View style={styles.toggleRow}>
+                        <Text style={styles.toggleOffText}>Off</Text>
+                        <TouchableOpacity 
+                          style={[
+                            styles.toggleSwitch,
+                            brokerToggles[broker.id]?.terminal && styles.toggleSwitchOn
+                          ]}
+                          onPress={() => toggleTerminal(broker.id)}
+                        >
+                          <View style={[
+                            styles.toggleThumb,
+                            brokerToggles[broker.id]?.terminal && styles.toggleThumbOn
+                          ]} />
+                        </TouchableOpacity>
+                        <Text style={styles.toggleOnText}>On</Text>
+                      </View>
+                    </View>
+
+                    {/* Trading Engine */}
+                    <View style={styles.toggleSection}>
+                      <View style={styles.toggleLabelContainer}>
+                        <View style={styles.tradingDot} />
+                        <Text style={styles.toggleLabel}>Trading Engine</Text>
+                      </View>
+                      <View style={styles.toggleRow}>
+                        <Text style={styles.toggleOffText}>Off</Text>
+                        <TouchableOpacity 
+                          style={[
+                            styles.toggleSwitch,
+                            brokerToggles[broker.id]?.trading && styles.toggleSwitchOn
+                          ]}
+                          onPress={() => toggleTrading(broker.id)}
+                        >
+                          <View style={[
+                            styles.toggleThumb,
+                            brokerToggles[broker.id]?.trading && styles.toggleThumbOn
+                          ]} />
+                        </TouchableOpacity>
+                        <Text style={styles.toggleOnText}>On</Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          )}
         </Animated.View>
 
         <ProductsSection onNavigateToStrategies={onNavigateToStrategies} />
@@ -250,4 +396,205 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   addButtonText: { color: '#4A90E2', fontSize: 18, fontWeight: '600', textAlign: 'center' },
+  
+  // Broker Display Styles
+  brokersContainer: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  brokerCard: {
+    backgroundColor: '#1E3A6A',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    width: '100%',
+    minHeight: 280,
+  },
+  cardTopSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  welcomeText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  subscriptionWarning: {
+    fontSize: 13,
+    color: '#FBBF24',
+    marginBottom: 16,
+    fontWeight: '500',
+  },
+  dotsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  activeDot: {
+    backgroundColor: '#FBBF24',
+  },
+  brokerChipContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  navArrow: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navArrowText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  brokerChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 24,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flex: 1,
+    marginHorizontal: 8,
+  },
+  brokerChipLogo: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  brokerChipLogoText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  brokerChipText: {
+    fontSize: 13,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  detailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  detailSection: {
+    flex: 1,
+  },
+  performanceSection: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginBottom: 4,
+  },
+  detailValue: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  performanceValue: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  togglesContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  toggleSection: {
+    flex: 1,
+  },
+  toggleLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 6,
+  },
+  terminalDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#FBBF24',
+  },
+  tradingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#EF4444',
+  },
+  toggleLabel: {
+    fontSize: 13,
+    color: '#FFFFFF',
+    fontWeight: '500',
+    flex: 1,
+  },
+  infoIcon: {
+    fontSize: 14,
+    color: '#9CA3AF',
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  toggleOffText: {
+    fontSize: 11,
+    color: '#D1D5DB',
+    fontWeight: '500',
+  },
+  toggleOnText: {
+    fontSize: 11,
+    color: '#D1D5DB',
+    fontWeight: '500',
+  },
+  toggleSwitch: {
+    width: 36,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#4B5563',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  toggleSwitchOn: {
+    backgroundColor: '#48BB78',
+  },
+  toggleThumb: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    marginLeft: 2,
+  },
+  toggleThumbOn: {
+    marginLeft: 'auto',
+    marginRight: 2,
+  },
 });
