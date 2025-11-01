@@ -110,7 +110,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   
   // Order Leg Configuration
   const [selectedOrderAction, setSelectedOrderAction] = useState('Buy');
-  const [lotSize, setLotSize] = useState('75');
+  const [lotSize, setLotSize] = useState('1');
   const [optionType, setOptionType] = useState('CE');
   const [expiryType, setExpiryType] = useState('Weekly');
   const [moneynessType, setMoneynessType] = useState('ATM');
@@ -227,7 +227,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
     setCandleTimeSelection('Start');
     setTimeRange('1 sec to 10 sec');
     setSelectedOrderAction('Buy');
-    setLotSize('75');
+    setLotSize('1');
     setOptionType('CE');
     setExpiryType('Weekly');
     setMoneynessType('ATM');
@@ -301,7 +301,10 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   // Dropdown data
   const candleColors = ['Green', 'Red'];
   const candleTimings = ['Start', 'Close'];
-  const lotSizes = ['25', '50', '75', '100', '125', '150'];
+  // Lot sizes starting from 1, excluding multiples of 5
+  const lotSizes = Array.from({ length: 150 }, (_, i) => i + 1)
+    .filter(num => num % 5 !== 0)
+    .map(num => num.toString());
   const moneynessTypes = ['ATM', 'ITM', 'OTM'];
   const atmStrikes = ['ITM-5', 'ITM-3', 'ITM-2', 'ITM-1', 'ATM', 'OTM-1', 'OTM-2', 'OTM-3', 'OTM-5'];
   const slTypes = ['Previous Candle - High', 'Previous Candle - Low', 'SAME Candle - High', 'SAME Candle - Low'];
