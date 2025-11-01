@@ -24,9 +24,9 @@ const BrokerSelectionModal: React.FC<BrokerSelectionModalProps> = ({ visible, on
   const [apiKey, setApiKey] = useState('');
   const [apiSecretKey, setApiSecretKey] = useState('');
 
-  const filteredBrokers = brokers.filter((broker) =>
-    broker.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredBrokers = brokers
+    .filter(broker => broker.name.toLowerCase() >= 'angel one'.toLowerCase())
+    .filter(broker => broker.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   const handleBrokerSelect = (broker: Broker) => {
     setSelectedBroker(broker);
