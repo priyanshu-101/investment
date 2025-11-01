@@ -11,6 +11,7 @@ export function BrokersScreen() {
   const { user } = useAuth();
   const [showBrokerModal, setShowBrokerModal] = useState<boolean>(false);
   const [brokerToggles, setBrokerToggles] = useState<Record<string, { terminal: boolean; trading: boolean }>>({});
+  const [showMenuForBroker, setShowMenuForBroker] = useState<string | null>(null);
   
   const { 
     availableBrokers, 
@@ -28,26 +29,56 @@ export function BrokersScreen() {
 
   const handleSelectBroker = async (broker: Broker) => {
     console.log('Broker selected:', broker);
+    setShowBrokerModal(false);
     await refreshBrokers();
   };
 
   const handleConnectBroker = async (params: any) => {
-    return await connectBroker(params);
+    const result = await connectBroker(params);
+    if (result.success) {
+      // Refresh brokers to show new broker on home page
+      await refreshBrokers();
+    }
+    return result;
   };
 
-  const handleDisconnectBroker = async (brokerId: string) => {
-    const result = await disconnectBroker(brokerId);
-    if (result.success) {
-      Alert.alert('Success', result.message);
-      // Clear toggles for disconnected broker
-      setBrokerToggles(prev => {
-        const updated = { ...prev };
-        delete updated[brokerId];
-        return updated;
-      });
-    } else {
-      Alert.alert('Error', result.message);
-    }
+  const handleMenuButtonPress = (brokerId: string) => {
+    setShowMenuForBroker(showMenuForBroker === brokerId ? null : brokerId);
+  };
+
+  const handleDisconnectBroker = async (brokerId: string, brokerName: string) => {
+    Alert.alert(
+      'Disconnect Broker',
+      `Are you sure you want to disconnect ${brokerName}? This broker will no longer appear on your home page.`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => setShowMenuForBroker(null)
+        },
+        {
+          text: 'Disconnect',
+          style: 'destructive',
+          onPress: async () => {
+            const result = await disconnectBroker(brokerId);
+            if (result.success) {
+              Alert.alert('Success', result.message);
+              // Clear toggles for disconnected broker
+              setBrokerToggles(prev => {
+                const updated = { ...prev };
+                delete updated[brokerId];
+                return updated;
+              });
+              setShowMenuForBroker(null);
+              // Refresh brokers to remove from home page
+              await refreshBrokers();
+            } else {
+              Alert.alert('Error', result.message);
+            }
+          }
+        }
+      ]
+    );
   };
 
   const toggleTerminal = (brokerId: string) => {
@@ -125,77 +156,94 @@ export function BrokersScreen() {
           <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
             <View style={styles.brokersListContainer}>
               {connectedBrokers.map((broker, index) => (
-                <View key={`${broker.id}-${index}`} style={styles.brokerCardLarge}>
-                  {/* Left Section - Logo */}
-                  <View style={styles.cardLeftSection}>
-                    <View style={[styles.brokerLogoBig, { backgroundColor: broker.bgColor || '#E3F2FD' }]}>
-                      <ThemedText style={[styles.brokerLogoBigText, { color: broker.color || '#1976D2' }]}>
+                <View key={`${broker.id}-${index}`} style={styles.brokerCard}>
+                  {/* Top Row - Logo, Info, Performance, Menu */}
+                  <View style={styles.cardTopRow}>
+                    {/* Logo */}
+                    <View style={[styles.brokerLogo, { backgroundColor: broker.bgColor || '#E3F2FD' }]}>
+                      <ThemedText style={[styles.brokerLogoText, { color: broker.color || '#1976D2' }]}>
                         {broker.logo || 'A'}
                       </ThemedText>
                     </View>
-                  </View>
 
-                  {/* Center Section - Broker Info */}
-                  <View style={styles.brokerInfoSmall}>
-                    <ThemedText style={styles.brokerNameLarge}>{broker.name}</ThemedText>
-                    <ThemedText style={styles.brokerIdText}>{broker.userId || 'R10111359'}</ThemedText>
-                  </View>
-
-                  {/* Performance Section */}
-                  <View style={styles.performanceSectionHorizontal}>
-                    <ThemedText style={styles.performanceLabel}>Strategy Performance</ThemedText>
-                    <ThemedText style={styles.performanceValue}>0.00 ↗</ThemedText>
-                  </View>
-
-                  {/* Right Section - Toggles and Menu */}
-                  <View style={styles.cardRightSectionHorizontal}>
-                    {/* Terminal Indicator */}
-                    <View style={styles.toggleGroupVerticalSmall}>
-                      <View style={styles.toggleGroupHorizontal}>
-                        <View style={styles.terminalDot} />
-                        <TouchableOpacity 
-                          style={[
-                            styles.largeToggle,
-                            brokerToggles[broker.id]?.terminal && styles.largeToggleOn
-                          ]}
-                          onPress={() => toggleTerminal(broker.id)}
-                        >
-                          <View style={[
-                            styles.largeToggleThumb,
-                            brokerToggles[broker.id]?.terminal && styles.largeToggleThumbOn
-                          ]} />
-                        </TouchableOpacity>
-                      </View>
-                      <ThemedText style={styles.toggleLabelSmall}>Terminal</ThemedText>
+                    {/* Broker Name & ID */}
+                    <View style={styles.brokerInfoLeft}>
+                      <ThemedText style={styles.brokerName}>{broker.name}</ThemedText>
+                      <ThemedText style={styles.brokerId}>{broker.userId || 'R10111359'}</ThemedText>
                     </View>
 
-                    {/* Trading Indicator */}
-                    <View style={styles.toggleGroupVerticalSmall}>
-                      <View style={styles.toggleGroupHorizontal}>
-                        <View style={styles.tradingDot} />
-                        <TouchableOpacity 
-                          style={[
-                            styles.largeToggle,
-                            brokerToggles[broker.id]?.trading && styles.largeToggleOn
-                          ]}
-                          onPress={() => toggleTrading(broker.id)}
-                        >
-                          <View style={[
-                            styles.largeToggleThumb,
-                            brokerToggles[broker.id]?.trading && styles.largeToggleThumbOn
-                          ]} />
-                        </TouchableOpacity>
-                      </View>
-                      <ThemedText style={styles.toggleLabelSmall}>Trading Engine</ThemedText>
+                    {/* Strategy Performance */}
+                    <View style={styles.strategyPerformance}>
+                      <ThemedText style={styles.strategyPerformanceLabel}>Strategy Performance</ThemedText>
+                      <ThemedText style={styles.strategyPerformanceValue}>0.00 ↗</ThemedText>
                     </View>
 
                     {/* Menu Button */}
-                    <TouchableOpacity 
-                      style={styles.menuButtonLarge}
-                      onPress={() => handleDisconnectBroker(broker.id)}
-                    >
-                      <ThemedText style={styles.menuButtonTextLarge}>⋯</ThemedText>
-                    </TouchableOpacity>
+                    <View style={styles.menuContainer}>
+                      <TouchableOpacity 
+                        style={styles.menuButton}
+                        onPress={() => handleMenuButtonPress(broker.id)}
+                      >
+                        <ThemedText style={styles.menuButtonText}>⋯</ThemedText>
+                      </TouchableOpacity>
+
+                      {showMenuForBroker === broker.id && (
+                        <View style={styles.menuDropdown}>
+                          <TouchableOpacity 
+                            style={styles.menuItem}
+                            onPress={() => {
+                              handleDisconnectBroker(broker.id, broker.name);
+                              setShowMenuForBroker(null);
+                            }}
+                          >
+                            <ThemedText style={styles.menuItemText}>Disconnect</ThemedText>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+
+                  {/* Bottom Row - Toggles */}
+                  <View style={styles.cardBottomRow}>
+                    {/* Terminal Toggle */}
+                    <View style={styles.toggleSection}>
+                      <View style={styles.toggleLabelRow}>
+                        <View style={styles.terminalDot} />
+                        <ThemedText style={styles.toggleLabel}>Terminal</ThemedText>
+                      </View>
+                      <TouchableOpacity 
+                        style={[
+                          styles.toggle,
+                          brokerToggles[broker.id]?.terminal && styles.toggleOn
+                        ]}
+                        onPress={() => toggleTerminal(broker.id)}
+                      >
+                        <View style={[
+                          styles.toggleThumb,
+                          brokerToggles[broker.id]?.terminal && styles.toggleThumbOn
+                        ]} />
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Trading Toggle */}
+                    <View style={styles.toggleSection}>
+                      <View style={styles.toggleLabelRow}>
+                        <View style={styles.tradingDot} />
+                        <ThemedText style={styles.toggleLabel}>Trading Engine</ThemedText>
+                      </View>
+                      <TouchableOpacity 
+                        style={[
+                          styles.toggle,
+                          brokerToggles[broker.id]?.trading && styles.toggleOn
+                        ]}
+                        onPress={() => toggleTrading(broker.id)}
+                      >
+                        <View style={[
+                          styles.toggleThumb,
+                          brokerToggles[broker.id]?.trading && styles.toggleThumbOn
+                        ]} />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </View>
               ))}
@@ -270,217 +318,104 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     gap: 16,
   },
-  brokerCardLarge: {
-    flexDirection: 'row',
+  brokerCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 16,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    gap: 16,
+  },
+  cardTopRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 80,
+    justifyContent: 'space-between',
     gap: 12,
   },
-  cardLeftSection: {
-    alignItems: 'center',
+  cardBottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    gap: 24,
+    paddingLeft: 62,
   },
-  brokerLogoBig: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+  brokerLogo: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
-  brokerLogoBigText: {
-    fontSize: 28,
+  brokerLogoText: {
+    fontSize: 24,
     fontWeight: 'bold',
   },
-  brokerInfoSmall: {
-    minWidth: 120,
+  brokerInfoLeft: {
+    flex: 1,
   },
-  brokerNameLarge: {
-    fontSize: 16,
+  brokerName: {
+    fontSize: 15,
     fontWeight: '600',
     color: '#1E293B',
-    marginBottom: 2,
   },
-  brokerIdText: {
-    fontSize: 12,
+  brokerId: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  strategyPerformance: {
+    alignItems: 'center',
+    minWidth: 110,
+  },
+  strategyPerformanceLabel: {
+    fontSize: 11,
     color: '#6B7280',
     fontWeight: '500',
   },
-  performanceSectionHorizontal: {
-    alignItems: 'center',
-    minWidth: 140,
-  },
-  performanceLabel: {
-    fontSize: 10,
-    color: '#9CA3AF',
-    marginBottom: 1,
-  },
-  performanceValue: {
-    fontSize: 13,
+  strategyPerformanceValue: {
+    fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
+    color: '#1E293B',
+    marginTop: 2,
   },
-  cardRightSectionHorizontal: {
-    flexDirection: 'row',
+  toggleSection: {
     alignItems: 'center',
-    marginLeft: 'auto',
-    gap: 12,
+    gap: 6,
   },
-  toggleGroupHorizontal: {
+  toggleLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
-  toggleGroupVerticalSmall: {
-    alignItems: 'center',
-    gap: 3,
-  },
-  toggleLabelSmall: {
-    fontSize: 9,
-    color: '#6B7280',
+  toggleLabel: {
+    fontSize: 12,
+    color: '#1E293B',
     fontWeight: '500',
   },
-  largeToggle: {
-    width: 44,
-    height: 24,
-    borderRadius: 12,
+  terminalDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#48BB78',
+  },
+  tradingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#F59E0B',
+  },
+  toggle: {
+    width: 40,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: '#D1D5DB',
     justifyContent: 'center',
     paddingHorizontal: 2,
     flexDirection: 'row',
     alignItems: 'center',
   },
-  largeToggleOn: {
-    backgroundColor: '#48BB78',
-  },
-  largeToggleThumb: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#FFFFFF',
-    marginLeft: 3,
-  },
-  largeToggleThumbOn: {
-    marginLeft: 'auto',
-    marginRight: 3,
-  },
-  menuButtonLarge: {
-    padding: 6,
-  },
-  menuButtonTextLarge: {
-    fontSize: 20,
-    color: '#6B7280',
-    fontWeight: 'bold',
-  },
-  connectedBrokerCard: {
-    backgroundColor: '#1E3A6A',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    width: '100%',
-    minHeight: 280,
-  },
-  cardTopSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  welcomeText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  subscriptionWarning: {
-    fontSize: 13,
-    color: '#FBBF24',
-    marginBottom: 16,
-    fontWeight: '500',
-  },
-  brokerChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 24,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 12,
-    alignSelf: 'flex-start',
-  },
-  brokerChipLogo: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  brokerChipLogoText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  brokerChipText: {
-    fontSize: 13,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  navigationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  navArrow: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navArrowText: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-  },
-  detailsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  detailSection: {
-    flex: 1,
-  },
-  detailLabel: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    marginBottom: 4,
-  },
-  detailValue: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  toggleSwitch: {
-    width: 36,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#4B5563',
-    justifyContent: 'center',
-    paddingHorizontal: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  toggleSwitchOn: {
+  toggleOn: {
     backgroundColor: '#48BB78',
   },
   toggleThumb: {
@@ -494,73 +429,46 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
     marginRight: 2,
   },
-  togglesContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  toggleSection: {
-    flex: 1,
-  },
-  toggleLabelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    gap: 6,
-  },
-  terminalDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#FBBF24',
-  },
-  tradingDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#EF4444',
-  },
-  toggleLabel: {
-    fontSize: 13,
-    color: '#FFFFFF',
-    fontWeight: '500',
-    flex: 1,
-  },
-  infoIcon: {
-    fontSize: 14,
-    color: '#9CA3AF',
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  menuButton: {
+    padding: 8,
+    borderRadius: 8,
     justifyContent: 'center',
-    gap: 6,
-  },
-  toggleOffText: {
-    fontSize: 11,
-    color: '#D1D5DB',
-    fontWeight: '500',
-  },
-  toggleOnText: {
-    fontSize: 11,
-    color: '#D1D5DB',
-    fontWeight: '500',
-  },
-  disconnectButton: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     alignItems: 'center',
-    justifyContent: 'center',
+    minWidth: 40,
+    height: 40,
   },
-  disconnectText: {
-    fontSize: 16,
-    color: '#FFFFFF',
+  menuButtonText: {
+    fontSize: 20,
+    color: '#374151',
     fontWeight: 'bold',
+  },
+  menuContainer: {
+    position: 'relative',
+  },
+  menuDropdown: {
+    position: 'absolute',
+    top: 40,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    minWidth: 140,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 10,
+  },
+  menuItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  menuItemText: {
+    fontSize: 13,
+    color: '#EF4444',
+    fontWeight: '500',
   },
 
   // Loading and Error States
