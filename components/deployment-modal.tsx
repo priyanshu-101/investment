@@ -18,6 +18,7 @@ interface DeploymentModalProps {
   visible: boolean;
   strategyName: string;
   strategyId: string;
+  strategyData?: any; // Full strategy data for dynamic stage generation
   onClose: () => void;
   onDeploy: (deploymentData: DeploymentData) => Promise<void>;
 }
@@ -37,6 +38,7 @@ export function DeploymentModal({
   visible,
   strategyName,
   strategyId,
+  strategyData,
   onClose,
   onDeploy,
 }: DeploymentModalProps) {
@@ -56,8 +58,60 @@ export function DeploymentModal({
   const [brokerDropdownOpen, setBrokerDropdownOpen] = useState(false);
   const [deploymentStages, setDeploymentStages] = useState<DeploymentStageData[]>([]);
 
+  // Generate dynamic stages from strategy data
+  const generateStagesFromStrategy = (strategy: any): DeploymentStageData[] => {
+    if (!strategy) return [];
+
+    const stages: DeploymentStageData[] = [];
+
+    try {
+      // Extract order legs from strategy if available
+      const orderLegs = strategy.orderLegs || strategy.fullStrategyData?.orderLegs || [];
+      
+      if (orderLegs.length > 0) {
+        // Generate stages based on order legs
+        orderLegs.forEach((leg: any, index: number) => {
+          stages.push({
+            index: index + 1,
+            entryTime: leg.entryTime || '09:15',
+            exitTime: leg.exitTime,
+            callPutType: leg.optionType || leg.callPutType || 'CE',
+            type: leg.orderType || 'BUY',
+            strike: String(leg.strikePrice || leg.strike || '25500'),
+            bidPrice: leg.bidPrice || 0,
+            askPrice: leg.askPrice || 0,
+            quantity: leg.quantity || 1,
+            ltp: leg.ltp || 0,
+            pnl: leg.pnl || 0,
+          });
+        });
+      } else if (strategy.instruments && strategy.instruments.length > 0) {
+        // Generate stages based on instruments
+        strategy.instruments.forEach((instrument: string, index: number) => {
+          stages.push({
+            index: index + 1,
+            entryTime: '09:15',
+            exitTime: undefined,
+            callPutType: instrument.includes('CE') ? 'CE' : 'PE',
+            type: 'BUY',
+            strike: instrument.match(/\d+/)?.[0] || '25500',
+            bidPrice: 0,
+            askPrice: 0,
+            quantity: 1,
+            ltp: 0,
+            pnl: 0,
+          });
+        });
+      }
+    } catch (error) {
+      console.error('Error generating stages from strategy:', error);
+    }
+
+    return stages;
+  };
+
   useEffect(() => {
-    // Reset form when modal opens
+    // Reset form and generate stages when modal opens
     if (visible) {
       setFormData({
         quantityMultiplier: 1,
@@ -68,8 +122,16 @@ export function DeploymentModal({
         deploymentType: 'ForwardTest',
         termsAccepted: false,
       });
+      
+      // Generate stages from strategy data
+      if (strategyData) {
+        const generatedStages = generateStagesFromStrategy(strategyData);
+        setDeploymentStages(generatedStages);
+      } else {
+        setDeploymentStages([]);
+      }
     }
-  }, [visible]);
+  }, [visible, strategyData]);
 
   const handleDeploy = async () => {
     if (!formData.brokerName) {

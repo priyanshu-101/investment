@@ -35,6 +35,7 @@ export function StrategiesScreen() {
   const [selectedStrategyForDeployment, setSelectedStrategyForDeployment] = useState<{
     id: string;
     name: string;
+    data?: any;
   } | null>(null);
 
   const { user, isAuthenticated } = useAuth();
@@ -484,9 +485,9 @@ export function StrategiesScreen() {
     }
   };
 
-  const handleSubscribeToStrategy = async (strategyId: string, strategyName: string) => {
-    // Show deployment modal instead of immediate alert
-    setSelectedStrategyForDeployment({ id: strategyId, name: strategyName });
+  const handleSubscribeToStrategy = async (strategyId: string, strategyName: string, strategyData?: any) => {
+    // Show deployment modal with strategy data
+    setSelectedStrategyForDeployment({ id: strategyId, name: strategyName, data: strategyData });
     setDeploymentModalVisible(true);
   };
 
@@ -601,7 +602,7 @@ export function StrategiesScreen() {
 
   const StrategyCard = ({ strategy, onSubscribe, onEdit }: { 
     strategy: StrategyApiData; 
-    onSubscribe: (id: string, name: string) => void; 
+    onSubscribe: (id: string, name: string, data?: any) => void; 
     onEdit: (strategy: StrategyApiData) => void; 
   }) => {
     const isCustomStrategy = strategy.strategyType === 'Candle Based' || strategy.strategyType === 'Time Based' || strategy.strategyType === 'Indicator Based' ||
@@ -724,7 +725,7 @@ export function StrategiesScreen() {
           )}
           <TouchableOpacity
             style={styles.subscribeButton}
-            onPress={() => onSubscribe(strategy.id, strategy.name)}
+            onPress={() => onSubscribe(strategy.id, strategy.name, strategy.fullStrategyData || strategy)}
           >
             <ThemedText style={styles.subscribeButtonText}>
               {strategy.isActive ? 'Deploy' : 'Subscribe'}
@@ -896,6 +897,7 @@ export function StrategiesScreen() {
           visible={deploymentModalVisible}
           strategyName={selectedStrategyForDeployment.name}
           strategyId={selectedStrategyForDeployment.id}
+          strategyData={selectedStrategyForDeployment.data}
           onClose={() => {
             setDeploymentModalVisible(false);
             setSelectedStrategyForDeployment(null);
