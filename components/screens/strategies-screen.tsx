@@ -19,6 +19,7 @@ import { useStrategies } from '../../hooks/useStrategies';
 import { StrategyApiData } from '../../services/strategiesApi';
 import { Header } from '../header';
 import TradingStrategy from './create-strategies';
+import { DeploymentModal, DeploymentData } from '../deployment-modal';
 
 export function StrategiesScreen() {
   const navigation = useNavigation();
@@ -31,6 +32,11 @@ export function StrategiesScreen() {
   const [createdStrategies, setCreatedStrategies] = useState<StrategyApiData[]>([]);
   const [productFilter, setProductFilter] = useState<any>(null);
   const [editingStrategy, setEditingStrategy] = useState<StrategyApiData | null>(null);
+  const [deploymentModalVisible, setDeploymentModalVisible] = useState(false);
+  const [selectedStrategyForDeployment, setSelectedStrategyForDeployment] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const { user, isAuthenticated } = useAuth();
   const {
@@ -480,28 +486,54 @@ export function StrategiesScreen() {
   };
 
   const handleSubscribeToStrategy = async (strategyId: string, strategyName: string) => {
+    // Show deployment modal instead of immediate alert
+    setSelectedStrategyForDeployment({ id: strategyId, name: strategyName });
+    setDeploymentModalVisible(true);
+  };
+
+  const handleDeploymentSubmit = async (deploymentData: DeploymentData) => {
     try {
+      if (!selectedStrategyForDeployment) return;
+
+      const strategyId = selectedStrategyForDeployment.id;
+      const strategyName = selectedStrategyForDeployment.name;
+
       if (strategyId.startsWith('created_')) {
+        // Handle created strategy deployment
         const updatedStrategies = createdStrategies.map(strategy =>
           strategy.id === strategyId
-            ? { ...strategy, isActive: true }
+            ? { 
+                ...strategy, 
+                isActive: true,
+                deploymentData: deploymentData
+              }
             : strategy
         );
         setCreatedStrategies(updatedStrategies);
         await saveCreatedStrategies(updatedStrategies);
+        
+        // Close modal
+        setDeploymentModalVisible(false);
+        setSelectedStrategyForDeployment(null);
+        
         Alert.alert('Success', `${strategyName} has been deployed successfully!`);
         return;
       }
 
+      // Handle subscribed strategy deployment
       const success = await subscribeToStrategy(strategyId);
       if (success) {
-        Alert.alert('Success', `Successfully subscribed to ${strategyName}`);
+        // Close modal
+        setDeploymentModalVisible(false);
+        setSelectedStrategyForDeployment(null);
+        
+        Alert.alert('Success', `Successfully deployed ${strategyName}`);
       } else {
-        Alert.alert('Error', 'Failed to subscribe to strategy');
+        Alert.alert('Error', 'Failed to deploy strategy');
       }
     } catch (err) {
-      console.error('Subscription error:', err);
-      Alert.alert('Error', 'An error occurred while subscribing');
+      console.error('Deployment error:', err);
+      Alert.alert('Error', 'An error occurred while deploying');
     }
   };
 
@@ -857,6 +889,20 @@ export function StrategiesScreen() {
             </View>
           )}
         </ScrollView>
+      )}
+
+      {/* Deployment Modal */}
+      {selectedStrategyForDeployment && (
+        <DeploymentModal
+          visible={deploymentModalVisible}
+          strategyName={selectedStrategyForDeployment.name}
+          strategyId={selectedStrategyForDeployment.id}
+          onClose={() => {
+            setDeploymentModalVisible(false);
+            setSelectedStrategyForDeployment(null);
+          }}
+          onDeploy={handleDeploymentSubmit}
+        />
       )}
     </ThemedView>
   );
