@@ -17,9 +17,9 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { useStrategies } from '../../hooks/useStrategies';
 import { StrategyApiData } from '../../services/strategiesApi';
+import { DeploymentData, DeploymentModal } from '../deployment-modal';
 import { Header } from '../header';
 import TradingStrategy from './create-strategies';
-import { DeploymentModal, DeploymentData } from '../deployment-modal';
 
 export function StrategiesScreen() {
   const navigation = useNavigation();
