@@ -11,6 +11,8 @@ import {
     View,
 } from 'react-native';
 import { useBrokers } from '../hooks/useBrokers';
+import { DeploymentStageData } from './deployment-stage';
+import { DeploymentStagesEditor } from './deployment-stages-editor';
 
 interface DeploymentModalProps {
   visible: boolean;
@@ -28,6 +30,7 @@ export interface DeploymentData {
   squareOffTime: string;
   deploymentType: 'Live' | 'ForwardTest';
   termsAccepted: boolean;
+  stages?: DeploymentStageData[];
 }
 
 export function DeploymentModal({
@@ -51,6 +54,7 @@ export function DeploymentModal({
 
   const [loading, setLoading] = useState(false);
   const [brokerDropdownOpen, setBrokerDropdownOpen] = useState(false);
+  const [deploymentStages, setDeploymentStages] = useState<DeploymentStageData[]>([]);
 
   useEffect(() => {
     // Reset form when modal opens
@@ -80,7 +84,11 @@ export function DeploymentModal({
 
     setLoading(true);
     try {
-      await onDeploy(formData);
+      const deploymentDataWithStages: DeploymentData = {
+        ...formData,
+        stages: deploymentStages.length > 0 ? deploymentStages : undefined,
+      };
+      await onDeploy(deploymentDataWithStages);
       setLoading(false);
       onClose();
     } catch (error) {
@@ -259,6 +267,12 @@ export function DeploymentModal({
                 </TouchableOpacity>
               </View>
             </View>
+
+            {/* Deployment Stages Editor */}
+            <DeploymentStagesEditor 
+              stages={deploymentStages}
+              onStagesChange={setDeploymentStages}
+            />
 
             {/* Terms Checkbox */}
             <View style={styles.termsContainer}>
