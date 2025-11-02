@@ -1382,11 +1382,6 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                 </TouchableOpacity>
               </View>
             </View>
-
-            <TouchableOpacity style={styles.addLegButton}>
-              <Ionicons name="add" size={16} color="#fff" />
-              <Text style={styles.addLegText}>+ ADD LEG</Text>
-            </TouchableOpacity>
           </View>
         )}
 
@@ -1596,10 +1591,6 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
             <Text style={styles.orderLegsTitle}>
               {selectedStrategyType === 'Candle Based' ? 'Configured Order Legs' : 'Order Legs'}
             </Text>
-            <TouchableOpacity style={styles.addLegButton} onPress={addOrderLeg}>
-              <Ionicons name="add" size={16} color="#fff" />
-              <Text style={styles.addLegText}>ADD LEG</Text>
-            </TouchableOpacity>
           </View>
 
           {orderLegs.map((leg) => (
@@ -1651,6 +1642,12 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
               )}
             </View>
           ))}
+
+          {/* Add Leg Button - After configured order legs */}
+          <TouchableOpacity style={styles.addLegButton} onPress={addOrderLeg}>
+            <Ionicons name="add" size={16} color="#fff" />
+            <Text style={styles.addLegText}>+ ADD LEG</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Exit Conditions for Candle Based */}
