@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View, Linking } from 'react-native';
+import { ActivityIndicator, Linking, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, useProfileData } from '../hooks/useProfileData';
 
@@ -241,8 +241,8 @@ export function ProfileMenu({ visible, onClose, onNavigate }: ProfileMenuProps) 
             </View>
             <View style={styles.contactContainer}>
               <Text style={styles.contactLabel}>WhatsApp:</Text>
-              <TouchableOpacity onPress={() => Linking.openURL('https://wa.me/919828618998')}>
-                <Text style={styles.contactValue}>+91 98286818998</Text>
+              <TouchableOpacity onPress={() => Linking.openURL('https://wa.me/919828681898')}>
+                <Text style={styles.contactValue}>+91 9828681898</Text>
               </TouchableOpacity>
             </View>
           </View>

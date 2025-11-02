@@ -106,7 +106,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   const [secondCandleColor, setSecondCandleColor] = useState('Red');
   const [secondCandleTiming, setSecondCandleTiming] = useState('Close');
   const [candleTimeSelection, setCandleTimeSelection] = useState('Start');
-  const [timeRange, setTimeRange] = useState('1 sec to 10 sec');
+  const [timeRange, setTimeRange] = useState('1');
   
   // Order Leg Configuration
   const [selectedOrderAction, setSelectedOrderAction] = useState('Buy');
@@ -224,7 +224,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
     setSecondCandleColor('Red');
     setSecondCandleTiming('Close');
     setCandleTimeSelection('Start');
-    setTimeRange('1 sec to 10 sec');
+    setTimeRange('1');
     setSelectedOrderAction('Buy');
     setNumberOfLots('1');
     setOptionType('CE');
@@ -305,7 +305,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   const slTrailTypes = ['New', 'On Candle Close', 'On Candle Start'];
    
   const highLowOptions = ['High', 'Low'];
-  const timeRanges = ['1 sec to 10 sec', '1 sec to 30 sec', '1 sec to 60 sec', '5 sec to 30 sec'];
+  const timeRanges = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 
   useEffect(() => {
     if (editingStrategy) {
