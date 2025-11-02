@@ -110,7 +110,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   
   // Order Leg Configuration
   const [selectedOrderAction, setSelectedOrderAction] = useState('Buy');
-  const [lotSize, setLotSize] = useState('1');
+  const [numberOfLots, setNumberOfLots] = useState('1');
   const [optionType, setOptionType] = useState('CE');
   const [expiryType, setExpiryType] = useState('Weekly');
   const [moneynessType, setMoneynessType] = useState('ATM');
@@ -141,7 +141,6 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   // Modal states for dropdowns
   const [showCandleColorModal, setShowCandleColorModal] = useState(false);
   const [showCandleTimingModal, setShowCandleTimingModal] = useState(false);
-  const [showLotSizeModal, setShowLotSizeModal] = useState(false);
   const [showMoneynessModal, setShowMoneynessModal] = useState(false);
   const [showAtmStrikeModal, setShowAtmStrikeModal] = useState(false);
   const [showSlTypeModal, setShowSlTypeModal] = useState(false);
@@ -227,7 +226,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
     setCandleTimeSelection('Start');
     setTimeRange('1 sec to 10 sec');
     setSelectedOrderAction('Buy');
-    setLotSize('1');
+    setNumberOfLots('1');
     setOptionType('CE');
     setExpiryType('Weekly');
     setMoneynessType('ATM');
@@ -249,7 +248,6 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
     setExitLegType('index');
     setShowCandleColorModal(false);
     setShowCandleTimingModal(false);
-    setShowLotSizeModal(false);
     setShowMoneynessModal(false);
     setShowAtmStrikeModal(false);
     setShowSlTypeModal(false);
@@ -301,10 +299,6 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   // Dropdown data
   const candleColors = ['Green', 'Red'];
   const candleTimings = ['Start', 'Close'];
-  // Lot sizes starting from 1, excluding multiples of 5
-  const lotSizes = Array.from({ length: 150 }, (_, i) => i + 1)
-    .filter(num => num % 5 !== 0)
-    .map(num => num.toString());
   const moneynessTypes = ['ATM', 'ITM', 'OTM'];
   const atmStrikes = ['ITM-5', 'ITM-3', 'ITM-2', 'ITM-1', 'ATM', 'OTM-1', 'OTM-2', 'OTM-3', 'OTM-5'];
   const slTypes = ['Previous Candle - High', 'Previous Candle - Low', 'SAME Candle - High', 'SAME Candle - Low'];
@@ -380,6 +374,33 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
     }
   };
 
+  // Helper function to get lot size (quantity per 1 lot) based on instrument name
+  const getLotSizeForInstrument = (instrument: string): number => {
+    const instrumentUpper = instrument.toUpperCase();
+    
+    if (instrumentUpper.includes('NIFTY') && !instrumentUpper.includes('BANK') && !instrumentUpper.includes('FIN') && !instrumentUpper.includes('MIDCP')) {
+      return 75; // Nifty: 75 quantity per 1 lot
+    }
+    if (instrumentUpper.includes('SENSEX')) {
+      return 20; // Sensex: 20 quantity per 1 lot
+    }
+    if (instrumentUpper.includes('FINNIFTY') || instrumentUpper.includes('FIN NIFTY')) {
+      return 65; // Fin nifty: 65 quantity per 1 lot
+    }
+    if (instrumentUpper.includes('BANKNIFTY') || instrumentUpper.includes('BANK NIFTY')) {
+      return 35; // Bank nifty: 35 quantity per 1 lot
+    }
+    if (instrumentUpper.includes('BANKEX')) {
+      return 30; // Bankex: 30 quantity per 1 lot
+    }
+    if (instrumentUpper.includes('MIDCPNIFTY') || instrumentUpper.includes('MIDCAP NIFTY') || instrumentUpper.includes('MIDCP NIFTY')) {
+      return 140; // Midcap nifty: 140 quantity per 1 lot
+    }
+    
+    // Default lot size if instrument not found
+    return 50;
+  };
+
   // Dropdown handlers
   const handleDropdownSelect = (type: string, value: string) => {
     switch (type) {
@@ -400,9 +421,6 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
         break;
       case 'timeRange':
         setTimeRange(value);
-        break;
-      case 'lotSize':
-        setLotSize(value);
         break;
       case 'moneynessType':
         setMoneynessType(value);
@@ -578,13 +596,18 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   };
 
   const addOrderLeg = () => {
-    const newLeg: OrderLeg = {
+    const instrument = selectedInstruments[0] || '';
+    const lotSize = instrument ? getLotSizeForInstrument(instrument) : 1;
+    const lots = parseInt(numberOfLots || '1') || 1; // Default to 1 if empty or 0
+    const calculatedQuantity = lots * lotSize;
+    const newLeg: any = {
       id: Date.now().toString(),
-      action: 'Buy',
+      action: selectedOrderAction as 'Buy' | 'Sell',
       orderType: 'Market',
-      quantity: '1',
-      instrument: selectedInstruments[0] || '',
-      lotSize: 1,
+      quantity: calculatedQuantity.toString(), // Set quantity based on number of lots
+      instrument: instrument,
+      lotSize: lotSize, // Store lot size based on instrument
+      numberOfLots: numberOfLots || '1', // Store number of lots (default to 1 if empty)
       entryCondition: {
         candleType: 'Green/Red',
         candleColor: 'Green',
@@ -1391,20 +1414,45 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
               </View>
             </View>
 
-            {/* Lot Size */}
+            {/* Lot Size - Input with calculated quantity */}
             <View style={styles.conditionRow}>
               <Text style={styles.conditionLabel}>Lot</Text>
               <View style={styles.dropdownWrapper}>
-                <TouchableOpacity 
-                  style={styles.dropdownButton}
-                  onPress={() => {
-                    setCurrentDropdownType('lotSize');
-                    setShowLotSizeModal(true);
-                  }}
-                >
-                  <Text style={styles.dropdownText}>Lot → {lotSize}</Text>
-                  <Ionicons name="chevron-down" size={16} color="#666" />
-                </TouchableOpacity>
+                {selectedInstruments.length > 0 ? (
+                  <View style={styles.lotSizeInputContainer}>
+                    <View style={styles.lotSizeInputRow}>
+                      <TextInput
+                        style={styles.lotSizeInput}
+                        value={numberOfLots}
+                        onChangeText={(value) => {
+                          // Only allow numeric input, allow empty for clearing
+                          const numericValue = value.replace(/[^0-9]/g, '');
+                          setNumberOfLots(numericValue);
+                        }}
+                        keyboardType="numeric"
+                        placeholder="1"
+                        placeholderTextColor="#999"
+                      />
+                      <Text style={styles.lotSizeLabel}>Lots</Text>
+                    </View>
+                    <Text style={styles.lotSizeText}>
+                      {numberOfLots ? (
+                        <>
+                          = {parseInt(numberOfLots) * getLotSizeForInstrument(selectedInstruments[0])} Quantity
+                          {' '}(1 Lot = {getLotSizeForInstrument(selectedInstruments[0])} Qty)
+                        </>
+                      ) : (
+                        <>Enter number of lots</>
+                      )}
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.lotSizeDisplay}>
+                    <Text style={styles.lotSizeText}>
+                      Select instrument to see lot size
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
 
@@ -1563,7 +1611,16 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                 <View style={styles.orderLegActions}>
                   <TouchableOpacity 
                     onPress={() => {
-                      setCurrentEditingLeg(leg);
+                      // Calculate numberOfLots if it doesn't exist
+                      const legWithLots: any = { ...leg };
+                      if (!(leg as any).numberOfLots && leg.instrument && leg.lotSize) {
+                        const quantity = parseInt(leg.quantity || '0');
+                        const calculatedLots = Math.floor(quantity / leg.lotSize);
+                        legWithLots.numberOfLots = (calculatedLots > 0 ? calculatedLots : 1).toString();
+                      } else if (!(leg as any).numberOfLots) {
+                        legWithLots.numberOfLots = '1';
+                      }
+                      setCurrentEditingLeg(legWithLots);
                       setShowOrderLegModal(true);
                     }}
                     style={styles.editButton}
@@ -1919,17 +1976,6 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                     </View>
 
                     <View style={styles.formRow}>
-                      <Text style={styles.formLabel}>Quantity</Text>
-                      <TextInput
-                        style={styles.formInput}
-                        value={currentEditingLeg.quantity}
-                        onChangeText={(value) => setCurrentEditingLeg(prev => prev ? {...prev, quantity: value} : null)}
-                        placeholder="1"
-                        keyboardType="numeric"
-                      />
-                    </View>
-
-                    <View style={styles.formRow}>
                       <Text style={styles.formLabel}>Instrument</Text>
                       <View style={styles.dropdownContainer}>
                         <ScrollView style={styles.dropdownScroll}>
@@ -1940,7 +1986,17 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                                 styles.dropdownOption,
                                 currentEditingLeg.instrument === instrument && styles.selectedDropdownOption
                               ]}
-                              onPress={() => setCurrentEditingLeg(prev => (prev ? { ...prev, instrument } : null))}
+                              onPress={() => {
+                                const lotSize = getLotSizeForInstrument(instrument);
+                                const lots = parseInt((currentEditingLeg as any).numberOfLots || '1');
+                                const calculatedQuantity = lots * lotSize;
+                                setCurrentEditingLeg(prev => (prev ? { 
+                                  ...prev, 
+                                  instrument,
+                                  lotSize: lotSize,
+                                  quantity: calculatedQuantity.toString()
+                                } : null));
+                              }}
                             >
                               <Text style={[
                                 styles.dropdownOptionText,
@@ -1952,6 +2008,80 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                           ))}
                         </ScrollView>
                       </View>
+                    </View>
+
+                    <View style={styles.formRow}>
+                      <Text style={styles.formLabel}>Lots</Text>
+                      <View style={styles.lotSizeInputRowModal}>
+                        <TextInput
+                          style={styles.lotSizeInputModal}
+                          value={(currentEditingLeg as any).numberOfLots || ''}
+                          onChangeText={(value) => {
+                            // Only allow numeric input, allow empty for clearing
+                            const numericValue = value.replace(/[^0-9]/g, '');
+                            const lots = parseInt(numericValue || '0');
+                            if (currentEditingLeg?.instrument && lots > 0) {
+                              const lotSize = getLotSizeForInstrument(currentEditingLeg.instrument);
+                              const calculatedQuantity = lots * lotSize;
+                              setCurrentEditingLeg(prev => prev ? {
+                                ...prev,
+                                quantity: calculatedQuantity.toString(),
+                                numberOfLots: numericValue
+                              } : null);
+                            } else {
+                              setCurrentEditingLeg(prev => prev ? {
+                                ...prev,
+                                numberOfLots: numericValue
+                              } : null);
+                            }
+                          }}
+                          keyboardType="numeric"
+                          placeholder="1"
+                          placeholderTextColor="#999"
+                        />
+                        <Text style={styles.lotSizeLabelModal}>Lots</Text>
+                      </View>
+                      {currentEditingLeg.instrument && (
+                        <View style={styles.lotSizeInfo}>
+                          <Text style={styles.lotSizeInfoText}>
+                            {(currentEditingLeg as any).numberOfLots ? (
+                              <>
+                                {(currentEditingLeg as any).numberOfLots} Lot(s) = {currentEditingLeg.quantity} Quantity
+                                {' '}(1 Lot = {getLotSizeForInstrument(currentEditingLeg.instrument)} Qty)
+                              </>
+                            ) : (
+                              <>Enter number of lots</>
+                            )}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
+                    <View style={styles.formRow}>
+                      <Text style={styles.formLabel}>Quantity</Text>
+                      <TextInput
+                        style={styles.formInput}
+                        value={currentEditingLeg.quantity}
+                        onChangeText={(value) => {
+                          // Allow manual quantity entry but update lots if instrument is selected
+                          setCurrentEditingLeg(prev => {
+                            if (prev && prev.instrument) {
+                              const lotSize = getLotSizeForInstrument(prev.instrument);
+                              const numericValue = value.replace(/[^0-9]/g, '');
+                              const quantity = parseInt(numericValue || '0');
+                              const calculatedLots = Math.floor(quantity / lotSize);
+                              return {
+                                ...prev,
+                                quantity: numericValue,
+                                numberOfLots: calculatedLots > 0 ? calculatedLots.toString() : '1'
+                              };
+                            }
+                            return prev ? {...prev, quantity: value} : null;
+                          });
+                        }}
+                        placeholder="1"
+                        keyboardType="numeric"
+                      />
                     </View>
                   </View>
 
@@ -2427,7 +2557,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
       </Modal>
 
       {/* Universal Dropdown Modal */}
-      <Modal visible={showCandleColorModal || showCandleTimingModal || showLotSizeModal || showMoneynessModal || showAtmStrikeModal || showSlTypeModal || showSlTrailModal || showTimeRangeModal || showSameCandleModal || showPreviousMinusOneModal || showPreviousCandleModal} animationType="slide" transparent={true}>
+      <Modal visible={showCandleColorModal || showCandleTimingModal || showMoneynessModal || showAtmStrikeModal || showSlTypeModal || showSlTrailModal || showTimeRangeModal || showSameCandleModal || showPreviousMinusOneModal || showPreviousCandleModal} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
@@ -2436,7 +2566,6 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                 onPress={() => {
                   setShowCandleColorModal(false);
                   setShowCandleTimingModal(false);
-                  setShowLotSizeModal(false);
                   setShowMoneynessModal(false);
                   setShowAtmStrikeModal(false);
                   setShowSlTypeModal(false);
@@ -2457,7 +2586,6 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                 let options: string[] = [];
                 if (showCandleColorModal) options = candleColors;
                 else if (showCandleTimingModal) options = candleTimings;
-                else if (showLotSizeModal) options = lotSizes;
                 else if (showMoneynessModal) options = moneynessTypes;
                 else if (showAtmStrikeModal) options = atmStrikes;
                 else if (showSlTypeModal) options = slTypes;
@@ -2473,7 +2601,6 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                       handleDropdownSelect(currentDropdownType, option);
                       setShowCandleColorModal(false);
                       setShowCandleTimingModal(false);
-                      setShowLotSizeModal(false);
                       setShowMoneynessModal(false);
                       setShowAtmStrikeModal(false);
                       setShowSlTypeModal(false);
@@ -3140,6 +3267,82 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     fontWeight: '500',
+  },
+  lotSizeDisplay: {
+    backgroundColor: '#e3f2fd',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#1976d2',
+  },
+  lotSizeText: {
+    fontSize: 14,
+    color: '#1976d2',
+    fontWeight: '600',
+  },
+  lotSizeInfo: {
+    marginTop: 8,
+    padding: 8,
+    backgroundColor: '#e3f2fd',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#1976d2',
+  },
+  lotSizeInfoText: {
+    fontSize: 12,
+    color: '#1976d2',
+    fontWeight: '500',
+  },
+  lotSizeInputContainer: {
+    flex: 1,
+  },
+  lotSizeInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 8,
+  },
+  lotSizeInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '600',
+    minWidth: 60,
+  },
+  lotSizeLabel: {
+    fontSize: 14,
+    color: '#1976d2',
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  lotSizeInputRowModal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  lotSizeInputModal: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '600',
+    minWidth: 60,
+  },
+  lotSizeLabelModal: {
+    fontSize: 14,
+    color: '#1976d2',
+    fontWeight: '600',
+    marginLeft: 8,
   },
   okButton: {
     backgroundColor: '#4caf50',
