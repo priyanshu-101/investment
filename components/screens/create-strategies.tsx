@@ -1377,7 +1377,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                     setShowTimeRangeModal(true);
                   }}
                 >
-                  <Text style={styles.dropdownText}>{timeRange}</Text>
+                  <Text style={styles.dropdownText}>{timeRange} sec</Text>
                   <Ionicons name="chevron-down" size={16} color="#666" />
                 </TouchableOpacity>
               </View>
@@ -2674,27 +2674,31 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                 else if (showTimeRangeModal) options = timeRanges;
                 else if (showSameCandleModal || showPreviousMinusOneModal || showPreviousCandleModal) options = highLowOptions;
 
-                return options.map((option) => (
-                  <TouchableOpacity
-                    key={option}
-                    style={styles.dropdownOption}
-                    onPress={() => {
-                      handleDropdownSelect(currentDropdownType, option);
-                      setShowCandleColorModal(false);
-                      setShowCandleTimingModal(false);
-                      setShowMoneynessModal(false);
-                      setShowAtmStrikeModal(false);
-                      setShowSlTypeModal(false);
-                      setShowSlTrailModal(false);
-                      setShowTimeRangeModal(false);
-                      setShowSameCandleModal(false);
-                      setShowPreviousMinusOneModal(false);
-                      setShowPreviousCandleModal(false);
-                    }}
-                  >
-                    <Text style={styles.dropdownOptionText}>{option}</Text>
-                  </TouchableOpacity>
-                ));
+                return options.map((option) => {
+                  // Add "sec" suffix for time range options
+                  const displayText = showTimeRangeModal ? `${option} sec` : option;
+                  return (
+                    <TouchableOpacity
+                      key={option}
+                      style={styles.dropdownOption}
+                      onPress={() => {
+                        handleDropdownSelect(currentDropdownType, option);
+                        setShowCandleColorModal(false);
+                        setShowCandleTimingModal(false);
+                        setShowMoneynessModal(false);
+                        setShowAtmStrikeModal(false);
+                        setShowSlTypeModal(false);
+                        setShowSlTrailModal(false);
+                        setShowTimeRangeModal(false);
+                        setShowSameCandleModal(false);
+                        setShowPreviousMinusOneModal(false);
+                        setShowPreviousCandleModal(false);
+                      }}
+                    >
+                      <Text style={styles.dropdownOptionText}>{displayText}</Text>
+                    </TouchableOpacity>
+                  );
+                });
               })()}
             </ScrollView>
           </View>
