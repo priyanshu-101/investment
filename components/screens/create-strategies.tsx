@@ -1577,7 +1577,62 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                     <Ionicons name="chevron-down" size={16} color="#666" />
                   </TouchableOpacity>
                 </View>
-                <TouchableOpacity style={styles.okButton}>
+                <TouchableOpacity 
+                  style={styles.okButton}
+                  onPress={() => {
+                    // Capture all Entry Condition + Order Leg data and create configured leg
+                    const instrument = selectedInstruments[0] || '';
+                    if (!instrument) {
+                      Alert.alert('Error', 'Please select an instrument first');
+                      return;
+                    }
+                    
+                    const lotSize = getLotSizeForInstrument(instrument);
+                    const lots = parseInt(numberOfLots || '1') || 1;
+                    const calculatedQuantity = lots * lotSize;
+                    
+                    // Create order leg with all Entry Condition + Order Leg data
+                    const newLeg: OrderLeg = {
+                      id: Date.now().toString(),
+                      action: selectedOrderAction as 'Buy' | 'Sell',
+                      orderType: entryPriceType === 'Market' ? 'Market' : 'Limit',
+                      quantity: calculatedQuantity.toString(),
+                      instrument: instrument,
+                      lotSize: lotSize,
+                      numberOfLots: numberOfLots || '1',
+                      entryCondition: {
+                        candleType: `${firstCandleColor}/${secondCandleColor}`,
+                        candleColor: `${firstCandleColor}, ${secondCandleColor}`,
+                        candleTime: `${firstCandleTiming}, ${secondCandleTiming}, ${candleTimeSelection}, ${timeRange}`
+                      },
+                      exitCondition: {
+                        candleType: 'N/A',
+                        candleColor: 'N/A',
+                        profitTarget: '0',
+                        stopLoss: '0'
+                      },
+                      // Store additional fields
+                      firstCandleColor: firstCandleColor,
+                      firstCandleTiming: firstCandleTiming,
+                      secondCandleColor: secondCandleColor,
+                      secondCandleTiming: secondCandleTiming,
+                      candleTimeSelection: candleTimeSelection,
+                      timeRange: timeRange,
+                      optionType: optionType,
+                      expiryType: expiryType,
+                      moneynessType: moneynessType,
+                      sameCandleSelection: sameCandleSelection,
+                      previousMinusOneSelection: previousMinusOneSelection,
+                      slTrailType: slTrailType
+                    } as any;
+                    
+                    // Add leg directly to configured legs list
+                    setOrderLegs(prev => [...prev, newLeg]);
+                    
+                    // Show success message
+                    Alert.alert('Success', 'Order leg configured successfully!');
+                  }}
+                >
                   <Text style={styles.okButtonText}>OK</Text>
                 </TouchableOpacity>
               </View>
@@ -1630,8 +1685,21 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
               {selectedStrategyType === 'Candle Based' && (
                 <View style={styles.orderLegDetails}>
                   <Text style={styles.conditionText}>
-                    Entry: {leg.entryCondition?.candleType} - {leg.entryCondition?.candleColor} at {leg.entryCondition?.candleTime}
+                    Entry Condition: Candle I: {(leg as any).firstCandleColor || leg.entryCondition?.candleType} at {(leg as any).firstCandleTiming || ''}, Candle II: {(leg as any).secondCandleColor || ''} at {(leg as any).secondCandleTiming || ''}
                   </Text>
+                  {(leg as any).candleTimeSelection && (
+                    <Text style={styles.conditionText}>
+                      Time: {(leg as any).candleTimeSelection}, Range: {(leg as any).timeRange} sec
+                    </Text>
+                  )}
+                  <Text style={styles.conditionText}>
+                    Order: {leg.action} | Lot: {(leg as any).numberOfLots || '1'} | CE/PE: {(leg as any).optionType || 'CE'} | Expiry: {(leg as any).expiryType || 'Weekly'} | Moneyness: {(leg as any).moneynessType || 'ATM'}
+                  </Text>
+                  {(leg as any).sameCandleSelection && (
+                    <Text style={styles.conditionText}>
+                      Same Candle: {(leg as any).sameCandleSelection}, Previous-1: {(leg as any).previousMinusOneSelection}
+                    </Text>
+                  )}
                   <Text style={styles.conditionText}>
                     Exit: {leg.exitCondition?.candleType} - {leg.exitCondition?.candleColor}
                   </Text>
@@ -2494,9 +2562,25 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
             <View style={styles.modalFooter}>
               <TouchableOpacity 
                 style={styles.modalButton}
-                onPress={() => setShowInstrumentModal(false)}
+                onPress={() => {
+                  // Auto-select the last added instrument when OK/Done is clicked
+                  if (selectedInstruments.length > 0) {
+                    const lastInstrument = selectedInstruments[selectedInstruments.length - 1];
+                    
+                    // For Candle Based strategy, select it as chart instrument
+                    if (selectedStrategyType === 'Candle Based') {
+                      setSelectedChartInstrument(lastInstrument);
+                    }
+                    
+                    // For all strategy types, the last added instrument is now selected
+                    // It will be available in selectedInstruments array and ready to use
+                    // The instrument is automatically highlighted/selected in the UI
+                  }
+                  setShowInstrumentModal(false);
+                  setInstrumentSearchQuery('');
+                }}
               >
-                <Text style={styles.modalButtonText}>Done ({selectedInstruments.length})</Text>
+                <Text style={styles.modalButtonText}>OK ({selectedInstruments.length})</Text>
               </TouchableOpacity>
             </View>
           </View>
