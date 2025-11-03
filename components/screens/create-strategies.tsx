@@ -2644,38 +2644,40 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
               </TouchableOpacity>
             </View>
             
-            <View style={styles.chartTypeList}>
-              {chartTypes.map((type) => (
-                <TouchableOpacity
-                  key={type}
-                  style={[
-                    styles.chartTypeOption,
-                    selectedChartType === type && styles.selectedChartTypeOption
-                  ]}
-                  onPress={() => {
-                    setSelectedChartType(type);
-                    setShowChartTypeModal(false);
-                  }}
-                >
-                  <View style={styles.chartTypeOptionIcon}>
-                    <Ionicons 
-                      name={getChartIcon(type) as any} 
-                      size={24} 
-                      color={selectedChartType === type ? '#1976d2' : '#666'} 
-                    />
-                  </View>
-                  <Text style={[
-                    styles.chartTypeOptionText,
-                    selectedChartType === type && styles.selectedChartTypeOptionText
-                  ]}>
-                    {type}
-                  </Text>
-                  {selectedChartType === type && (
-                    <Ionicons name="checkmark" size={20} color="#1976d2" />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
+            <ScrollView style={styles.chartTypeScrollView}>
+              <View style={styles.chartTypeList}>
+                {chartTypes.map((type) => (
+                  <TouchableOpacity
+                    key={type}
+                    style={[
+                      styles.chartTypeOption,
+                      selectedChartType === type && styles.selectedChartTypeOption
+                    ]}
+                    onPress={() => {
+                      setSelectedChartType(type);
+                      setShowChartTypeModal(false);
+                    }}
+                  >
+                    <View style={styles.chartTypeOptionIcon}>
+                      <Ionicons 
+                        name={getChartIcon(type) as any} 
+                        size={24} 
+                        color={selectedChartType === type ? '#1976d2' : '#666'} 
+                      />
+                    </View>
+                    <Text style={[
+                      styles.chartTypeOptionText,
+                      selectedChartType === type && styles.selectedChartTypeOptionText
+                    ]}>
+                      {type}
+                    </Text>
+                    {selectedChartType === type && (
+                      <Ionicons name="checkmark" size={20} color="#1976d2" />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -3535,6 +3537,9 @@ const styles = StyleSheet.create({
     width: '90%',
     maxHeight: '70%',
     paddingVertical: 20,
+  },
+  chartTypeScrollView: {
+    maxHeight: 400,
   },
   chartTypeList: {
     paddingHorizontal: 20,
