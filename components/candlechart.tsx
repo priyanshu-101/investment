@@ -849,11 +849,13 @@ const CandleChart: React.FC<CandleChartProps> = ({
               case 'Renko':
                 // Renko chart - bricks based on price movement
                 const renkoSize = bounds.priceRange * 0.01; // 1% of price range
-                const renkoBricks = Math.floor(Math.abs(path.close - (index > 0 ? paths[index - 1].close : path.open)) / renkoSize);
+                const renkoCurrentPrice = path.candle.close;
+                const renkoPrevPrice = index > 0 ? paths[index - 1].candle.close : path.candle.open;
+                const renkoBricks = Math.floor(Math.abs(renkoCurrentPrice - renkoPrevPrice) / renkoSize);
                 if (renkoBricks === 0) return null;
-                const renkoDirection = path.close > (index > 0 ? paths[index - 1].close : path.open);
+                const renkoDirection = renkoCurrentPrice > renkoPrevPrice;
                 const renkoColor = renkoDirection ? "#4CAF50" : "#F44336";
-                const renkoY = priceToY(path.close, bounds);
+                const renkoY = priceToY(renkoCurrentPrice, bounds);
                 return (
                   <Rect
                     key={`renko-${index}`}
@@ -871,10 +873,13 @@ const CandleChart: React.FC<CandleChartProps> = ({
                 // Line break - line chart with breaks on direction change
                 if (index === 0) return null;
                 const prevLineBreak = paths[index - 1];
+                const lineBreakCurrentPrice = path.candle.close;
+                const lineBreakPrevPrice = prevLineBreak.candle.close;
+                const lineBreakBeforePrice = index > 1 ? paths[index - 2].candle.close : lineBreakPrevPrice;
                 const directionChanged = 
-                  (path.close > prevLineBreak.close && prevLineBreak.close < (index > 1 ? paths[index - 2].close : prevLineBreak.close)) ||
-                  (path.close < prevLineBreak.close && prevLineBreak.close > (index > 1 ? paths[index - 2].close : prevLineBreak.close));
-                if (directionChanged) {
+                  (lineBreakCurrentPrice > lineBreakPrevPrice && lineBreakPrevPrice < lineBreakBeforePrice) ||
+                  (lineBreakCurrentPrice < lineBreakPrevPrice && lineBreakPrevPrice > lineBreakBeforePrice);
+                if (directionChanged || index === 1) {
                   return (
                     <Line
                       key={`line-break-${index}`}
@@ -891,7 +896,9 @@ const CandleChart: React.FC<CandleChartProps> = ({
                 // Kagi chart - connected lines that change thickness based on direction
                 if (index === 0) return null;
                 const prevKagi = paths[index - 1];
-                const kagiDirection = path.close >= prevKagi.close;
+                const kagiCurrentPrice = path.candle.close;
+                const kagiPrevPrice = prevKagi.candle.close;
+                const kagiDirection = kagiCurrentPrice >= kagiPrevPrice;
                 const kagiColor = kagiDirection ? "#4CAF50" : "#F44336";
                 const kagiThickness = kagiDirection ? 3 : 2;
                 return (
@@ -909,12 +916,17 @@ const CandleChart: React.FC<CandleChartProps> = ({
                 const pnfBoxSize = bounds.priceRange * 0.01;
                 if (index === 0) return null;
                 const prevPnf = paths[index - 1];
-                const pnfChange = Math.abs(path.close - prevPnf.close);
-                const pnfBoxes = Math.floor(pnfChange / pnfBoxSize);
-                const pnfUp = path.close > prevPnf.close;
+                const pnfCurrentPrice = path.candle.close;
+                const pnfPrevPrice = prevPnf.candle.close;
+                const pnfChange = Math.abs(pnfCurrentPrice - pnfPrevPrice);
+                const pnfBoxes = Math.max(1, Math.min(Math.floor(pnfChange / pnfBoxSize), 5));
+                const pnfUp = pnfCurrentPrice > pnfPrevPrice;
                 const pnfColor = pnfUp ? "#4CAF50" : "#F44336";
-                const pnfElements = Array.from({ length: Math.min(pnfBoxes, 5) }).map((_, i) => {
-                  const boxY = priceToY(path.close - (i * pnfBoxSize), bounds);
+                const pnfElements = Array.from({ length: pnfBoxes }).map((_, i) => {
+                  const boxPrice = pnfUp 
+                    ? pnfPrevPrice + (i * pnfBoxSize)
+                    : pnfPrevPrice - (i * pnfBoxSize);
+                  const boxY = priceToY(boxPrice, bounds);
                   return (
                     <Rect
                       key={`pnf-${index}-${i}`}
