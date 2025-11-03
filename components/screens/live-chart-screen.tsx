@@ -11,7 +11,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import CandleChart from '../candlechart';
+import CandleChart, { ChartType } from '../candlechart';
 
 interface LiveChartScreenProps {
   strategyData: any;
@@ -31,11 +31,29 @@ const LiveChartScreen: React.FC<LiveChartScreenProps> = ({
   const router = useRouter();
   const [selectedInstrument, setSelectedInstrument] = useState(instruments[0] || '');
   const [selectedInterval, setSelectedInterval] = useState(interval);
-  const [selectedChartType, setSelectedChartType] = useState(chartType);
+  const [selectedChartType, setSelectedChartType] = useState<ChartType>(chartType as ChartType);
   const [selectedAction, setSelectedAction] = useState<'Buy' | 'Sell' | 'Both'>('Both');
 
   const intervals = ['1M', '3M', '5M', '15M', '30M', '1H', '1D'];
-  const chartTypes = ['Candle', 'Bars', 'Hollow candles', 'Line', 'OHLC'];
+  const chartTypes: ('Candle' | 'Bars' | 'Hollow candles' | 'Line' | 'OHLC' | 'Area' | 'HLC area' | 'Baseline' | 'Columns' | 'High-low' | 'Heikin Ashi' | 'Renko' | 'Line break' | 'Kagi' | 'Point & figure' | 'Line with markers' | 'Step line')[] = [
+    'Candle', 
+    'Bars', 
+    'Hollow candles', 
+    'Line', 
+    'OHLC',
+    'Area',
+    'HLC area',
+    'Baseline',
+    'Columns',
+    'High-low',
+    'Heikin Ashi',
+    'Renko',
+    'Line break',
+    'Kagi',
+    'Point & figure',
+    'Line with markers',
+    'Step line'
+  ];
   const actionTypes = ['Buy', 'Sell', 'Both'];
 
   const handleBack = () => {
@@ -219,10 +237,11 @@ const LiveChartScreen: React.FC<LiveChartScreenProps> = ({
             <CandleChart
               instrument={selectedInstrument}
               interval={selectedInterval}
-              chartType={selectedChartType as 'Candle' | 'Bars' | 'Hollow candles' | 'Line' | 'OHLC'}
+              chartType={selectedChartType}
               height={450}
               isRealTime={true}
               onCandlePatternDetected={handlePatternDetected}
+              onChartTypeChange={(type) => setSelectedChartType(type)}
               action={selectedAction}
             />
           </ScrollView>

@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Canvas, Group, Line, Rect } from '@shopify/react-native-skia';
+import { Canvas, Group, Line, Path, Rect, Skia } from '@shopify/react-native-skia';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
@@ -22,13 +22,33 @@ interface CandleData {
   volume: number;
 }
 
+export type ChartType = 
+  | 'Candle' 
+  | 'Bars' 
+  | 'Hollow candles' 
+  | 'Line' 
+  | 'OHLC'
+  | 'Area'
+  | 'HLC area'
+  | 'Baseline'
+  | 'Columns'
+  | 'High-low'
+  | 'Heikin Ashi'
+  | 'Renko'
+  | 'Line break'
+  | 'Kagi'
+  | 'Point & figure'
+  | 'Line with markers'
+  | 'Step line';
+
 interface CandleChartProps {
   instrument: string;
   interval: string;
   height?: number;
   isRealTime?: boolean;
-  chartType?: 'Candle' | 'Bars' | 'Hollow candles' | 'Line' | 'OHLC';
+  chartType?: ChartType;
   onCandlePatternDetected?: (pattern: string) => void;
+  onChartTypeChange?: (chartType: ChartType) => void;
   action?: 'Buy' | 'Sell' | 'Both';
 }
 
@@ -41,6 +61,7 @@ const CandleChart: React.FC<CandleChartProps> = ({
   isRealTime = false,
   chartType = 'Candle',
   onCandlePatternDetected,
+  onChartTypeChange,
   action = 'Both'
 }) => {
   const [candleData, setCandleData] = useState<CandleData[]>([]);
@@ -152,6 +173,30 @@ const CandleChart: React.FC<CandleChartProps> = ({
       case 'Line':
         return 'analytics';
       case 'OHLC':
+        return 'stats-chart';
+      case 'Area':
+        return 'color-fill';
+      case 'HLC area':
+        return 'layers';
+      case 'Baseline':
+        return 'swap-horizontal';
+      case 'Columns':
+        return 'albums';
+      case 'High-low':
+        return 'pulse';
+      case 'Heikin Ashi':
+        return 'trending-up';
+      case 'Renko':
+        return 'grid';
+      case 'Line break':
+        return 'remove';
+      case 'Kagi':
+        return 'git-branch';
+      case 'Point & figure':
+        return 'grid-outline';
+      case 'Line with markers':
+        return 'radio-button-on';
+      case 'Step line':
         return 'stats-chart';
       default:
         return 'bar-chart';
@@ -626,6 +671,312 @@ const CandleChart: React.FC<CandleChartProps> = ({
                   </Group>
                 );
                 
+              case 'Line':
+                // For Line chart, connect close prices
+                if (index === 0) return null;
+                const prevPath = paths[index - 1];
+                return (
+                  <Line
+                    key={`line-${index}`}
+                    p1={{ x: prevPath.x, y: prevPath.closeY }}
+                    p2={{ x: path.x, y: path.closeY }}
+                    color="#1976d2"
+                    strokeWidth={2}
+                  />
+                );
+                
+              case 'OHLC':
+                return (
+                  <Group key={`ohlc-${index}`}>
+                    {/* High-Low line (vertical) */}
+                    <Line
+                      p1={{ x: path.x, y: path.highY }}
+                      p2={{ x: path.x, y: path.lowY }}
+                      color={color}
+                      strokeWidth={2}
+                    />
+                    
+                    {/* Open tick (left horizontal line) */}
+                    <Line
+                      p1={{ x: path.x - 6, y: path.openY }}
+                      p2={{ x: path.x, y: path.openY }}
+                      color={color}
+                      strokeWidth={3}
+                    />
+                    
+                    {/* Close tick (right horizontal line) */}
+                    <Line
+                      p1={{ x: path.x, y: path.closeY }}
+                      p2={{ x: path.x + 6, y: path.closeY }}
+                      color={color}
+                      strokeWidth={3}
+                    />
+                  </Group>
+                );
+                
+              case 'Area':
+                // Area chart - filled area under line
+                if (index === 0) return null;
+                const prevAreaPath = paths[index - 1];
+                const areaPath = Skia.Path.Make();
+                areaPath.moveTo(prevAreaPath.x, actualChartHeight);
+                areaPath.lineTo(prevAreaPath.x, prevAreaPath.closeY);
+                areaPath.lineTo(path.x, path.closeY);
+                areaPath.lineTo(path.x, actualChartHeight);
+                areaPath.close();
+                return (
+                  <Path
+                    key={`area-${index}`}
+                    path={areaPath}
+                    color="rgba(25, 118, 210, 0.3)"
+                  />
+                );
+                
+              case 'HLC area':
+                // HLC area - area between high, low, and close
+                if (index === 0) return null;
+                const prevHlcPath = paths[index - 1];
+                const hlcAreaPath = Skia.Path.Make();
+                hlcAreaPath.moveTo(prevHlcPath.x, prevHlcPath.highY);
+                hlcAreaPath.lineTo(prevHlcPath.x, prevHlcPath.lowY);
+                hlcAreaPath.lineTo(path.x, path.lowY);
+                hlcAreaPath.lineTo(path.x, path.highY);
+                hlcAreaPath.close();
+                return (
+                  <Path
+                    key={`hlc-area-${index}`}
+                    path={hlcAreaPath}
+                    color="rgba(25, 118, 210, 0.2)"
+                  />
+                );
+                
+              case 'Baseline':
+                // Baseline chart - line chart with horizontal baseline
+                if (index === 0) return null;
+                const baselinePrice = bounds.minPrice + (bounds.priceRange / 2);
+                const baselineY = priceToY(baselinePrice, bounds);
+                const prevBaselinePath = paths[index - 1];
+                return (
+                  <Group key={`baseline-${index}`}>
+                    <Line
+                      p1={{ x: prevBaselinePath.x, y: prevBaselinePath.closeY }}
+                      p2={{ x: path.x, y: path.closeY }}
+                      color="#1976d2"
+                      strokeWidth={2}
+                    />
+                    <Line
+                      p1={{ x: prevBaselinePath.x, y: baselineY }}
+                      p2={{ x: path.x, y: baselineY }}
+                      color="rgba(128, 128, 128, 0.5)"
+                      strokeWidth={1}
+                    />
+                  </Group>
+                );
+                
+              case 'Columns':
+                // Columns - vertical bars representing close price
+                const columnHeight = actualChartHeight - path.closeY;
+                return (
+                  <Rect
+                    key={`column-${index}`}
+                    x={path.x - path.candleWidth / 2}
+                    y={path.closeY}
+                    width={path.candleWidth}
+                    height={columnHeight}
+                    color={color}
+                  />
+                );
+                
+              case 'High-low':
+                // High-low bars - vertical lines with horizontal ticks
+                return (
+                  <Group key={`high-low-${index}`}>
+                    <Line
+                      p1={{ x: path.x, y: path.highY }}
+                      p2={{ x: path.x, y: path.lowY }}
+                      color={color}
+                      strokeWidth={2}
+                    />
+                    <Line
+                      p1={{ x: path.x - 3, y: path.highY }}
+                      p2={{ x: path.x + 3, y: path.highY }}
+                      color={color}
+                      strokeWidth={2}
+                    />
+                    <Line
+                      p1={{ x: path.x - 3, y: path.lowY }}
+                      p2={{ x: path.x + 3, y: path.lowY }}
+                      color={color}
+                      strokeWidth={2}
+                    />
+                  </Group>
+                );
+                
+              case 'Heikin Ashi':
+                // Heikin Ashi candles - smoothed candle chart
+                const haClose = (path.candle.open + path.candle.high + path.candle.low + path.candle.close) / 4;
+                const haOpen = index === 0 
+                  ? (path.candle.open + path.candle.close) / 2
+                  : (paths[index - 1].candle.open + paths[index - 1].candle.close) / 2;
+                const haHigh = Math.max(path.candle.high, haOpen, haClose);
+                const haLow = Math.min(path.candle.low, haOpen, haClose);
+                const haOpenY = priceToY(haOpen, bounds);
+                const haCloseY = priceToY(haClose, bounds);
+                const haHighY = priceToY(haHigh, bounds);
+                const haLowY = priceToY(haLow, bounds);
+                const haIsGreen = haClose > haOpen;
+                const haColor = haIsGreen ? "#4CAF50" : "#F44336";
+                const haBodyTop = Math.min(haOpenY, haCloseY);
+                const haBodyHeight = Math.abs(haCloseY - haOpenY);
+                return (
+                  <Group key={`heikin-ashi-${index}`}>
+                    <Line
+                      p1={{ x: path.x, y: haHighY }}
+                      p2={{ x: path.x, y: haLowY }}
+                      color={haColor}
+                      strokeWidth={1}
+                    />
+                    <Rect
+                      x={path.x - path.candleWidth / 2}
+                      y={haBodyTop}
+                      width={path.candleWidth}
+                      height={Math.max(haBodyHeight, 1)}
+                      color={haColor}
+                    />
+                  </Group>
+                );
+                
+              case 'Renko':
+                // Renko chart - bricks based on price movement
+                const renkoSize = bounds.priceRange * 0.01; // 1% of price range
+                const renkoBricks = Math.floor(Math.abs(path.close - (index > 0 ? paths[index - 1].close : path.open)) / renkoSize);
+                if (renkoBricks === 0) return null;
+                const renkoDirection = path.close > (index > 0 ? paths[index - 1].close : path.open);
+                const renkoColor = renkoDirection ? "#4CAF50" : "#F44336";
+                const renkoY = priceToY(path.close, bounds);
+                return (
+                  <Rect
+                    key={`renko-${index}`}
+                    x={path.x - path.candleWidth}
+                    y={renkoY - path.candleWidth}
+                    width={path.candleWidth * 2}
+                    height={path.candleWidth * 2}
+                    color={renkoColor}
+                    style="stroke"
+                    strokeWidth={2}
+                  />
+                );
+                
+              case 'Line break':
+                // Line break - line chart with breaks on direction change
+                if (index === 0) return null;
+                const prevLineBreak = paths[index - 1];
+                const directionChanged = 
+                  (path.close > prevLineBreak.close && prevLineBreak.close < (index > 1 ? paths[index - 2].close : prevLineBreak.close)) ||
+                  (path.close < prevLineBreak.close && prevLineBreak.close > (index > 1 ? paths[index - 2].close : prevLineBreak.close));
+                if (directionChanged) {
+                  return (
+                    <Line
+                      key={`line-break-${index}`}
+                      p1={{ x: prevLineBreak.x, y: prevLineBreak.closeY }}
+                      p2={{ x: path.x, y: path.closeY }}
+                      color="#1976d2"
+                      strokeWidth={2}
+                    />
+                  );
+                }
+                return null;
+                
+              case 'Kagi':
+                // Kagi chart - connected lines that change thickness based on direction
+                if (index === 0) return null;
+                const prevKagi = paths[index - 1];
+                const kagiDirection = path.close >= prevKagi.close;
+                const kagiColor = kagiDirection ? "#4CAF50" : "#F44336";
+                const kagiThickness = kagiDirection ? 3 : 2;
+                return (
+                  <Line
+                    key={`kagi-${index}`}
+                    p1={{ x: prevKagi.x, y: prevKagi.closeY }}
+                    p2={{ x: path.x, y: path.closeY }}
+                    color={kagiColor}
+                    strokeWidth={kagiThickness}
+                  />
+                );
+                
+              case 'Point & figure':
+                // Point & Figure - boxes representing price movement
+                const pnfBoxSize = bounds.priceRange * 0.01;
+                if (index === 0) return null;
+                const prevPnf = paths[index - 1];
+                const pnfChange = Math.abs(path.close - prevPnf.close);
+                const pnfBoxes = Math.floor(pnfChange / pnfBoxSize);
+                const pnfUp = path.close > prevPnf.close;
+                const pnfColor = pnfUp ? "#4CAF50" : "#F44336";
+                const pnfElements = Array.from({ length: Math.min(pnfBoxes, 5) }).map((_, i) => {
+                  const boxY = priceToY(path.close - (i * pnfBoxSize), bounds);
+                  return (
+                    <Rect
+                      key={`pnf-${index}-${i}`}
+                      x={path.x - path.candleWidth / 2}
+                      y={boxY - path.candleWidth / 2}
+                      width={path.candleWidth}
+                      height={path.candleWidth}
+                      color={pnfColor}
+                      style={pnfUp ? "fill" : "stroke"}
+                      strokeWidth={2}
+                    />
+                  );
+                });
+                return (
+                  <Group key={`pnf-group-${index}`}>
+                    {pnfElements}
+                  </Group>
+                );
+                
+              case 'Line with markers':
+                // Line with markers - line chart with dots
+                if (index === 0) return null;
+                const prevMarkerPath = paths[index - 1];
+                return (
+                  <Group key={`line-marker-${index}`}>
+                    <Line
+                      p1={{ x: prevMarkerPath.x, y: prevMarkerPath.closeY }}
+                      p2={{ x: path.x, y: path.closeY }}
+                      color="#1976d2"
+                      strokeWidth={2}
+                    />
+                    <Rect
+                      x={path.x - 3}
+                      y={path.closeY - 3}
+                      width={6}
+                      height={6}
+                      color="#1976d2"
+                    />
+                  </Group>
+                );
+                
+              case 'Step line':
+                // Step line - line chart with steps
+                if (index === 0) return null;
+                const prevStepPath = paths[index - 1];
+                return (
+                  <Group key={`step-line-${index}`}>
+                    <Line
+                      p1={{ x: prevStepPath.x, y: prevStepPath.closeY }}
+                      p2={{ x: path.x, y: prevStepPath.closeY }}
+                      color="#1976d2"
+                      strokeWidth={2}
+                    />
+                    <Line
+                      p1={{ x: path.x, y: prevStepPath.closeY }}
+                      p2={{ x: path.x, y: path.closeY }}
+                      color="#1976d2"
+                      strokeWidth={2}
+                    />
+                  </Group>
+                );
+                
               case 'Candle':
               default:
                 return (
@@ -653,7 +1004,7 @@ const CandleChart: React.FC<CandleChartProps> = ({
         </Group>
       </Canvas>
     );
-  }, [generateChartPaths, generateYAxisLabels, generateXAxisLabels, getChartBounds, chartWidth, chartHeight, axisPadding, actualChartHeight]);
+  }, [generateChartPaths, generateYAxisLabels, generateXAxisLabels, getChartBounds, chartWidth, chartHeight, axisPadding, actualChartHeight, chartType]);
 
   return (
     <View style={styles.container}>
@@ -812,38 +1163,61 @@ const CandleChart: React.FC<CandleChartProps> = ({
               </TouchableOpacity>
             </View>
             
-            <View style={styles.chartTypeList}>
-              {['Candle', 'Bars', 'Hollow candles', 'Line', 'OHLC'].map((type) => (
-                <TouchableOpacity
-                  key={type}
-                  style={[
-                    styles.chartTypeOption,
-                    chartType === type && styles.selectedChartTypeOption
-                  ]}
-                  onPress={() => {
-                    // Note: Chart type is controlled by parent component
-                    setShowChartTypeModal(false);
-                  }}
-                >
-                  <View style={styles.chartTypeOptionIcon}>
-                    <Ionicons 
-                      name={getChartIcon(type) as any} 
-                      size={24} 
-                      color={chartType === type ? '#1976d2' : '#666'} 
-                    />
-                  </View>
-                  <Text style={[
-                    styles.chartTypeOptionText,
-                    chartType === type && styles.selectedChartTypeOptionText
-                  ]}>
-                    {type}
-                  </Text>
-                  {chartType === type && (
-                    <Ionicons name="checkmark" size={20} color="#1976d2" />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
+            <ScrollView style={styles.chartTypeScrollView}>
+              <View style={styles.chartTypeList}>
+                {([
+                  'Candle', 
+                  'Bars', 
+                  'Hollow candles', 
+                  'Line', 
+                  'OHLC',
+                  'Area',
+                  'HLC area',
+                  'Baseline',
+                  'Columns',
+                  'High-low',
+                  'Heikin Ashi',
+                  'Renko',
+                  'Line break',
+                  'Kagi',
+                  'Point & figure',
+                  'Line with markers',
+                  'Step line'
+                ] as ChartType[]).map((type) => (
+                  <TouchableOpacity
+                    key={type}
+                    style={[
+                      styles.chartTypeOption,
+                      chartType === type && styles.selectedChartTypeOption
+                    ]}
+                    onPress={() => {
+                      // Update chart type via callback to parent component
+                      if (onChartTypeChange) {
+                        onChartTypeChange(type);
+                      }
+                      setShowChartTypeModal(false);
+                    }}
+                  >
+                    <View style={styles.chartTypeOptionIcon}>
+                      <Ionicons 
+                        name={getChartIcon(type) as any} 
+                        size={24} 
+                        color={chartType === type ? '#1976d2' : '#666'} 
+                      />
+                    </View>
+                    <Text style={[
+                      styles.chartTypeOptionText,
+                      chartType === type && styles.selectedChartTypeOptionText
+                    ]}>
+                      {type}
+                    </Text>
+                    {chartType === type && (
+                      <Ionicons name="checkmark" size={20} color="#1976d2" />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -1118,6 +1492,9 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#666',
     fontWeight: 'bold',
+  },
+  chartTypeScrollView: {
+    maxHeight: 500,
   },
   chartTypeList: {
     paddingHorizontal: 20,

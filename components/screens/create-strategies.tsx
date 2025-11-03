@@ -19,7 +19,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { kiteConnect } from '../../services/kiteConnect';
 import { marketDataService } from '../../services/marketDataApi';
 import { StrategyApiData } from '../../services/strategiesApi';
-import CandleChart from '../candlechart';
+import CandleChart, { ChartType } from '../candlechart';
 import { PasswordModal } from '../password-modal';
 
 interface CandlePattern {
@@ -72,7 +72,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   
   // Existing state
   const [selectedStrategyType, setSelectedStrategyType] = useState('Time Based');
-  const [selectedChartType, setSelectedChartType] = useState('Candle');
+  const [selectedChartType, setSelectedChartType] = useState<ChartType>('Candle');
   const [selectedOrderType, setSelectedOrderType] = useState('MIS');
   const [selectedTransactionType, setSelectedTransactionType] = useState('Buy');
   const [startTime, setStartTime] = useState('09:16');
@@ -279,7 +279,25 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   };
 
   const strategyTypes = ['Candle Based', 'Time Based', 'Indicator Based'];
-  const chartTypes = ['Candle', 'Bars', 'Hollow candles', 'Line', 'OHLC'];
+  const chartTypes: ('Candle' | 'Bars' | 'Hollow candles' | 'Line' | 'OHLC' | 'Area' | 'HLC area' | 'Baseline' | 'Columns' | 'High-low' | 'Heikin Ashi' | 'Renko' | 'Line break' | 'Kagi' | 'Point & figure' | 'Line with markers' | 'Step line')[] = [
+    'Candle', 
+    'Bars', 
+    'Hollow candles', 
+    'Line', 
+    'OHLC',
+    'Area',
+    'HLC area',
+    'Baseline',
+    'Columns',
+    'High-low',
+    'Heikin Ashi',
+    'Renko',
+    'Line break',
+    'Kagi',
+    'Point & figure',
+    'Line with markers',
+    'Step line'
+  ];
   const orderTypes = ['MIS', 'CNC', 'BTST'];
   const transactionTypes = ['Buy', 'Sell', 'Both'];
   const weekDays = ['MON', 'TUE', 'WED', 'THU', 'FRI'];
@@ -368,6 +386,30 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
       case 'Line':
         return 'analytics';
       case 'OHLC':
+        return 'stats-chart';
+      case 'Area':
+        return 'color-fill';
+      case 'HLC area':
+        return 'layers';
+      case 'Baseline':
+        return 'swap-horizontal';
+      case 'Columns':
+        return 'albums';
+      case 'High-low':
+        return 'pulse';
+      case 'Heikin Ashi':
+        return 'trending-up';
+      case 'Renko':
+        return 'grid';
+      case 'Line break':
+        return 'remove';
+      case 'Kagi':
+        return 'git-branch';
+      case 'Point & figure':
+        return 'grid-outline';
+      case 'Line with markers':
+        return 'radio-button-on';
+      case 'Step line':
         return 'stats-chart';
       default:
         return 'bar-chart';
@@ -1264,8 +1306,9 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                   interval={selectedInterval}
                   height={350}
                   isRealTime={true}
-                  chartType={selectedChartType as 'Candle' | 'Bars' | 'Hollow candles' | 'Line' | 'OHLC'}
+                  chartType={selectedChartType}
                   onCandlePatternDetected={handleCandlePatternDetected}
+                  onChartTypeChange={(type) => setSelectedChartType(type)}
                   action={selectedTransactionType as 'Buy' | 'Sell' | 'Both'}
                 />
               </View>
