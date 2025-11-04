@@ -35,6 +35,12 @@ interface OrderLeg {
   quantity: string;
   instrument: string;
   lotSize: number;
+  numberOfLots?: string;
+  optionType?: 'CE' | 'PE';
+  expiryType?: 'Weekly' | 'Monthly';
+  moneynessType?: 'ATM' | 'ITM' | 'OTM';
+  slPercentage?: string;
+  tpPercentage?: string;
   entryCondition?: {
     candleType: string;
     candleColor: string;
@@ -94,6 +100,8 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   const [orderLegs, setOrderLegs] = useState<OrderLeg[]>([]);
   const [showOrderLegModal, setShowOrderLegModal] = useState(false);
   const [currentEditingLeg, setCurrentEditingLeg] = useState<OrderLeg | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [openLegDropdown, setOpenLegDropdown] = useState<{ legId: string; type: 'expiry' | 'moneyness' | 'sl' | 'tp' } | null>(null);
   const [riskRewardRatio, setRiskRewardRatio] = useState('1:3');
   const [overallStopLoss, setOverallStopLoss] = useState(true);
   const [overallProfit, setOverallProfit] = useState(true);
@@ -649,7 +657,12 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
       quantity: calculatedQuantity.toString(), // Set quantity based on number of lots
       instrument: instrument,
       lotSize: lotSize, // Store lot size based on instrument
-      numberOfLots: numberOfLots || '1', // Store number of lots (default to 1 if empty)
+      numberOfLots: numberOfLots || '1', // Store number of lots from above selection
+      optionType: optionType || 'CE',
+      expiryType: expiryType || 'Weekly',
+      moneynessType: moneynessType || 'ATM',
+      slPercentage: '30',
+      tpPercentage: '',
       entryCondition: {
         candleType: 'Green/Red',
         candleColor: 'Green',
@@ -662,8 +675,55 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
         stopLoss: '50',
       }
     };
-    setCurrentEditingLeg(newLeg);
-    setShowOrderLegModal(true);
+    setOrderLegs(prev => [...prev, newLeg]);
+  };
+
+  // Update all legs when numberOfLots changes from above
+  useEffect(() => {
+    if (orderLegs.length > 0 && numberOfLots) {
+      const lots = parseInt(numberOfLots || '1') || 1;
+      setOrderLegs(prev => prev.map(leg => {
+        if (leg.instrument && leg.lotSize) {
+          const calculatedQuantity = lots * leg.lotSize;
+          return {
+            ...leg,
+            numberOfLots: numberOfLots,
+            quantity: calculatedQuantity.toString()
+          };
+        }
+        return leg;
+      }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [numberOfLots]);
+
+  const duplicateOrderLeg = (leg: OrderLeg) => {
+    // Create a complete copy of the leg with a new ID
+    const duplicatedLeg: any = {
+      ...leg,
+      id: Date.now().toString(),
+      // Ensure all fields are copied
+      action: leg.action,
+      orderType: leg.orderType,
+      quantity: leg.quantity,
+      instrument: leg.instrument,
+      lotSize: leg.lotSize,
+      numberOfLots: (leg as any).numberOfLots || leg.quantity ? Math.floor(parseInt(leg.quantity || '0') / (leg.lotSize || 1)).toString() : '1',
+      optionType: leg.optionType || 'CE',
+      expiryType: leg.expiryType || 'Weekly',
+      moneynessType: leg.moneynessType || 'ATM',
+      slPercentage: leg.slPercentage || '30',
+      tpPercentage: leg.tpPercentage || '',
+      entryCondition: leg.entryCondition ? { ...leg.entryCondition } : undefined,
+      exitCondition: leg.exitCondition ? { ...leg.exitCondition } : undefined,
+    };
+    setOrderLegs(prev => [...prev, duplicatedLeg]);
+  };
+
+  const updateOrderLeg = (id: string, updates: Partial<OrderLeg>) => {
+    setOrderLegs(prev => prev.map(leg => 
+      leg.id === id ? { ...leg, ...updates } : leg
+    ));
   };
 
   const saveOrderLeg = (leg: OrderLeg) => {
@@ -1691,74 +1751,303 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
             </Text>
           </View>
 
-          {orderLegs.map((leg) => (
-            <View key={leg.id} style={styles.orderLegCard}>
-              <View style={styles.orderLegHeader}>
-                <Text style={styles.orderLegTitle}>
-                  {leg.action} {leg.instrument} - {leg.quantity} Qty
-                </Text>
-                <View style={styles.orderLegActions}>
-                  <TouchableOpacity 
-                    onPress={() => {
-                      // Calculate numberOfLots if it doesn't exist
-                      const legWithLots: any = { ...leg };
-                      if (!(leg as any).numberOfLots && leg.instrument && leg.lotSize) {
-                        const quantity = parseInt(leg.quantity || '0');
-                        const calculatedLots = Math.floor(quantity / leg.lotSize);
-                        legWithLots.numberOfLots = (calculatedLots > 0 ? calculatedLots : 1).toString();
-                      } else if (!(leg as any).numberOfLots) {
-                        legWithLots.numberOfLots = '1';
-                      }
-                      setCurrentEditingLeg(legWithLots);
-                      setShowOrderLegModal(true);
-                    }}
-                    style={styles.editButton}
-                  >
-                    <Ionicons name="pencil" size={16} color="#1976d2" />
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    onPress={() => deleteOrderLeg(leg.id)}
-                    style={styles.deleteButton}
-                  >
-                    <Ionicons name="trash" size={16} color="#f44336" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-              
-              {selectedStrategyType === 'Candle Based' && (
-                <View style={styles.orderLegDetails}>
-                  <Text style={styles.conditionText}>
-                    Entry Condition: Candle I: {(leg as any).firstCandleColor || leg.entryCondition?.candleType} at {(leg as any).firstCandleTiming || ''}, Candle II: {(leg as any).secondCandleColor || ''} at {(leg as any).secondCandleTiming || ''}
-                  </Text>
-                  {(leg as any).candleTimeSelection && (
-                    <Text style={styles.conditionText}>
-                      Time: {(leg as any).candleTimeSelection}, Range: {(leg as any).timeRange} sec
-                    </Text>
-                  )}
-                  <Text style={styles.conditionText}>
-                    Order: {leg.action} | Lot: {(leg as any).numberOfLots || '1'} | CE/PE: {(leg as any).optionType || 'CE'} | Expiry: {(leg as any).expiryType || 'Weekly'} | Moneyness: {(leg as any).moneynessType || 'ATM'}
-                  </Text>
-                  {(leg as any).sameCandleSelection && (
-                    <Text style={styles.conditionText}>
-                      Same Candle: {(leg as any).sameCandleSelection}, Previous-1: {(leg as any).previousMinusOneSelection}
-                    </Text>
-                  )}
-                  <Text style={styles.conditionText}>
-                    Exit: {leg.exitCondition?.candleType} - {leg.exitCondition?.candleColor}
-                  </Text>
-                  <Text style={styles.conditionText}>
-                    Target: ₹{leg.exitCondition?.profitTarget} | SL: ₹{leg.exitCondition?.stopLoss}
-                  </Text>
-                </View>
-              )}
-            </View>
-          ))}
-
-          {/* Add Leg Button - After configured order legs */}
+          {/* Add Leg Button - Above configured order legs */}
           <TouchableOpacity style={styles.addLegButton} onPress={addOrderLeg}>
             <Ionicons name="add" size={16} color="#fff" />
             <Text style={styles.addLegText}>+ ADD LEG</Text>
           </TouchableOpacity>
+
+          {orderLegs.map((leg) => (
+            <View key={leg.id} style={styles.orderLegCard}>
+              {/* Row 1: Action, Quantity/Lots, Option Type, Menu */}
+              <View style={styles.legRow}>
+                <View style={styles.legRowLeft}>
+                  {/* Action Button */}
+                  <TouchableOpacity
+                    style={[
+                      styles.actionButton,
+                      leg.action === 'Sell' ? styles.actionButtonSell : styles.actionButtonBuy
+                    ]}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      updateOrderLeg(leg.id, { 
+                        action: leg.action === 'Buy' ? 'Sell' : 'Buy' 
+                      });
+                    }}
+                  >
+                    <Text style={styles.actionButtonText}>
+                      {leg.action.toUpperCase()} X
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  {/* Quantity/Lots Input */}
+                  <View style={styles.quantityInputContainer} onStartShouldSetResponder={() => true}>
+                    <Text style={styles.quantityLabel}>Qty</Text>
+                    <TextInput
+                      style={styles.quantityInput}
+                      value={(leg as any).numberOfLots || Math.floor(parseInt(leg.quantity || '0') / (leg.lotSize || 1)) || numberOfLots || '1'}
+                      onChangeText={(value) => {
+                        // Only allow numeric input
+                        const numericValue = value.replace(/[^0-9]/g, '');
+                        const lots = parseInt(numericValue || '1');
+                        if (leg.instrument && leg.lotSize) {
+                          const calculatedQuantity = lots * leg.lotSize;
+                          updateOrderLeg(leg.id, { 
+                            quantity: calculatedQuantity.toString(),
+                            numberOfLots: numericValue
+                          } as any);
+                          // Update the global numberOfLots state
+                          setNumberOfLots(numericValue);
+                        } else {
+                          updateOrderLeg(leg.id, { 
+                            numberOfLots: numericValue
+                          } as any);
+                          setNumberOfLots(numericValue);
+                        }
+                      }}
+                      keyboardType="numeric"
+                      placeholder="75"
+                      onFocus={(e) => e.stopPropagation()}
+                    />
+                    <Text style={styles.lotLabel}>LOT</Text>
+                  </View>
+                  
+                  {/* Option Type Button */}
+                  <TouchableOpacity
+                    style={styles.optionTypeButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      updateOrderLeg(leg.id, { 
+                        optionType: leg.optionType === 'CE' ? 'PE' : 'CE'
+                      });
+                    }}
+                  >
+                    <Text style={styles.optionTypeText}>
+                      {(leg.optionType || 'CE').toUpperCase()} X
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                
+                {/* Menu Icon */}
+                <View style={styles.menuContainer}>
+                  <TouchableOpacity
+                    style={styles.menuButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      setOpenMenuId(openMenuId === leg.id ? null : leg.id);
+                    }}
+                  >
+                    <Ionicons name="ellipsis-vertical" size={20} color="#666" />
+                  </TouchableOpacity>
+                  {openMenuId === leg.id && (
+                    <View style={styles.menuDropdown} onStartShouldSetResponder={() => true}>
+                      <TouchableOpacity
+                        style={styles.menuItem}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          duplicateOrderLeg(leg);
+                          setOpenMenuId(null);
+                        }}
+                      >
+                        <Text style={styles.menuItemText}>Duplicate</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.menuItem, styles.menuItemLast]}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          deleteOrderLeg(leg.id);
+                          setOpenMenuId(null);
+                        }}
+                      >
+                        <Text style={[styles.menuItemText, styles.menuItemDelete]}>Delete</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              {/* Row 2: Expiry, Moneyness, ATM */}
+              <View style={styles.legRow}>
+                <View style={styles.dropdownWrapper} onStartShouldSetResponder={() => true}>
+                  <Text style={styles.dropdownLabel}>Weekly X</Text>
+                  <TouchableOpacity
+                    style={styles.dropdownButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      setOpenLegDropdown(openLegDropdown?.legId === leg.id && openLegDropdown?.type === 'expiry' ? null : { legId: leg.id, type: 'expiry' });
+                    }}
+                  >
+                    <Text style={styles.dropdownText}>{leg.expiryType || 'Weekly'}</Text>
+                    <Ionicons name="chevron-down" size={16} color="#666" />
+                  </TouchableOpacity>
+                </View>
+                
+                <View style={styles.dropdownWrapper} onStartShouldSetResponder={() => true}>
+                  <Text style={styles.dropdownLabel}>ATM pt</Text>
+                  <TouchableOpacity
+                    style={styles.dropdownButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      setOpenLegDropdown(openLegDropdown?.legId === leg.id && openLegDropdown?.type === 'moneyness' ? null : { legId: leg.id, type: 'moneyness' });
+                    }}
+                  >
+                    <Text style={styles.dropdownText}>{leg.moneynessType || 'ATM'}</Text>
+                    <Ionicons name="chevron-down" size={16} color="#666" />
+                  </TouchableOpacity>
+                </View>
+                
+                <View style={styles.atmInputContainer}>
+                  <Text style={styles.atmLabel}>ATM</Text>
+                  <TextInput
+                    style={styles.atmInput}
+                    value={leg.moneynessType || 'ATM'}
+                    editable={false}
+                    placeholder="ATM"
+                  />
+                </View>
+              </View>
+
+              {/* Row 3: SL % */}
+              <View style={styles.legRow}>
+                <View style={styles.dropdownWrapper} onStartShouldSetResponder={() => true}>
+                  <Text style={styles.dropdownLabel}>SL %</Text>
+                  <TouchableOpacity 
+                    style={styles.dropdownButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      setOpenLegDropdown(openLegDropdown?.legId === leg.id && openLegDropdown?.type === 'sl' ? null : { legId: leg.id, type: 'sl' });
+                    }}
+                  >
+                    <Text style={styles.dropdownText}>SL %</Text>
+                    <Ionicons name="chevron-down" size={16} color="#666" />
+                  </TouchableOpacity>
+                </View>
+                
+                <View style={styles.percentageInputContainer} onStartShouldSetResponder={() => true}>
+                  <TextInput
+                    style={styles.percentageInput}
+                    value={leg.slPercentage || '30'}
+                    onChangeText={(value) => {
+                      const numericValue = value.replace(/[^0-9]/g, '');
+                      updateOrderLeg(leg.id, { slPercentage: numericValue });
+                    }}
+                    keyboardType="numeric"
+                    placeholder="30"
+                    onFocus={(e) => e.stopPropagation()}
+                  />
+                </View>
+                
+                <View style={styles.onPriceLabel}>
+                  <Text style={styles.onPriceText}>On Price</Text>
+                </View>
+              </View>
+
+              {/* Row 4: TP % */}
+              <View style={styles.legRow}>
+                <View style={styles.dropdownWrapper} onStartShouldSetResponder={() => true}>
+                  <Text style={styles.dropdownLabel}>TP %</Text>
+                  <TouchableOpacity 
+                    style={styles.dropdownButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      setOpenLegDropdown(openLegDropdown?.legId === leg.id && openLegDropdown?.type === 'tp' ? null : { legId: leg.id, type: 'tp' });
+                    }}
+                  >
+                    <Text style={styles.dropdownText}>TP %</Text>
+                    <Ionicons name="chevron-down" size={16} color="#666" />
+                  </TouchableOpacity>
+                </View>
+                
+                <View style={styles.percentageInputContainer} onStartShouldSetResponder={() => true}>
+                  <TextInput
+                    style={styles.percentageInput}
+                    value={leg.tpPercentage || ''}
+                    onChangeText={(value) => {
+                      const numericValue = value.replace(/[^0-9]/g, '');
+                      updateOrderLeg(leg.id, { tpPercentage: numericValue });
+                    }}
+                    keyboardType="numeric"
+                    placeholder="0"
+                    onFocus={(e) => e.stopPropagation()}
+                  />
+                </View>
+                
+                <View style={styles.onPriceLabel}>
+                  <Text style={styles.onPriceText}>On Price</Text>
+                </View>
+              </View>
+              
+              {/* Dropdown Menu for this leg */}
+              {openLegDropdown?.legId === leg.id && (
+                <View style={styles.legDropdownMenuContainer} onStartShouldSetResponder={() => true}>
+                  <View style={styles.legDropdownMenu}>
+                    {openLegDropdown.type === 'expiry' && (
+                      <>
+                        {['Weekly', 'Monthly'].map((option, index) => (
+                          <TouchableOpacity
+                            key={option}
+                            style={[
+                              styles.legDropdownOption,
+                              index === ['Weekly', 'Monthly'].length - 1 && styles.legDropdownOptionLast
+                            ]}
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              updateOrderLeg(leg.id, { expiryType: option as 'Weekly' | 'Monthly' });
+                              setOpenLegDropdown(null);
+                            }}
+                          >
+                            <Text style={styles.legDropdownOptionText}>{option}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </>
+                    )}
+                    {openLegDropdown.type === 'moneyness' && (
+                      <>
+                        {['ATM', 'ITM', 'OTM'].map((option, index) => (
+                          <TouchableOpacity
+                            key={option}
+                            style={[
+                              styles.legDropdownOption,
+                              index === ['ATM', 'ITM', 'OTM'].length - 1 && styles.legDropdownOptionLast
+                            ]}
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              updateOrderLeg(leg.id, { moneynessType: option as 'ATM' | 'ITM' | 'OTM' });
+                              setOpenLegDropdown(null);
+                            }}
+                          >
+                            <Text style={styles.legDropdownOptionText}>{option}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </>
+                    )}
+                    {openLegDropdown.type === 'sl' && (
+                      <TouchableOpacity
+                        style={[styles.legDropdownOption, styles.legDropdownOptionLast]}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          setOpenLegDropdown(null);
+                        }}
+                      >
+                        <Text style={styles.legDropdownOptionText}>SL %</Text>
+                      </TouchableOpacity>
+                    )}
+                    {openLegDropdown.type === 'tp' && (
+                      <TouchableOpacity
+                        style={[styles.legDropdownOption, styles.legDropdownOptionLast]}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          setOpenLegDropdown(null);
+                        }}
+                      >
+                        <Text style={styles.legDropdownOptionText}>TP %</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              )}
+            </View>
+          ))}
         </View>
 
         {/* Exit Conditions for Candle Based */}
@@ -3002,6 +3291,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     gap: 4,
+    marginBottom: 16,
   },
   addLegText: {
     color: '#fff',
@@ -3044,6 +3334,195 @@ const styles = StyleSheet.create({
   conditionText: {
     fontSize: 12,
     color: '#666',
+  },
+  legRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  legRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 8,
+  },
+  actionButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    minWidth: 70,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionButtonBuy: {
+    backgroundColor: '#4caf50',
+  },
+  actionButtonSell: {
+    backgroundColor: '#f44336',
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  quantityInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    gap: 4,
+  },
+  quantityLabel: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+  },
+  quantityInput: {
+    minWidth: 50,
+    fontSize: 14,
+    color: '#333',
+    textAlign: 'center',
+  },
+  lotLabel: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+  },
+  optionTypeButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    backgroundColor: '#e3f2fd',
+    borderWidth: 1,
+    borderColor: '#1976d2',
+    minWidth: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  optionTypeText: {
+    color: '#1976d2',
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  menuContainer: {
+    position: 'relative',
+  },
+  menuButton: {
+    padding: 4,
+  },
+  menuDropdown: {
+    position: 'absolute',
+    top: 28,
+    right: 0,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 1000,
+    minWidth: 120,
+  },
+  menuItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  menuItemLast: {
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  menuItemText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  menuItemDelete: {
+    color: '#f44336',
+  },
+  dropdownLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+  },
+  atmInputContainer: {
+    flex: 1,
+  },
+  atmLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+  },
+  atmInput: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: '#333',
+  },
+  percentageInputContainer: {
+    flex: 1,
+  },
+  percentageInput: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: '#333',
+    textAlign: 'center',
+  },
+  onPriceLabel: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingLeft: 8,
+  },
+  onPriceText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  legDropdownMenuContainer: {
+    position: 'relative',
+    marginTop: 4,
+    zIndex: 1000,
+  },
+  legDropdownMenu: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+    overflow: 'hidden',
+  },
+  legDropdownOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  legDropdownOptionLast: {
+    borderBottomWidth: 0,
+  },
+  legDropdownOptionText: {
+    fontSize: 14,
+    color: '#333',
   },
   riskRow: {
     flexDirection: 'row',
