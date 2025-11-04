@@ -56,7 +56,7 @@ interface OrderLeg {
 
 interface ExitLeg {
   id: string;
-  action: 'Sell';
+  action: 'Buy' | 'Sell';
   orderType: 'Market' | 'Limit' | 'SL' | 'SL-M';
   quantity: string;
   instrument: string;
@@ -746,7 +746,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   const addExitLeg = (type: 'index' | 'selling') => {
     const newExitLeg: ExitLeg = {
       id: Date.now().toString(),
-      action: 'Sell',
+      action: type === 'index' ? 'Buy' : 'Sell', // 'Buy' for Buying exit condition, 'Sell' for Selling exit condition
       orderType: 'Market',
       quantity: '1',
       instrument: selectedInstruments[0] || '',
@@ -760,23 +760,29 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   };
 
   const saveExitLeg = (leg: ExitLeg) => {
+    // Ensure action matches the exit condition type
+    const legWithCorrectAction: ExitLeg = {
+      ...leg,
+      action: (exitLegType === 'index' ? 'Buy' : 'Sell') as 'Buy' | 'Sell'
+    };
+    
     if (exitLegType === 'index') {
       const existingIndex = exitLegsIndex.findIndex(l => l.id === leg.id);
       if (existingIndex >= 0) {
         const updatedLegs = [...exitLegsIndex];
-        updatedLegs[existingIndex] = leg;
+        updatedLegs[existingIndex] = legWithCorrectAction;
         setExitLegsIndex(updatedLegs);
       } else {
-        setExitLegsIndex(prev => [...prev, leg]);
+        setExitLegsIndex(prev => [...prev, legWithCorrectAction]);
       }
     } else {
       const existingIndex = exitLegsSelling.findIndex(l => l.id === leg.id);
       if (existingIndex >= 0) {
         const updatedLegs = [...exitLegsSelling];
-        updatedLegs[existingIndex] = leg;
+        updatedLegs[existingIndex] = legWithCorrectAction;
         setExitLegsSelling(updatedLegs);
       } else {
-        setExitLegsSelling(prev => [...prev, leg]);
+        setExitLegsSelling(prev => [...prev, legWithCorrectAction]);
       }
     }
     setShowExitLegModal(false);
@@ -2680,15 +2686,18 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                     <View style={styles.formRow}>
                       <Text style={styles.formLabel}>Action</Text>
                       <View style={styles.radioContainer}>
-                        <TouchableOpacity
-                          style={styles.radioOption}
-                          onPress={() => setCurrentEditingExitLeg(prev => prev ? {...prev, action: 'Sell'} : null)}
-                        >
-                          <View style={styles.radioButton}>
-                            {currentEditingExitLeg.action === 'Sell' && <View style={styles.radioButtonInner} />}
-                          </View>
-                          <Text style={styles.radioText}>Sell</Text>
-                        </TouchableOpacity>
+                        {(exitLegType === 'index' ? ['Buy'] : ['Sell']).map((action) => (
+                          <TouchableOpacity
+                            key={action}
+                            style={styles.radioOption}
+                            onPress={() => setCurrentEditingExitLeg(prev => prev ? {...prev, action: action as 'Buy' | 'Sell'} : null)}
+                          >
+                            <View style={styles.radioButton}>
+                              {currentEditingExitLeg.action === action && <View style={styles.radioButtonInner} />}
+                            </View>
+                            <Text style={styles.radioText}>{action}</Text>
+                          </TouchableOpacity>
+                        ))}
                       </View>
                     </View>
 
