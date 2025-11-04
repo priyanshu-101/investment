@@ -146,6 +146,15 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   const [currentEditingExitLeg, setCurrentEditingExitLeg] = useState<ExitLeg | null>(null);
   const [exitLegType, setExitLegType] = useState<'index' | 'selling'>('index');
   
+  // Exit Condition Modal (for the form shown in image)
+  const [showExitConditionModal, setShowExitConditionModal] = useState(false);
+  const [exitConditionModalType, setExitConditionModalType] = useState<'buying' | 'selling'>('buying');
+  // Separate state for modal form fields
+  const [modalExitOptionType, setModalExitOptionType] = useState('CE');
+  const [modalExitCandleTiming, setModalExitCandleTiming] = useState('Start');
+  const [modalExitCandleColor, setModalExitCandleColor] = useState('Green');
+  const [modalExitSlHit, setModalExitSlHit] = useState(false);
+  
   // Modal states for dropdowns
   const [showCandleColorModal, setShowCandleColorModal] = useState(false);
   const [showCandleTimingModal, setShowCandleTimingModal] = useState(false);
@@ -254,6 +263,12 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
     setShowExitLegModal(false);
     setCurrentEditingExitLeg(null);
     setExitLegType('index');
+    setShowExitConditionModal(false);
+    setExitConditionModalType('buying');
+    setModalExitOptionType('CE');
+    setModalExitCandleTiming('Start');
+    setModalExitCandleColor('Green');
+    setModalExitSlHit(false);
     setShowCandleColorModal(false);
     setShowCandleTimingModal(false);
     setShowMoneynessModal(false);
@@ -2172,6 +2187,24 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                   <Text style={styles.addLegText}>+ ADD LEG</Text>
                 </TouchableOpacity>
               </View>
+
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}></Text>
+                <TouchableOpacity 
+                  style={[styles.addLegButton, { backgroundColor: '#1976d2', marginTop: 10 }]} 
+                  onPress={() => {
+                    setExitConditionModalType('buying');
+                    setModalExitOptionType(exitOptionType);
+                    setModalExitCandleTiming(exitCandleTiming);
+                    setModalExitCandleColor(exitCandleColor);
+                    setModalExitSlHit(exitSlHit);
+                    setShowExitConditionModal(true);
+                  }}
+                >
+                  <Ionicons name="add" size={16} color="#fff" />
+                  <Text style={styles.addLegText}>+</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Exit Condition - Selling */}
@@ -2285,6 +2318,24 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                 <TouchableOpacity style={styles.addLegButton} onPress={() => addExitLeg('selling')}>
                   <Ionicons name="add" size={16} color="#fff" />
                   <Text style={styles.addLegText}>+ ADD LEG</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}></Text>
+                <TouchableOpacity 
+                  style={[styles.addLegButton, { backgroundColor: '#1976d2', marginTop: 10 }]} 
+                  onPress={() => {
+                    setExitConditionModalType('selling');
+                    setModalExitOptionType(exitOptionType);
+                    setModalExitCandleTiming(exitCandleTiming);
+                    setModalExitCandleColor(exitCandleColor);
+                    setModalExitSlHit(exitSlHit);
+                    setShowExitConditionModal(true);
+                  }}
+                >
+                  <Ionicons name="add" size={16} color="#fff" />
+                  <Text style={styles.addLegText}>+</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -3044,6 +3095,122 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                 });
               })()}
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Exit Condition Modal */}
+      <Modal visible={showExitConditionModal} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.orderLegModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                Exit Condition - {exitConditionModalType === 'buying' ? 'Buying' : 'Selling'}
+              </Text>
+              <TouchableOpacity 
+                onPress={() => {
+                  setShowExitConditionModal(false);
+                  // Reset modal form fields
+                  setModalExitOptionType('CE');
+                  setModalExitCandleTiming('Start');
+                  setModalExitCandleColor('Green');
+                  setModalExitSlHit(false);
+                }}
+                style={styles.closeButton}
+              >
+                <Text style={styles.closeButtonText}>×</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.orderLegForm}>
+              <View style={styles.formSection}>
+                <View style={styles.conditionRow}>
+                  <Text style={styles.conditionLabel}>Exit CE/PE</Text>
+                  <View style={styles.radioContainer}>
+                    {['CE', 'PE'].map((type) => (
+                      <TouchableOpacity
+                        key={type}
+                        style={styles.radioOption}
+                        onPress={() => setModalExitOptionType(type)}
+                      >
+                        <View style={styles.radioButton}>
+                          {modalExitOptionType === type && <View style={styles.radioButtonInner} />}
+                        </View>
+                        <Text style={styles.radioText}>{type}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={styles.conditionRow}>
+                  <Text style={styles.conditionLabel}>Candle Start/Close</Text>
+                  <View style={styles.radioContainer}>
+                    {['Start', 'Close'].map((timing) => (
+                      <TouchableOpacity
+                        key={timing}
+                        style={styles.radioOption}
+                        onPress={() => setModalExitCandleTiming(timing)}
+                      >
+                        <View style={styles.radioButton}>
+                          {modalExitCandleTiming === timing && <View style={styles.radioButtonInner} />}
+                        </View>
+                        <Text style={styles.radioText}>{timing}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={styles.conditionRow}>
+                  <Text style={styles.conditionLabel}>Green/Red</Text>
+                  <View style={styles.radioContainer}>
+                    {['Green', 'Red'].map((color) => (
+                      <TouchableOpacity
+                        key={color}
+                        style={styles.radioOption}
+                        onPress={() => setModalExitCandleColor(color)}
+                      >
+                        <View style={styles.radioButton}>
+                          {modalExitCandleColor === color && <View style={styles.radioButtonInner} />}
+                        </View>
+                        <Text style={styles.radioText}>{color}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={styles.conditionRow}>
+                  <Text style={styles.conditionLabel}>or SL HIT</Text>
+                  <View style={styles.radioContainer}>
+                    <TouchableOpacity
+                      style={styles.radioOption}
+                      onPress={() => setModalExitSlHit(!modalExitSlHit)}
+                    >
+                      <View style={styles.radioButton}>
+                        {modalExitSlHit && <View style={styles.radioButtonInner} />}
+                      </View>
+                      <Text style={styles.radioText}>SL HIT</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity 
+                style={styles.modalButton}
+                onPress={() => {
+                  // Update the main form fields with modal values
+                  setExitOptionType(modalExitOptionType);
+                  setExitCandleTiming(modalExitCandleTiming);
+                  setExitCandleColor(modalExitCandleColor);
+                  setExitSlHit(modalExitSlHit);
+                  // Close modal
+                  setShowExitConditionModal(false);
+                }}
+              >
+                <Text style={styles.modalButtonText}>Done</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
