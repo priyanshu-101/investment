@@ -463,6 +463,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   const getLotSizeForInstrument = (instrument: string): number => {
     const instrumentUpper = instrument.toUpperCase();
     
+    // Index lot sizes
     if (instrumentUpper.includes('NIFTY') && !instrumentUpper.includes('BANK') && !instrumentUpper.includes('FIN') && !instrumentUpper.includes('MIDCP')) {
       return 75; // Nifty: 75 quantity per 1 lot
     }
@@ -480,6 +481,83 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
     }
     if (instrumentUpper.includes('MIDCPNIFTY') || instrumentUpper.includes('MIDCAP NIFTY') || instrumentUpper.includes('MIDCP NIFTY')) {
       return 140; // Midcap nifty: 140 quantity per 1 lot
+    }
+    
+    // Stock Options lot sizes (from handwritten list)
+    const stockLotSizes: Record<string, number> = {
+      'ADANIENT': 300,
+      'ADANIPORTS': 475,
+      'ADANIPORT': 475,
+      'APOLLOHOSP': 125,
+      'ASIANPAINT': 250,
+      'AXISBANK': 625,
+      'AXIS BANK': 625,
+      'BAJAJ-AUTO': 75,
+      'BAJAJAUTO': 75,
+      'BAJFINANCE': 750,
+      'BAJAJ FINANCE': 750,
+      'BAJAJFINSV': 250,
+      'BEL': 1425,
+      'BHARTIARTL': 475,
+      'CIPLA': 375,
+      'COALINDIA': 1350,
+      'DRREDDY': 625,
+      'EICHERMOT': 175,
+      'ETERNAL': 2425,
+      'GRASIM': 250,
+      'HCLTECH': 350,
+      'HDFCBANK': 550,
+      'HDFC BANK': 550,
+      'HDFCLIFE': 1100,
+      'HDFC LIFE': 1100,
+      'HINDUNILVR': 300,
+      'HINDALCO': 700,
+      'ICICIBANK': 700,
+      'ICICI BANK': 700,
+      'INFY': 400,
+      'INDIGO': 150,
+      'ITC': 1600,
+      'JIOFIN': 2350,
+      'JSWSTEEL': 675,
+      'KOTAKBANK': 400,
+      'KOTAK BANK': 400,
+      'LT': 300,
+      'M&M': 200,
+      'MARUTI': 50,
+      'MAXHEALTH': 525,
+      'NESTLEIND': 500,
+      'NTPC': 1500,
+      'ONGC': 2250,
+      'POWERGRID': 1900,
+      'RELIANCE': 500,
+      'SBIN': 750,
+      'SBILIFE': 375,
+      'SBI LIFE': 375,
+      'SHRIRAMFIN': 825,
+      'SUNPHARMA': 350,
+      'TATACONSUM': 550,
+      'TATA CONSUM': 550,
+      'TATASTEEL': 5500,
+      'TATA STEEL': 5500,
+      'TCS': 175,
+      'TECHM': 600,
+      'TITAN': 175,
+      'TMPV': 800,
+      'TRENT': 100,
+      'ULTRACEMCO': 50,
+      'WIPRO': 3000,
+    };
+    
+    // Check for exact match first
+    if (stockLotSizes[instrumentUpper]) {
+      return stockLotSizes[instrumentUpper];
+    }
+    
+    // Check for partial matches (in case instrument name has variations)
+    for (const [key, value] of Object.entries(stockLotSizes)) {
+      if (instrumentUpper.includes(key) || key.includes(instrumentUpper)) {
+        return value;
+      }
     }
     
     // Default lot size if instrument not found
