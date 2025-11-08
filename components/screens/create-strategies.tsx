@@ -91,8 +91,10 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   const [selectedInstruments, setSelectedInstruments] = useState<string[]>([]);
   const [showInstrumentModal, setShowInstrumentModal] = useState(false);
   const [availableInstruments, setAvailableInstruments] = useState<string[]>([]);
+  const [allInstruments, setAllInstruments] = useState<string[]>([]);
   const [loadingInstruments, setLoadingInstruments] = useState(false);
   const [instrumentSearchQuery, setInstrumentSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [activeEditingStrategy, setActiveEditingStrategy] = useState<StrategyApiData | null>(null);
 
   // Enhanced candle-based strategy state
@@ -181,6 +183,10 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [isPasswordVerified, setIsPasswordVerified] = useState(false);
 
+  // Asset class selection for Candle Based strategy
+  const [showAssetClassModal, setShowAssetClassModal] = useState(false);
+  const [selectedAssetClass, setSelectedAssetClass] = useState<string>('');
+
   // Live candle chart state
   const [showLiveChart, setShowLiveChart] = useState(false);
   const [selectedChartInstrument, setSelectedChartInstrument] = useState<string>('');
@@ -190,6 +196,17 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   const handlePasswordSuccess = () => {
     setIsPasswordVerified(true);
     setSelectedStrategyType('Candle Based');
+    setShowPasswordModal(false);
+    // Show asset class selection modal after password verification
+    setShowAssetClassModal(true);
+  };
+
+  // Handle asset class selection for Candle Based strategy
+  const handleAssetClassSelect = (assetClass: string) => {
+    setSelectedAssetClass(assetClass);
+    // Set chart type to OHLC as per flowchart
+    setSelectedChartType('OHLC');
+    setShowAssetClassModal(false);
   };
 
   const handlePasswordClose = () => {
@@ -226,6 +243,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
     setSelectedInstruments([]);
     setShowInstrumentModal(false);
     setInstrumentSearchQuery('');
+    setSelectedCategory('');
     setActiveEditingStrategy(null);
     setSelectedInterval('1M');
     setOrderLegs([]);
@@ -288,6 +306,8 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
     setDetectedPatterns([]);
     setShowPasswordModal(false);
     setIsPasswordVerified(false);
+    setShowAssetClassModal(false);
+    setSelectedAssetClass('');
   }, []);
 
   const handleStrategyTypePress = (type: string) => {
@@ -578,6 +598,28 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
     try {
       let instruments: string[] = [];
 
+      // Add fallback company names for each category
+      const fallbackInstruments = [
+        // Index Options
+        'NIFTY 50', 'BANKNIFTY', 'FINNIFTY', 'NIFTY 50 CE', 'NIFTY 50 PE', 
+        'BANKNIFTY CE', 'BANKNIFTY PE', 'FINNIFTY CE', 'FINNIFTY PE',
+        'NIFTY 50 25000 CE', 'NIFTY 50 25000 PE', 'BANKNIFTY 50000 CE', 'BANKNIFTY 50000 PE',
+        // Stock Options
+        'RELIANCE CE', 'RELIANCE PE', 'TCS CE', 'TCS PE', 'INFY CE', 'INFY PE',
+        'HDFCBANK CE', 'HDFCBANK PE', 'ICICIBANK CE', 'ICICIBANK PE', 'SBIN CE', 'SBIN PE',
+        'BHARTIARTL CE', 'BHARTIARTL PE', 'HINDUNILVR CE', 'HINDUNILVR PE',
+        'KOTAKBANK CE', 'KOTAKBANK PE', 'LT CE', 'LT PE', 'HCLTECH CE', 'HCLTECH PE',
+        // Stock Intraday
+        'RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK', 'SBIN', 'BHARTIARTL',
+        'HINDUNILVR', 'KOTAKBANK', 'LT', 'HCLTECH', 'AXISBANK', 'ITC', 'BAJFINANCE',
+        'ASIANPAINT', 'MARUTI', 'TITAN', 'NESTLEIND', 'ULTRACEMCO', 'WIPRO', 'TECHM',
+        'SUNPHARMA', 'POWERGRID', 'NTPC', 'ONGC', 'COALINDIA', 'IOC', 'BPCL',
+        // Commodity
+        'GOLD', 'SILVER', 'CRUDEOIL', 'NATURALGAS', 'COPPER', 'ZINC', 'LEAD',
+        'ALUMINIUM', 'NICKEL', 'GOLDMCX', 'SILVERMCX', 'CRUDEOILMCX', 'NATURALGASMCX'
+      ];
+      instruments = [...instruments, ...fallbackInstruments];
+
       // First try to get market indices from API
       try {
         const marketIndices = await marketDataService.getMarketIndices();
@@ -600,15 +642,17 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
               const exchange = instrument.exchange;
               const instrumentType = instrument.instrument_type;
 
+              // Include all types: EQ (equity), CE/PE (options), FUT (futures), and commodities
               return (
-                (exchange === 'NSE' && instrumentType === 'EQ') ||
+                (exchange === 'NSE' && (instrumentType === 'EQ' || instrumentType === 'CE' || instrumentType === 'PE' || instrumentType === 'FUT')) ||
                 (exchange === 'NSE' && symbol?.includes('NIFTY')) ||
-                (exchange === 'BSE' && symbol?.includes('SENSEX'))
+                (exchange === 'BSE' && symbol?.includes('SENSEX')) ||
+                (exchange === 'MCX' || exchange === 'BSE' && (instrumentType === 'EQ' || symbol?.includes('GOLD') || symbol?.includes('SILVER') || symbol?.includes('CRUDE')))
               );
             })
             .map((instrument: any) => instrument.tradingsymbol || instrument.trading_symbol)
             .filter((symbol: string) => symbol && symbol.length > 0)
-            .slice(0, 300); // Increased limit for more instruments
+            .slice(0, 1000); // Increased limit for more instruments
 
           instruments = [...instruments, ...kiteInstruments];
           console.log(`Fetched ${kiteInstruments.length} instruments from Zerodha`);
@@ -617,21 +661,22 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
         }
       }
 
-      // If no instruments from APIs, show error
-      if (instruments.length === 0) {
-        throw new Error('No instruments available from any API source');
-      }
-
-      setAvailableInstruments([...new Set(instruments)].sort());
-      console.log(`Total unique instruments loaded: ${instruments.length}`);
+      // Always have fallback instruments available
+      const uniqueInstruments = [...new Set(instruments)].sort();
+      setAllInstruments(uniqueInstruments);
+      setAvailableInstruments(uniqueInstruments);
+      console.log(`Total unique instruments loaded: ${uniqueInstruments.length}`);
     } catch (error) {
       console.error('Failed to fetch instruments:', error);
-      setAvailableInstruments([]);
-      Alert.alert(
-        'API Error', 
-        'Unable to fetch instruments from API. Please check your internet connection and try again.',
-        [{ text: 'Retry', onPress: fetchInstruments }]
-      );
+      // Even on error, use fallback instruments
+      const fallbackInstruments = [
+        'NIFTY 50', 'BANKNIFTY', 'FINNIFTY', 'NIFTY 50 CE', 'NIFTY 50 PE', 
+        'BANKNIFTY CE', 'BANKNIFTY PE', 'RELIANCE', 'TCS', 'INFY', 'HDFCBANK',
+        'ICICIBANK', 'SBIN', 'RELIANCE CE', 'RELIANCE PE', 'TCS CE', 'TCS PE',
+        'GOLD', 'SILVER', 'CRUDEOIL', 'NATURALGAS'
+      ];
+      setAllInstruments(fallbackInstruments);
+      setAvailableInstruments(fallbackInstruments);
     } finally {
       setLoadingInstruments(false);
     }
@@ -640,6 +685,87 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   useEffect(() => {
     fetchInstruments();
   }, [fetchInstruments]);
+
+  // Filter instruments by category
+  const filterInstrumentsByCategory = useCallback((category: string, instruments: string[]): string[] => {
+    if (!category) return instruments;
+    
+    switch (category) {
+      case 'Index Options':
+        // Filter for index options (NIFTY, BANKNIFTY, etc. - show all index-related instruments)
+        return instruments.filter(inst => {
+          const upper = inst.toUpperCase();
+          return (
+            upper.includes('NIFTY') || upper.includes('BANKNIFTY') || upper.includes('FINNIFTY') || 
+            upper.includes('SENSEX') || upper.includes('BANKEX') || upper.includes('MIDCPNIFTY')
+          );
+        });
+      
+      case 'Stock Options':
+        // Filter for stock options (stocks with CE/PE but not indices)
+        return instruments.filter(inst => {
+          const upper = inst.toUpperCase();
+          return (
+            !upper.includes('NIFTY') && !upper.includes('BANKNIFTY') && !upper.includes('FINNIFTY') &&
+            !upper.includes('SENSEX') && !upper.includes('BANKEX') && !upper.includes('MIDCPNIFTY') &&
+            (upper.includes('CE') || upper.includes('PE'))
+          );
+        });
+      
+      case 'Stock Intraday':
+        // Filter for stocks (EQ type, no options/futures)
+        return instruments.filter(inst => {
+          const upper = inst.toUpperCase();
+          return (
+            !upper.includes('CE') && !upper.includes('PE') && !upper.includes('FUT') &&
+            !upper.includes('NIFTY') && !upper.includes('BANKNIFTY') && !upper.includes('FINNIFTY') &&
+            !upper.includes('SENSEX') && !upper.includes('BANKEX') && !upper.includes('MIDCPNIFTY')
+          );
+        });
+      
+      case 'Commodity':
+        // Filter for commodities (GOLD, SILVER, CRUDE, etc.)
+        return instruments.filter(inst => {
+          const upper = inst.toUpperCase();
+          return (
+            upper.includes('GOLD') || upper.includes('SILVER') || upper.includes('CRUDE') ||
+            upper.includes('NATURALGAS') || upper.includes('COPPER') || upper.includes('ZINC') ||
+            upper.includes('LEAD') || upper.includes('ALUMINIUM') || upper.includes('NICKEL')
+          );
+        });
+      
+      default:
+        return instruments;
+    }
+  }, []);
+
+  // Update filtered instruments when allInstruments changes and a category is selected
+  useEffect(() => {
+    if (selectedCategory && allInstruments.length > 0) {
+      const filtered = filterInstrumentsByCategory(selectedCategory, allInstruments);
+      setAvailableInstruments(filtered);
+    }
+  }, [allInstruments, selectedCategory, filterInstrumentsByCategory]);
+
+  // Handle category selection
+  const handleCategorySelect = useCallback((category: string) => {
+    setSelectedCategory(category);
+    // Use allInstruments if available, otherwise use availableInstruments
+    const instrumentsToFilter = allInstruments.length > 0 ? allInstruments : availableInstruments;
+    
+    if (instrumentsToFilter.length > 0) {
+      const filtered = filterInstrumentsByCategory(category, instrumentsToFilter);
+      setAvailableInstruments(filtered);
+      setShowInstrumentModal(true);
+    } else {
+      // If no instruments loaded yet, ensure they're loaded first
+      if (!loadingInstruments && allInstruments.length === 0) {
+        fetchInstruments();
+      }
+      // Still show modal - it will update when instruments load
+      setShowInstrumentModal(true);
+    }
+  }, [allInstruments, availableInstruments, filterInstrumentsByCategory, loadingInstruments, fetchInstruments]);
 
   useEffect(() => {
     if (selectedInstruments.length > 0) {
@@ -1122,8 +1248,8 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
           </View>
         </View>
 
-        {/* Chart Type Dropdown - Only for Candle Based */}
-        {selectedStrategyType === 'Candle Based' && (
+        {/* Chart Type Dropdown - Only for Candle Based after asset class selection */}
+        {selectedStrategyType === 'Candle Based' && selectedAssetClass && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Chart Type</Text>
             <TouchableOpacity 
@@ -1146,7 +1272,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
         )}
 
         {/* Instruments Selection */}
-        <View style={styles.section}>
+        <View style={[styles.section, styles.instrumentsSection]}>
           <Text style={styles.sectionTitle}>Select Instruments</Text>
           {selectedInstruments.length > 0 && (
             <View style={styles.selectedInstruments}>
@@ -1170,20 +1296,30 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
               ))}
             </View>
           )}
-          <TouchableOpacity 
-            style={styles.addInstrumentsBox}
-            onPress={() => {
-              if (availableInstruments.length === 0 && !loadingInstruments) {
-                fetchInstruments();
-              }
-              setShowInstrumentModal(true);
-            }}
-          >
-            <Text style={styles.plusIcon}>+</Text>
-            <Text style={styles.addInstrumentsText}>
-              {loadingInstruments ? 'Loading Instruments...' : 'Add Instruments.'}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.categoryContainer}>
+            {['Index Options', 'Stock Options', 'Stock Intraday', 'Commodity'].map((category) => (
+              <TouchableOpacity
+                key={category}
+                style={[
+                  styles.categoryButton,
+                  selectedCategory === category && styles.selectedCategoryButton
+                ]}
+                onPress={() => {
+                  if (allInstruments.length === 0 && !loadingInstruments) {
+                    fetchInstruments();
+                  }
+                  handleCategorySelect(category);
+                }}
+              >
+                <Text style={[
+                  styles.categoryButtonText,
+                  selectedCategory === category && styles.selectedCategoryButtonText
+                ]}>
+                  {category}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
 
@@ -2858,7 +2994,9 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Instruments</Text>
+              <Text style={styles.modalTitle}>
+                {selectedCategory ? `Select ${selectedCategory}` : 'Select Instruments'}
+              </Text>
               {loadingMarketData && (
                 <ActivityIndicator size="small" color="#1976d2" />
               )}
@@ -2866,6 +3004,10 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                 onPress={() => {
                   setShowInstrumentModal(false);
                   setInstrumentSearchQuery('');
+                  // Reset to show all instruments when modal closes
+                  if (allInstruments.length > 0) {
+                    setAvailableInstruments(allInstruments);
+                  }
                 }}
                 style={styles.closeButton}
               >
@@ -2970,6 +3112,10 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                   }
                   setShowInstrumentModal(false);
                   setInstrumentSearchQuery('');
+                  // Reset to show all instruments when modal closes
+                  if (allInstruments.length > 0) {
+                    setAvailableInstruments(allInstruments);
+                  }
                 }}
               >
                 <Text style={styles.modalButtonText}>OK ({selectedInstruments.length})</Text>
@@ -3215,6 +3361,52 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
         </View>
       </Modal>
 
+      {/* Asset Class Selection Modal for Candle Based Strategy */}
+      <Modal visible={showAssetClassModal} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Asset Class</Text>
+              <TouchableOpacity 
+                onPress={() => setShowAssetClassModal(false)}
+                style={styles.closeButton}
+              >
+                <Text style={styles.closeButtonText}>×</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.assetClassContainer}>
+              <Text style={styles.assetClassDescription}>
+                Select the type of instruments you want to trade:
+              </Text>
+              
+              <View style={styles.assetClassList}>
+                {['Index Options', 'Stock Options', 'Stock Intraday', 'Commodity'].map((assetClass) => (
+                  <TouchableOpacity
+                    key={assetClass}
+                    style={[
+                      styles.assetClassOption,
+                      selectedAssetClass === assetClass && styles.selectedAssetClassOption
+                    ]}
+                    onPress={() => handleAssetClassSelect(assetClass)}
+                  >
+                    <Text style={[
+                      styles.assetClassOptionText,
+                      selectedAssetClass === assetClass && styles.selectedAssetClassOptionText
+                    ]}>
+                      {assetClass}
+                    </Text>
+                    {selectedAssetClass === assetClass && (
+                      <Ionicons name="checkmark" size={20} color="#1976d2" />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Password Protection Modal */}
       <PasswordModal
         visible={showPasswordModal}
@@ -3233,7 +3425,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 32,
     paddingHorizontal: 16,
   },
   sectionTitle: {
@@ -3241,6 +3433,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginBottom: 12,
+  },
+  instrumentsSection: {
+    marginBottom: 40,
   },
   tabContainer: {
     flexDirection: 'row',
@@ -3333,6 +3528,39 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1976d2',
     fontWeight: '500',
+  },
+  categoryContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 12,
+    marginBottom: 32,
+    paddingBottom: 8,
+  },
+  categoryButton: {
+    flex: 1,
+    minWidth: '45%',
+    borderWidth: 2,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 16,
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+  },
+  selectedCategoryButton: {
+    borderColor: '#1976d2',
+    backgroundColor: '#e3f2fd',
+  },
+  categoryButtonText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  selectedCategoryButtonText: {
+    color: '#1976d2',
+    fontWeight: 'bold',
   },
   orderTypeLabel: {
     fontSize: 14,
@@ -4222,6 +4450,45 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   selectedChartTypeOptionText: {
+    color: '#1976d2',
+    fontWeight: '600',
+  },
+  // Asset Class Selection Styles
+  assetClassContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  assetClassDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  assetClassList: {
+    gap: 12,
+  },
+  assetClassOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    backgroundColor: '#fff',
+  },
+  selectedAssetClassOption: {
+    backgroundColor: '#e3f2fd',
+    borderColor: '#1976d2',
+    borderWidth: 2,
+  },
+  assetClassOptionText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  selectedAssetClassOptionText: {
     color: '#1976d2',
     fontWeight: '600',
   },
