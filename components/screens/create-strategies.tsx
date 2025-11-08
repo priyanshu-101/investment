@@ -483,6 +483,26 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
       return 140; // Midcap nifty: 140 quantity per 1 lot
     }
     
+    // Commodity lot sizes
+    if (instrumentUpper.includes('CRUDEOIL NOV') || instrumentUpper.includes('CRUDE OIL NOV')) {
+      if (instrumentUpper.includes('MINI')) {
+        return 10; // Crude oil mini Nov: 10 quantity per 1 lot
+      }
+      return 100; // Crude oil Nov: 100 quantity per 1 lot
+    }
+    if (instrumentUpper.includes('NATURALGAS NOV') || instrumentUpper.includes('NATURAL GAS NOV')) {
+      if (instrumentUpper.includes('MINI')) {
+        return 250; // Natural gas mini Nov: 250 quantity per 1 lot
+      }
+      return 1250; // Natural gas Nov: 1250 quantity per 1 lot
+    }
+    if (instrumentUpper.includes('SILVER MINI NOV')) {
+      return 5; // Silver mini Nov: 5 quantity per 1 lot
+    }
+    if (instrumentUpper.includes('GOLD MINI DEC')) {
+      return 10; // Gold mini Dec: 10 quantity per 1 lot
+    }
+    
     // Stock Options lot sizes (from handwritten list)
     const stockLotSizes: Record<string, number> = {
       'ADANIENT': 300,
