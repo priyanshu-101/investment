@@ -4,7 +4,7 @@
     "slug": "investment",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/satyam.jpg",
     "scheme": "investment",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -16,23 +16,23 @@
       "package": "com.priyanshu.myapp",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "foregroundImage": "./assets/images/satyam.jpg",
         "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "monochromeImage": "./assets/images/satyam.jpg"
       },
       "edgeToEdge": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/satyam.jpg"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/satyam.jpg",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
