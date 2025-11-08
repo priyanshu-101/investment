@@ -235,8 +235,8 @@ export function ProfileMenu({ visible, onClose, onNavigate }: ProfileMenuProps) 
             <Text style={styles.modalTitle}>Help Desk</Text>
             <View style={styles.contactContainer}>
               <Text style={styles.contactLabel}>Email:</Text>
-              <TouchableOpacity onPress={() => Linking.openURL('mailto:satyamalgovestment@zohomail.com')}>
-                <Text style={styles.contactValue}>satyamalgoinvestment@zohomail.com</Text>
+              <TouchableOpacity onPress={() => Linking.openURL('mailto:satyamralgoinvestment@zohomail.com')}>
+                <Text style={styles.contactValue}>satyamralgoinvestment@zohomail.com</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.contactContainer}>

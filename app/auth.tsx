@@ -139,7 +139,7 @@ export default function AuthScreen() {
         <View style={styles.formContainer}>
           <View style={styles.headerSection}>
             <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.brand}>Investment Tracker</Text>
+            <Text style={styles.brand}>Satyam R Algo</Text>
             <Text style={styles.subtitle}>
               {mode === 'login' ? 'Sign in to your account' : mode === 'register' ? 'Create a new account' : 'Reset your password'}
             </Text>
