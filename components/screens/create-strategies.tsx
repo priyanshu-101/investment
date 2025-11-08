@@ -689,17 +689,16 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
       ];
 
       const fallbackInstruments = [
-        // Index Options
-        'NIFTY 50', 'BANKNIFTY', 'FINNIFTY', 'NIFTY 50 CE', 'NIFTY 50 PE', 
-        'BANKNIFTY CE', 'BANKNIFTY PE', 'FINNIFTY CE', 'FINNIFTY PE',
-        'NIFTY 50 25000 CE', 'NIFTY 50 25000 PE', 'BANKNIFTY 50000 CE', 'BANKNIFTY 50000 PE',
+        // Index Options - only specified indices
+        'NIFTY 50', 'BANK NIFTY', 'SENSEX', 'FINNIFTY', 'BANKEX', 'MIDCAP NIFTY',
         // Stock Options - same base companies (without CE/PE)
         ...baseStockCompanies,
         // Stock Intraday - same base companies
         ...baseStockCompanies,
-        // Commodity
-        'GOLD', 'SILVER', 'CRUDEOIL', 'NATURALGAS', 'COPPER', 'ZINC', 'LEAD',
-        'ALUMINIUM', 'NICKEL', 'GOLDMCX', 'SILVERMCX', 'CRUDEOILMCX', 'NATURALGASMCX'
+        // Commodity - only specified commodities
+        'CRUDEOIL NOV', 'CRUDE OIL NOV', 'CRUDEOIL MINI NOV', 'CRUDE OIL MINI NOV',
+        'NATURALGAS NOV', 'NATURAL GAS NOV', 'NATURALGAS MINI NOV', 'NATURAL GAS MINI NOV',
+        'SILVER MINI NOV', 'GOLD MINI DEC'
       ];
       instruments = [...instruments, ...fallbackInstruments];
 
@@ -753,10 +752,14 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
       console.error('Failed to fetch instruments:', error);
       // Even on error, use fallback instruments
       const fallbackInstruments = [
-        'NIFTY 50', 'BANKNIFTY', 'FINNIFTY', 'NIFTY 50 CE', 'NIFTY 50 PE', 
-        'BANKNIFTY CE', 'BANKNIFTY PE', 'RELIANCE', 'TCS', 'INFY', 'HDFCBANK',
-        'ICICIBANK', 'SBIN', 'RELIANCE CE', 'RELIANCE PE', 'TCS CE', 'TCS PE',
-        'GOLD', 'SILVER', 'CRUDEOIL', 'NATURALGAS'
+        // Index Options - only specified indices
+        'NIFTY 50', 'BANK NIFTY', 'SENSEX', 'FINNIFTY', 'BANKEX', 'MIDCAP NIFTY',
+        // Stock Options
+        'RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK', 'SBIN',
+        // Commodity - only specified commodities
+        'CRUDEOIL NOV', 'CRUDE OIL NOV', 'CRUDEOIL MINI NOV', 'CRUDE OIL MINI NOV',
+        'NATURALGAS NOV', 'NATURAL GAS NOV', 'NATURALGAS MINI NOV', 'NATURAL GAS MINI NOV',
+        'SILVER MINI NOV', 'GOLD MINI DEC'
       ];
       setAllInstruments(fallbackInstruments);
       setAvailableInstruments(fallbackInstruments);
@@ -775,12 +778,13 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
     
     switch (category) {
       case 'Index Options':
-        // Filter for index options (NIFTY, BANKNIFTY, etc. - show all index-related instruments)
+        // Filter for index options - only specified indices
         return instruments.filter(inst => {
           const upper = inst.toUpperCase();
           return (
-            upper.includes('NIFTY') || upper.includes('BANKNIFTY') || upper.includes('FINNIFTY') || 
-            upper.includes('SENSEX') || upper.includes('BANKEX') || upper.includes('MIDCPNIFTY')
+            upper.includes('NIFTY 50') || upper.includes('BANK NIFTY') || upper.includes('BANKNIFTY') ||
+            upper.includes('SENSEX') || upper.includes('FINNIFTY') || 
+            upper.includes('BANKEX') || upper.includes('MIDCAP NIFTY') || upper.includes('MIDCPNIFTY')
           );
         });
       
@@ -788,11 +792,14 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
         // Filter for stock options - show same base companies as Stock Intraday (without CE/PE)
         return instruments.filter(inst => {
           const upper = inst.toUpperCase();
-          const isIndex = upper.includes('NIFTY') || upper.includes('BANKNIFTY') || upper.includes('FINNIFTY') ||
-                         upper.includes('SENSEX') || upper.includes('BANKEX') || upper.includes('MIDCPNIFTY');
-          const isCommodity = upper.includes('GOLD') || upper.includes('SILVER') || upper.includes('CRUDE') ||
-                             upper.includes('NATURALGAS') || upper.includes('COPPER') || upper.includes('ZINC') ||
-                             upper.includes('LEAD') || upper.includes('ALUMINIUM') || upper.includes('NICKEL');
+          const isIndex = upper.includes('NIFTY 50') || upper.includes('BANK NIFTY') || upper.includes('BANKNIFTY') ||
+                         upper.includes('SENSEX') || upper.includes('FINNIFTY') ||
+                         upper.includes('BANKEX') || upper.includes('MIDCAP NIFTY') || upper.includes('MIDCPNIFTY');
+          const isCommodity = upper.includes('CRUDEOIL NOV') || upper.includes('CRUDE OIL NOV') || 
+                             upper.includes('CRUDEOIL MINI NOV') || upper.includes('CRUDE OIL MINI NOV') ||
+                             upper.includes('NATURALGAS NOV') || upper.includes('NATURAL GAS NOV') ||
+                             upper.includes('NATURALGAS MINI NOV') || upper.includes('NATURAL GAS MINI NOV') ||
+                             upper.includes('SILVER MINI NOV') || upper.includes('GOLD MINI DEC');
           const hasOption = upper.includes(' CE') || upper.includes(' PE') || upper.endsWith('CE') || upper.endsWith('PE');
           const hasFuture = upper.includes('FUT');
           return (
@@ -805,11 +812,14 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
         // Show same base companies as Stock Options but without CE/PE
         return instruments.filter(inst => {
           const upper = inst.toUpperCase();
-          const isIndex = upper.includes('NIFTY') || upper.includes('BANKNIFTY') || upper.includes('FINNIFTY') ||
-                         upper.includes('SENSEX') || upper.includes('BANKEX') || upper.includes('MIDCPNIFTY');
-          const isCommodity = upper.includes('GOLD') || upper.includes('SILVER') || upper.includes('CRUDE') ||
-                             upper.includes('NATURALGAS') || upper.includes('COPPER') || upper.includes('ZINC') ||
-                             upper.includes('LEAD') || upper.includes('ALUMINIUM') || upper.includes('NICKEL');
+          const isIndex = upper.includes('NIFTY 50') || upper.includes('BANK NIFTY') || upper.includes('BANKNIFTY') ||
+                         upper.includes('SENSEX') || upper.includes('FINNIFTY') ||
+                         upper.includes('BANKEX') || upper.includes('MIDCAP NIFTY') || upper.includes('MIDCPNIFTY');
+          const isCommodity = upper.includes('CRUDEOIL NOV') || upper.includes('CRUDE OIL NOV') || 
+                             upper.includes('CRUDEOIL MINI NOV') || upper.includes('CRUDE OIL MINI NOV') ||
+                             upper.includes('NATURALGAS NOV') || upper.includes('NATURAL GAS NOV') ||
+                             upper.includes('NATURALGAS MINI NOV') || upper.includes('NATURAL GAS MINI NOV') ||
+                             upper.includes('SILVER MINI NOV') || upper.includes('GOLD MINI DEC');
           const hasOption = upper.includes(' CE') || upper.includes(' PE') || upper.endsWith('CE') || upper.endsWith('PE');
           const hasFuture = upper.includes('FUT');
           return (
@@ -818,13 +828,15 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
         });
       
       case 'Commodity':
-        // Filter for commodities (GOLD, SILVER, CRUDE, etc.)
+        // Filter for commodities - only specified commodities
         return instruments.filter(inst => {
           const upper = inst.toUpperCase();
           return (
-            upper.includes('GOLD') || upper.includes('SILVER') || upper.includes('CRUDE') ||
-            upper.includes('NATURALGAS') || upper.includes('COPPER') || upper.includes('ZINC') ||
-            upper.includes('LEAD') || upper.includes('ALUMINIUM') || upper.includes('NICKEL')
+            upper.includes('CRUDEOIL NOV') || upper.includes('CRUDE OIL NOV') ||
+            upper.includes('CRUDEOIL MINI NOV') || upper.includes('CRUDE OIL MINI NOV') ||
+            upper.includes('NATURALGAS NOV') || upper.includes('NATURAL GAS NOV') ||
+            upper.includes('NATURALGAS MINI NOV') || upper.includes('NATURAL GAS MINI NOV') ||
+            upper.includes('SILVER MINI NOV') || upper.includes('GOLD MINI DEC')
           );
         });
       
@@ -1035,13 +1047,15 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   // Map strategy types to product categories
   const getStrategyCategory = (strategyType: string, instruments: string[]): string => {
     // Check if instruments contain index-related symbols
-    const indexKeywords = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY', 'SENSEX'];
+    const indexKeywords = ['NIFTY 50', 'BANK NIFTY', 'BANKNIFTY', 'SENSEX', 'FINNIFTY', 'BANKEX', 'MIDCAP NIFTY', 'MIDCPNIFTY'];
     const hasIndexInstruments = instruments.some(instrument => 
       indexKeywords.some(keyword => instrument.toUpperCase().includes(keyword))
     );
 
-    // Check if instruments contain commodity-related symbols
-    const commodityKeywords = ['GOLD', 'SILVER', 'CRUDE', 'NATURALGAS', 'COPPER'];
+    // Check if instruments contain commodity-related symbols - only specified commodities
+    const commodityKeywords = ['CRUDEOIL NOV', 'CRUDE OIL NOV', 'CRUDEOIL MINI NOV', 'CRUDE OIL MINI NOV',
+                              'NATURALGAS NOV', 'NATURAL GAS NOV', 'NATURALGAS MINI NOV', 'NATURAL GAS MINI NOV',
+                              'SILVER MINI NOV', 'GOLD MINI DEC'];
     const hasCommodityInstruments = instruments.some(instrument => 
       commodityKeywords.some(keyword => instrument.toUpperCase().includes(keyword))
     );

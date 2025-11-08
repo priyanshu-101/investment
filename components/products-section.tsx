@@ -34,7 +34,7 @@ const productsByCategory: Record<ProductCategoryId, Product[]> = {
   'Index Algo': [
     {
       id: 'nifty',
-      title: 'Nifty',
+      title: 'Nifty 50',
       icon: '📈',
       backgroundColor: '#e8f2ff',
       iconColor: '#4285f4',
@@ -47,18 +47,18 @@ const productsByCategory: Record<ProductCategoryId, Product[]> = {
       iconColor: '#10b981',
     },
     {
-      id: 'fin-nifty',
-      title: 'Fin Nifty',
-      icon: '💰',
-      backgroundColor: '#fef2f2',
-      iconColor: '#ef4444',
-    },
-    {
       id: 'sensex',
       title: 'Sensex',
       icon: '📊',
       backgroundColor: '#fdf2f8',
       iconColor: '#ec4899',
+    },
+    {
+      id: 'fin-nifty',
+      title: 'Finnifty',
+      icon: '💰',
+      backgroundColor: '#fef2f2',
+      iconColor: '#ef4444',
     },
     {
       id: 'bankex',
@@ -122,25 +122,46 @@ const productsByCategory: Record<ProductCategoryId, Product[]> = {
   ],
   'Commodity Algo': [
     {
-      id: 'silver-mcx',
-      title: 'Silver MCX Future',
-      icon: '🥈',
-      backgroundColor: '#f1f5f9',
-      iconColor: '#64748b',
-    },
-    {
-      id: 'crude-oil-mcx',
-      title: 'Crude Oil MCX Future',
+      id: 'crude-oil-nov',
+      title: 'Crude Oil Nov',
       icon: '🛢️',
       backgroundColor: '#1e1b4b',
       iconColor: '#fbbf24',
     },
     {
-      id: 'gold-mcx',
-      title: 'Gold MCX Options',
+      id: 'crude-oil-mini-nov',
+      title: 'Crude Oil Mini Nov',
+      icon: '🛢️',
+      backgroundColor: '#1e1b4b',
+      iconColor: '#fbbf24',
+    },
+    {
+      id: 'natural-gas-nov',
+      title: 'Natural Gas Nov',
+      icon: '💨',
+      backgroundColor: '#e0f2fe',
+      iconColor: '#0ea5e9',
+    },
+    {
+      id: 'silver-mini-nov',
+      title: 'Silver Mini Nov',
+      icon: '🥈',
+      backgroundColor: '#f1f5f9',
+      iconColor: '#64748b',
+    },
+    {
+      id: 'gold-mini-dec',
+      title: 'Gold Mini Dec',
       icon: '🥇',
       backgroundColor: '#fef3c7',
       iconColor: '#d97706',
+    },
+    {
+      id: 'natural-gas-mini-nov',
+      title: 'Natural Gas Mini Nov',
+      icon: '💨',
+      backgroundColor: '#e0f2fe',
+      iconColor: '#0ea5e9',
     },
   ],
   'FNO': [
@@ -252,9 +273,12 @@ export function ProductsSection({ onNavigateToStrategies }: ProductsSectionProps
       'stock-btst': ['RELIANCE', 'TCS', 'INFY', 'HDFC', 'ICICIBANK'],
       'stock-positional': ['RELIANCE', 'TCS', 'INFY', 'HDFC', 'ICICIBANK'],
       'stock-future': ['FUT'],
-      'silver-mcx': ['SILVER'],
-      'crude-oil-mcx': ['CRUDE', 'CRUDE OIL'],
-      'gold-mcx': ['GOLD'],
+      'crude-oil-nov': ['CRUDEOIL NOV', 'CRUDE OIL NOV'],
+      'crude-oil-mini-nov': ['CRUDEOIL MINI NOV', 'CRUDE OIL MINI NOV'],
+      'natural-gas-nov': ['NATURALGAS NOV', 'NATURAL GAS NOV'],
+      'silver-mini-nov': ['SILVER MINI NOV'],
+      'gold-mini-dec': ['GOLD MINI DEC'],
+      'natural-gas-mini-nov': ['NATURALGAS MINI NOV', 'NATURAL GAS MINI NOV'],
     };
     return productInstrumentMap[productId] || [];
   };

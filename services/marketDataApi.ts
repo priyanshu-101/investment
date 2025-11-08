@@ -55,10 +55,10 @@ class MarketDataService {
   private readonly indicesMapping = {
     'NIFTY 50': { symbol: '^NSEI', yahooSymbol: '%5ENSEI' },
     'BANK NIFTY': { symbol: '^NSEBANK', yahooSymbol: 'NIFTY_BANK.NS' },
-    'FINNIFTY': { symbol: '^CNXFIN', yahooSymbol: 'NIFTY_FIN_SERVICE.NS' },
     'SENSEX': { symbol: '^BSESN', yahooSymbol: '%5EBSESN' },
-    'Nifty Midcap Select': { symbol: '^CNXMID', yahooSymbol: 'NIFTY_MIDCAP_100.NS' },
+    'FINNIFTY': { symbol: '^CNXFIN', yahooSymbol: 'NIFTY_FIN_SERVICE.NS' },
     'BANKEX': { symbol: '^BSEBANK', yahooSymbol: 'BSE_BANKEX.NS' },
+    'MIDCAP NIFTY': { symbol: '^CNXMID', yahooSymbol: 'NIFTY_MIDCAP_100.NS' },
   };
 
   // Fallback static data in case APIs fail - ordered as per user specification
@@ -80,14 +80,6 @@ class MarketDataService {
       color: '#1abc9c',
     },
     {
-      name: 'FINNIFTY',
-      symbol: '^CNXFIN',
-      value: '26,842.25',
-      change: '+189.30',
-      percent: '+0.71%',
-      color: '#1abc9c',
-    },
-    {
       name: 'SENSEX',
       symbol: '^BSESN',
       value: '82,500.82',
@@ -96,12 +88,12 @@ class MarketDataService {
       color: '#1abc9c',
     },
     {
-      name: 'Nifty Midcap Select',
-      symbol: '^CNXMID',
-      value: '13,149.55',
-      change: '-89.15',
-      percent: '-0.41%',
-      color: '#e74c3c',
+      name: 'FINNIFTY',
+      symbol: '^CNXFIN',
+      value: '26,842.25',
+      change: '+189.30',
+      percent: '+0.71%',
+      color: '#1abc9c',
     },
     {
       name: 'BANKEX',
@@ -110,6 +102,14 @@ class MarketDataService {
       change: '+123.45',
       percent: '+0.21%',
       color: '#1abc9c',
+    },
+    {
+      name: 'MIDCAP NIFTY',
+      symbol: '^CNXMID',
+      value: '13,149.55',
+      change: '-89.15',
+      percent: '-0.41%',
+      color: '#e74c3c',
     },
   ];
 
@@ -288,10 +288,10 @@ class MarketDataService {
     const baseIndices = [
       { name: 'NIFTY 50', symbol: '^NSEI', baseValue: 25285.35, baseChange: 86.90 },
       { name: 'BANK NIFTY', symbol: '^NSEBANK', baseValue: 56609.75, baseChange: 245.80 },
-      { name: 'FINNIFTY', symbol: '^CNXFIN', baseValue: 26842.25, baseChange: 189.30 },
       { name: 'SENSEX', symbol: '^BSESN', baseValue: 82500.82, baseChange: 304.39 },
-      { name: 'Nifty Midcap Select', symbol: '^CNXMID', baseValue: 13149.55, baseChange: -89.15 },
+      { name: 'FINNIFTY', symbol: '^CNXFIN', baseValue: 26842.25, baseChange: 189.30 },
       { name: 'BANKEX', symbol: '^BSEBANK', baseValue: 63872.58, baseChange: 123.45 },
+      { name: 'MIDCAP NIFTY', symbol: '^CNXMID', baseValue: 13149.55, baseChange: -89.15 },
     ];
 
     const simulatedIndices: IndexData[] = baseIndices.map(index => {
