@@ -599,21 +599,26 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
       let instruments: string[] = [];
 
       // Add fallback company names for each category
+      // Base companies that appear in both Stock Options and Stock Intraday
+      const baseStockCompanies = [
+        'ADANIENT', 'ADANIPORTS', 'APOLLOHOSP', 'ASIANPAINT', 'AXISBANK', 'BAJAJ-AUTO', 'BAJFINANCE',
+        'BAJAJFINSV', 'BEL', 'BHARTIARTL', 'CIPLA', 'COALINDIA', 'DRREDDY', 'EICHERMOT', 'ETERNAL',
+        'GRASIM', 'HCLTECH', 'HDFCBANK', 'HDFCLIFE', 'HINDUNILVR', 'HINDALCO', 'ICICIBANK',
+        'INFY', 'INDIGO', 'ITC', 'JIOFIN', 'JSWSTEEL', 'KOTAKBANK', 'LT', 'M&M', 'MARUTI',
+        'MAXHEALTH', 'NESTLEIND', 'NTPC', 'ONGC', 'POWERGRID', 'RELIANCE', 'SBIN', 'SBILIFE',
+        'SHRIRAMFIN', 'SUNPHARMA', 'TATACONSUM', 'TATASTEEL', 'TCS', 'TECHM', 'TITAN', 'TRENT',
+        'TMPV', 'ULTRACEMCO', 'WIPRO'
+      ];
+
       const fallbackInstruments = [
         // Index Options
         'NIFTY 50', 'BANKNIFTY', 'FINNIFTY', 'NIFTY 50 CE', 'NIFTY 50 PE', 
         'BANKNIFTY CE', 'BANKNIFTY PE', 'FINNIFTY CE', 'FINNIFTY PE',
         'NIFTY 50 25000 CE', 'NIFTY 50 25000 PE', 'BANKNIFTY 50000 CE', 'BANKNIFTY 50000 PE',
-        // Stock Options
-        'RELIANCE CE', 'RELIANCE PE', 'TCS CE', 'TCS PE', 'INFY CE', 'INFY PE',
-        'HDFCBANK CE', 'HDFCBANK PE', 'ICICIBANK CE', 'ICICIBANK PE', 'SBIN CE', 'SBIN PE',
-        'BHARTIARTL CE', 'BHARTIARTL PE', 'HINDUNILVR CE', 'HINDUNILVR PE',
-        'KOTAKBANK CE', 'KOTAKBANK PE', 'LT CE', 'LT PE', 'HCLTECH CE', 'HCLTECH PE',
-        // Stock Intraday
-        'RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK', 'SBIN', 'BHARTIARTL',
-        'HINDUNILVR', 'KOTAKBANK', 'LT', 'HCLTECH', 'AXISBANK', 'ITC', 'BAJFINANCE',
-        'ASIANPAINT', 'MARUTI', 'TITAN', 'NESTLEIND', 'ULTRACEMCO', 'WIPRO', 'TECHM',
-        'SUNPHARMA', 'POWERGRID', 'NTPC', 'ONGC', 'COALINDIA', 'IOC', 'BPCL',
+        // Stock Options - same base companies (without CE/PE)
+        ...baseStockCompanies,
+        // Stock Intraday - same base companies
+        ...baseStockCompanies,
         // Commodity
         'GOLD', 'SILVER', 'CRUDEOIL', 'NATURALGAS', 'COPPER', 'ZINC', 'LEAD',
         'ALUMINIUM', 'NICKEL', 'GOLDMCX', 'SILVERMCX', 'CRUDEOILMCX', 'NATURALGASMCX'
@@ -702,24 +707,35 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
         });
       
       case 'Stock Options':
-        // Filter for stock options (stocks with CE/PE but not indices)
+        // Filter for stock options - show same base companies as Stock Intraday (without CE/PE)
         return instruments.filter(inst => {
           const upper = inst.toUpperCase();
+          const isIndex = upper.includes('NIFTY') || upper.includes('BANKNIFTY') || upper.includes('FINNIFTY') ||
+                         upper.includes('SENSEX') || upper.includes('BANKEX') || upper.includes('MIDCPNIFTY');
+          const isCommodity = upper.includes('GOLD') || upper.includes('SILVER') || upper.includes('CRUDE') ||
+                             upper.includes('NATURALGAS') || upper.includes('COPPER') || upper.includes('ZINC') ||
+                             upper.includes('LEAD') || upper.includes('ALUMINIUM') || upper.includes('NICKEL');
+          const hasOption = upper.includes(' CE') || upper.includes(' PE') || upper.endsWith('CE') || upper.endsWith('PE');
+          const hasFuture = upper.includes('FUT');
           return (
-            !upper.includes('NIFTY') && !upper.includes('BANKNIFTY') && !upper.includes('FINNIFTY') &&
-            !upper.includes('SENSEX') && !upper.includes('BANKEX') && !upper.includes('MIDCPNIFTY') &&
-            (upper.includes('CE') || upper.includes('PE'))
+            !isIndex && !isCommodity && !hasOption && !hasFuture
           );
         });
       
       case 'Stock Intraday':
         // Filter for stocks (EQ type, no options/futures)
+        // Show same base companies as Stock Options but without CE/PE
         return instruments.filter(inst => {
           const upper = inst.toUpperCase();
+          const isIndex = upper.includes('NIFTY') || upper.includes('BANKNIFTY') || upper.includes('FINNIFTY') ||
+                         upper.includes('SENSEX') || upper.includes('BANKEX') || upper.includes('MIDCPNIFTY');
+          const isCommodity = upper.includes('GOLD') || upper.includes('SILVER') || upper.includes('CRUDE') ||
+                             upper.includes('NATURALGAS') || upper.includes('COPPER') || upper.includes('ZINC') ||
+                             upper.includes('LEAD') || upper.includes('ALUMINIUM') || upper.includes('NICKEL');
+          const hasOption = upper.includes(' CE') || upper.includes(' PE') || upper.endsWith('CE') || upper.endsWith('PE');
+          const hasFuture = upper.includes('FUT');
           return (
-            !upper.includes('CE') && !upper.includes('PE') && !upper.includes('FUT') &&
-            !upper.includes('NIFTY') && !upper.includes('BANKNIFTY') && !upper.includes('FINNIFTY') &&
-            !upper.includes('SENSEX') && !upper.includes('BANKEX') && !upper.includes('MIDCPNIFTY')
+            !isIndex && !isCommodity && !hasOption && !hasFuture
           );
         });
       
