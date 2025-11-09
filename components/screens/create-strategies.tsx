@@ -3104,24 +3104,6 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                   <Text style={styles.addLegText}>+ ADD LEG</Text>
                 </TouchableOpacity>
               </View>
-
-              <View style={styles.conditionRow}>
-                <Text style={styles.conditionLabel}></Text>
-                <TouchableOpacity 
-                  style={[styles.addLegButton, { backgroundColor: '#1976d2', marginTop: 10 }]} 
-                  onPress={() => {
-                    setExitConditionModalType('buying');
-                    setModalExitOptionType(exitOptionType);
-                    setModalExitCandleTiming(exitCandleTiming);
-                    setModalExitCandleColor(exitCandleColor);
-                    setModalExitSlHit(exitSlHit);
-                    setShowExitConditionModal(true);
-                  }}
-                >
-                  <Ionicons name="add" size={16} color="#fff" />
-                  <Text style={styles.addLegText}>+</Text>
-                </TouchableOpacity>
-              </View>
             </View>
 
             {/* Exit Condition - Selling */}
@@ -3235,24 +3217,6 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                 <TouchableOpacity style={styles.addLegButton} onPress={() => addExitLeg('selling')}>
                   <Ionicons name="add" size={16} color="#fff" />
                   <Text style={styles.addLegText}>+ ADD LEG</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.conditionRow}>
-                <Text style={styles.conditionLabel}></Text>
-                <TouchableOpacity 
-                  style={[styles.addLegButton, { backgroundColor: '#1976d2', marginTop: 10 }]} 
-                  onPress={() => {
-                    setExitConditionModalType('selling');
-                    setModalExitOptionType(exitOptionType);
-                    setModalExitCandleTiming(exitCandleTiming);
-                    setModalExitCandleColor(exitCandleColor);
-                    setModalExitSlHit(exitSlHit);
-                    setShowExitConditionModal(true);
-                  }}
-                >
-                  <Ionicons name="add" size={16} color="#fff" />
-                  <Text style={styles.addLegText}>+</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -3375,24 +3339,6 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                   <Text style={styles.addLegText}>+ ADD LEG</Text>
                 </TouchableOpacity>
               </View>
-
-              <View style={styles.conditionRow}>
-                <Text style={styles.conditionLabel}></Text>
-                <TouchableOpacity 
-                  style={[styles.addLegButton, { backgroundColor: '#1976d2', marginTop: 10 }]} 
-                  onPress={() => {
-                    setExitConditionModalType('buying');
-                    setModalExitOptionType(exitOptionType);
-                    setModalExitCandleTiming(exitCandleTiming);
-                    setModalExitCandleColor(exitCandleColor);
-                    setModalExitSlHit(exitSlHit);
-                    setShowExitConditionModal(true);
-                  }}
-                >
-                  <Ionicons name="add" size={16} color="#fff" />
-                  <Text style={styles.addLegText}>+</Text>
-                </TouchableOpacity>
-              </View>
             </View>
 
             {/* Exit Condition - Selling */}
@@ -3506,24 +3452,6 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                 <TouchableOpacity style={styles.addLegButton} onPress={() => addExitLeg('selling')}>
                   <Ionicons name="add" size={16} color="#fff" />
                   <Text style={styles.addLegText}>+ ADD LEG</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.conditionRow}>
-                <Text style={styles.conditionLabel}></Text>
-                <TouchableOpacity 
-                  style={[styles.addLegButton, { backgroundColor: '#1976d2', marginTop: 10 }]} 
-                  onPress={() => {
-                    setExitConditionModalType('selling');
-                    setModalExitOptionType(exitOptionType);
-                    setModalExitCandleTiming(exitCandleTiming);
-                    setModalExitCandleColor(exitCandleColor);
-                    setModalExitSlHit(exitSlHit);
-                    setShowExitConditionModal(true);
-                  }}
-                >
-                  <Ionicons name="add" size={16} color="#fff" />
-                  <Text style={styles.addLegText}>+</Text>
                 </TouchableOpacity>
               </View>
             </View>
