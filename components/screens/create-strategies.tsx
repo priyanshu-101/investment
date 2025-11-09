@@ -2988,6 +2988,277 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
           </View>
         )}
 
+        {/* Exit Conditions for Candle Based - Below Order Leg */}
+        {selectedStrategyType === 'Candle Based' && (
+          <>
+            {/* Exit Condition - Buying */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Exit Condition - Buying</Text>
+              
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Exit CE/PE</Text>
+                <View style={styles.radioContainer}>
+                  {['CE', 'PE'].map((type) => (
+                    <TouchableOpacity
+                      key={type}
+                      style={styles.radioOption}
+                      onPress={() => setExitOptionType(type)}
+                    >
+                      <View style={styles.radioButton}>
+                        {exitOptionType === type && <View style={styles.radioButtonInner} />}
+                      </View>
+                      <Text style={styles.radioText}>{type}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Candle Start/Close</Text>
+                <View style={styles.radioContainer}>
+                  {['Start', 'Close'].map((timing) => (
+                    <TouchableOpacity
+                      key={timing}
+                      style={styles.radioOption}
+                      onPress={() => setExitCandleTiming(timing)}
+                    >
+                      <View style={styles.radioButton}>
+                        {exitCandleTiming === timing && <View style={styles.radioButtonInner} />}
+                      </View>
+                      <Text style={styles.radioText}>{timing}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Green/Red</Text>
+                <View style={styles.radioContainer}>
+                  {['Green', 'Red'].map((color) => (
+                    <TouchableOpacity
+                      key={color}
+                      style={styles.radioOption}
+                      onPress={() => setExitCandleColor(color)}
+                    >
+                      <View style={styles.radioButton}>
+                        {exitCandleColor === color && <View style={styles.radioButtonInner} />}
+                      </View>
+                      <Text style={styles.radioText}>{color}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>or SL HIT</Text>
+                <View style={styles.radioContainer}>
+                  <TouchableOpacity
+                    style={styles.radioOption}
+                    onPress={() => setExitSlHit(!exitSlHit)}
+                  >
+                    <View style={styles.radioButton}>
+                      {exitSlHit && <View style={styles.radioButtonInner} />}
+                    </View>
+                    <Text style={styles.radioText}>SL HIT</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {exitLegsIndex.map((leg) => (
+                <View key={leg.id} style={styles.orderLegCard}>
+                  <View style={styles.orderLegHeader}>
+                    <Text style={styles.orderLegTitle}>
+                      {leg.action} {leg.instrument} - {leg.quantity} Qty
+                    </Text>
+                    <View style={styles.orderLegActions}>
+                      <TouchableOpacity 
+                        onPress={() => {
+                          setCurrentEditingExitLeg(leg);
+                          setExitLegType('index');
+                          setShowExitLegModal(true);
+                        }}
+                        style={styles.editButton}
+                      >
+                        <Ionicons name="pencil" size={16} color="#1976d2" />
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        onPress={() => deleteExitLeg(leg.id, 'index')}
+                        style={styles.deleteButton}
+                      >
+                        <Ionicons name="trash" size={16} color="#f44336" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  <View style={styles.orderLegDetails}>
+                    <Text style={styles.conditionText}>
+                      {leg.condition}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>...</Text>
+                <TouchableOpacity style={styles.addLegButton} onPress={() => addExitLeg('index')}>
+                  <Ionicons name="add" size={16} color="#fff" />
+                  <Text style={styles.addLegText}>+ ADD LEG</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}></Text>
+                <TouchableOpacity 
+                  style={[styles.addLegButton, { backgroundColor: '#1976d2', marginTop: 10 }]} 
+                  onPress={() => {
+                    setExitConditionModalType('buying');
+                    setModalExitOptionType(exitOptionType);
+                    setModalExitCandleTiming(exitCandleTiming);
+                    setModalExitCandleColor(exitCandleColor);
+                    setModalExitSlHit(exitSlHit);
+                    setShowExitConditionModal(true);
+                  }}
+                >
+                  <Ionicons name="add" size={16} color="#fff" />
+                  <Text style={styles.addLegText}>+</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Exit Condition - Selling */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Exit Condition - Selling</Text>
+              
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Exit CE/PE</Text>
+                <View style={styles.radioContainer}>
+                  {['CE', 'PE'].map((type) => (
+                    <TouchableOpacity
+                      key={type}
+                      style={styles.radioOption}
+                      onPress={() => setExitOptionType(type)}
+                    >
+                      <View style={styles.radioButton}>
+                        {exitOptionType === type && <View style={styles.radioButtonInner} />}
+                      </View>
+                      <Text style={styles.radioText}>{type}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Candle Start/Close</Text>
+                <View style={styles.radioContainer}>
+                  {['Start', 'Close'].map((timing) => (
+                    <TouchableOpacity
+                      key={timing}
+                      style={styles.radioOption}
+                      onPress={() => setExitCandleTiming(timing)}
+                    >
+                      <View style={styles.radioButton}>
+                        {exitCandleTiming === timing && <View style={styles.radioButtonInner} />}
+                      </View>
+                      <Text style={styles.radioText}>{timing}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Green/Red</Text>
+                <View style={styles.radioContainer}>
+                  {['Green', 'Red'].map((color) => (
+                    <TouchableOpacity
+                      key={color}
+                      style={styles.radioOption}
+                      onPress={() => setExitCandleColor(color)}
+                    >
+                      <View style={styles.radioButton}>
+                        {exitCandleColor === color && <View style={styles.radioButtonInner} />}
+                      </View>
+                      <Text style={styles.radioText}>{color}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>or SL HIT</Text>
+                <View style={styles.radioContainer}>
+                  <TouchableOpacity
+                    style={styles.radioOption}
+                    onPress={() => setExitSlHit(!exitSlHit)}
+                  >
+                    <View style={styles.radioButton}>
+                      {exitSlHit && <View style={styles.radioButtonInner} />}
+                    </View>
+                    <Text style={styles.radioText}>SL HIT</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {exitLegsSelling.map((leg) => (
+                <View key={leg.id} style={styles.orderLegCard}>
+                  <View style={styles.orderLegHeader}>
+                    <Text style={styles.orderLegTitle}>
+                      {leg.action} {leg.instrument} - {leg.quantity} Qty
+                    </Text>
+                    <View style={styles.orderLegActions}>
+                      <TouchableOpacity 
+                        onPress={() => {
+                          setCurrentEditingExitLeg(leg);
+                          setExitLegType('selling');
+                          setShowExitLegModal(true);
+                        }}
+                        style={styles.editButton}
+                      >
+                        <Ionicons name="pencil" size={16} color="#1976d2" />
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        onPress={() => deleteExitLeg(leg.id, 'selling')}
+                        style={styles.deleteButton}
+                      >
+                        <Ionicons name="trash" size={16} color="#f44336" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  <View style={styles.orderLegDetails}>
+                    <Text style={styles.conditionText}>
+                      {leg.condition}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>...</Text>
+                <TouchableOpacity style={styles.addLegButton} onPress={() => addExitLeg('selling')}>
+                  <Ionicons name="add" size={16} color="#fff" />
+                  <Text style={styles.addLegText}>+ ADD LEG</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}></Text>
+                <TouchableOpacity 
+                  style={[styles.addLegButton, { backgroundColor: '#1976d2', marginTop: 10 }]} 
+                  onPress={() => {
+                    setExitConditionModalType('selling');
+                    setModalExitOptionType(exitOptionType);
+                    setModalExitCandleTiming(exitCandleTiming);
+                    setModalExitCandleColor(exitCandleColor);
+                    setModalExitSlHit(exitSlHit);
+                    setShowExitConditionModal(true);
+                  }}
+                >
+                  <Ionicons name="add" size={16} color="#fff" />
+                  <Text style={styles.addLegText}>+</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </>
+        )}
+
         {/* Exit Conditions for Candle Based */}
         {selectedStrategyType === 'Candle Based' && (
           <>
