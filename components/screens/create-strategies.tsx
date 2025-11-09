@@ -110,13 +110,21 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   const [maxLossAmount, setMaxLossAmount] = useState('1000');
   const [maxProfitAmount, setMaxProfitAmount] = useState('5000');
   
-  // Entry Conditions
-  const [firstCandleColor, setFirstCandleColor] = useState('Green');
-  const [firstCandleTiming, setFirstCandleTiming] = useState('Start');
-  const [secondCandleColor, setSecondCandleColor] = useState('Red');
-  const [secondCandleTiming, setSecondCandleTiming] = useState('Close');
-  const [candleTimeSelection, setCandleTimeSelection] = useState('Start');
-  const [timeRange, setTimeRange] = useState('1');
+  // Entry Conditions - Buying
+  const [entryFirstCandleColorBuying, setEntryFirstCandleColorBuying] = useState('Green');
+  const [entryFirstCandleTimingBuying, setEntryFirstCandleTimingBuying] = useState('Start');
+  const [entrySecondCandleColorBuying, setEntrySecondCandleColorBuying] = useState('Red');
+  const [entrySecondCandleTimingBuying, setEntrySecondCandleTimingBuying] = useState('Close');
+  const [entryCandleTimeSelectionBuying, setEntryCandleTimeSelectionBuying] = useState('Start');
+  const [entryTimeRangeBuying, setEntryTimeRangeBuying] = useState('1');
+  
+  // Entry Conditions - Selling
+  const [entryFirstCandleColorSelling, setEntryFirstCandleColorSelling] = useState('Green');
+  const [entryFirstCandleTimingSelling, setEntryFirstCandleTimingSelling] = useState('Start');
+  const [entrySecondCandleColorSelling, setEntrySecondCandleColorSelling] = useState('Red');
+  const [entrySecondCandleTimingSelling, setEntrySecondCandleTimingSelling] = useState('Close');
+  const [entryCandleTimeSelectionSelling, setEntryCandleTimeSelectionSelling] = useState('Start');
+  const [entryTimeRangeSelling, setEntryTimeRangeSelling] = useState('1');
   
   // Order Leg Configuration
   const [selectedOrderAction, setSelectedOrderAction] = useState('Buy');
@@ -254,12 +262,21 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
     setOverallProfit(true);
     setMaxLossAmount('1000');
     setMaxProfitAmount('5000');
-    setFirstCandleColor('Green');
-    setFirstCandleTiming('Start');
-    setSecondCandleColor('Red');
-    setSecondCandleTiming('Close');
-    setCandleTimeSelection('Start');
-    setTimeRange('1');
+    // Entry Conditions - Buying
+    setEntryFirstCandleColorBuying('Green');
+    setEntryFirstCandleTimingBuying('Start');
+    setEntrySecondCandleColorBuying('Red');
+    setEntrySecondCandleTimingBuying('Close');
+    setEntryCandleTimeSelectionBuying('Start');
+    setEntryTimeRangeBuying('1');
+    
+    // Entry Conditions - Selling
+    setEntryFirstCandleColorSelling('Green');
+    setEntryFirstCandleTimingSelling('Start');
+    setEntrySecondCandleColorSelling('Red');
+    setEntrySecondCandleTimingSelling('Close');
+    setEntryCandleTimeSelectionSelling('Start');
+    setEntryTimeRangeSelling('1');
     setSelectedOrderAction('Buy');
     setNumberOfLots('1');
     setOptionType('CE');
@@ -371,6 +388,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   useEffect(() => {
     if (editingStrategy) {
       const data = editingStrategy.fullStrategyData || {};
+      const entryConditions = data.entryConditions || {};
       const exitConditions = data.exitConditions || {};
       const riskManagement = data.riskManagement || {};
       const marketData = data.marketData || {};
@@ -388,6 +406,21 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
       setSelectedInterval(data.selectedInterval || '1M');
       setSelectedInstruments(Array.isArray(data.instruments) ? data.instruments : []);
       setOrderLegs(Array.isArray(data.orderLegs) ? data.orderLegs : []);
+      // Load Entry Conditions - Buying
+      setEntryFirstCandleColorBuying(entryConditions.entryFirstCandleColorBuying || 'Green');
+      setEntryFirstCandleTimingBuying(entryConditions.entryFirstCandleTimingBuying || 'Start');
+      setEntrySecondCandleColorBuying(entryConditions.entrySecondCandleColorBuying || 'Red');
+      setEntrySecondCandleTimingBuying(entryConditions.entrySecondCandleTimingBuying || 'Close');
+      setEntryCandleTimeSelectionBuying(entryConditions.entryCandleTimeSelectionBuying || 'Start');
+      setEntryTimeRangeBuying(entryConditions.entryTimeRangeBuying || '1');
+      // Load Entry Conditions - Selling
+      setEntryFirstCandleColorSelling(entryConditions.entryFirstCandleColorSelling || 'Green');
+      setEntryFirstCandleTimingSelling(entryConditions.entryFirstCandleTimingSelling || 'Start');
+      setEntrySecondCandleColorSelling(entryConditions.entrySecondCandleColorSelling || 'Red');
+      setEntrySecondCandleTimingSelling(entryConditions.entrySecondCandleTimingSelling || 'Close');
+      setEntryCandleTimeSelectionSelling(entryConditions.entryCandleTimeSelectionSelling || 'Start');
+      setEntryTimeRangeSelling(entryConditions.entryTimeRangeSelling || '1');
+      // Load Exit Conditions
       setExitLegsIndex(Array.isArray(exitConditions.exitLegsIndex) ? exitConditions.exitLegsIndex : []);
       setExitLegsSelling(Array.isArray(exitConditions.exitLegsSelling) ? exitConditions.exitLegsSelling : []);
       setExitOptionType(exitConditions.exitOptionType || 'CE');
@@ -587,23 +620,43 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   // Dropdown handlers
   const handleDropdownSelect = (type: string, value: string) => {
     switch (type) {
-      case 'firstCandleColor':
-        setFirstCandleColor(value);
+      // Entry Conditions - Buying
+      case 'entryFirstCandleColorBuying':
+        setEntryFirstCandleColorBuying(value);
         break;
-      case 'firstCandleTiming':
-        setFirstCandleTiming(value);
+      case 'entryFirstCandleTimingBuying':
+        setEntryFirstCandleTimingBuying(value);
         break;
-      case 'secondCandleColor':
-        setSecondCandleColor(value);
+      case 'entrySecondCandleColorBuying':
+        setEntrySecondCandleColorBuying(value);
         break;
-      case 'secondCandleTiming':
-        setSecondCandleTiming(value);
+      case 'entrySecondCandleTimingBuying':
+        setEntrySecondCandleTimingBuying(value);
         break;
-      case 'candleTimeSelection':
-        setCandleTimeSelection(value);
+      case 'entryCandleTimeSelectionBuying':
+        setEntryCandleTimeSelectionBuying(value);
         break;
-      case 'timeRange':
-        setTimeRange(value);
+      case 'entryTimeRangeBuying':
+        setEntryTimeRangeBuying(value);
+        break;
+      // Entry Conditions - Selling
+      case 'entryFirstCandleColorSelling':
+        setEntryFirstCandleColorSelling(value);
+        break;
+      case 'entryFirstCandleTimingSelling':
+        setEntryFirstCandleTimingSelling(value);
+        break;
+      case 'entrySecondCandleColorSelling':
+        setEntrySecondCandleColorSelling(value);
+        break;
+      case 'entrySecondCandleTimingSelling':
+        setEntrySecondCandleTimingSelling(value);
+        break;
+      case 'entryCandleTimeSelectionSelling':
+        setEntryCandleTimeSelectionSelling(value);
+        break;
+      case 'entryTimeRangeSelling':
+        setEntryTimeRangeSelling(value);
         break;
       case 'moneynessType':
         setMoneynessType(value);
@@ -1247,6 +1300,22 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
       selectedInterval,
       instruments: selectedInstruments,
       orderLegs,
+      entryConditions: {
+        // Entry Conditions - Buying
+        entryFirstCandleColorBuying,
+        entryFirstCandleTimingBuying,
+        entrySecondCandleColorBuying,
+        entrySecondCandleTimingBuying,
+        entryCandleTimeSelectionBuying,
+        entryTimeRangeBuying,
+        // Entry Conditions - Selling
+        entryFirstCandleColorSelling,
+        entryFirstCandleTimingSelling,
+        entrySecondCandleColorSelling,
+        entrySecondCandleTimingSelling,
+        entryCandleTimeSelectionSelling,
+        entryTimeRangeSelling,
+      },
       exitConditions: {
         exitLegsIndex,
         exitLegsSelling,
@@ -1672,105 +1741,209 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
 
         {/* Enhanced Entry Conditions for Candle Based */}
         {selectedStrategyType === 'Candle Based' && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Entry Condition</Text>
-            
-            {/* First Candle Selection */}
-            <View style={styles.conditionRow}>
-              <Text style={styles.conditionLabel}>Select Candle I</Text>
-              <View style={styles.conditionControls}>
-                <View style={styles.dropdownWrapper}>
-                  <TouchableOpacity 
-                    style={styles.dropdownButton}
-                    onPress={() => {
-                      setCurrentDropdownType('firstCandleColor');
-                      setShowCandleColorModal(true);
-                    }}
-                  >
-                    <Text style={styles.dropdownText}>{firstCandleColor}</Text>
-                    <Ionicons name="chevron-down" size={16} color="#666" />
-                  </TouchableOpacity>
+          <>
+            {/* Entry Condition - Buying */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Entry Condition - Buying</Text>
+              
+              {/* First Candle Selection */}
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Select Candle I</Text>
+                <View style={styles.conditionControls}>
+                  <View style={styles.dropdownWrapper}>
+                    <TouchableOpacity 
+                      style={styles.dropdownButton}
+                      onPress={() => {
+                        setCurrentDropdownType('entryFirstCandleColorBuying');
+                        setShowCandleColorModal(true);
+                      }}
+                    >
+                      <Text style={styles.dropdownText}>{entryFirstCandleColorBuying}</Text>
+                      <Ionicons name="chevron-down" size={16} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.dropdownWrapper}>
+                    <TouchableOpacity 
+                      style={styles.dropdownButton}
+                      onPress={() => {
+                        setCurrentDropdownType('entryFirstCandleTimingBuying');
+                        setShowCandleTimingModal(true);
+                      }}
+                    >
+                      <Text style={styles.dropdownText}>{entryFirstCandleTimingBuying}</Text>
+                      <Ionicons name="chevron-down" size={16} color="#666" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
+              </View>
+
+              {/* Second Candle Selection */}
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Select Candle II</Text>
+                <View style={styles.conditionControls}>
+                  <View style={styles.dropdownWrapper}>
+                    <TouchableOpacity 
+                      style={styles.dropdownButton}
+                      onPress={() => {
+                        setCurrentDropdownType('entrySecondCandleColorBuying');
+                        setShowCandleColorModal(true);
+                      }}
+                    >
+                      <Text style={styles.dropdownText}>{entrySecondCandleColorBuying}</Text>
+                      <Ionicons name="chevron-down" size={16} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.dropdownWrapper}>
+                    <TouchableOpacity 
+                      style={styles.dropdownButton}
+                      onPress={() => {
+                        setCurrentDropdownType('entrySecondCandleTimingBuying');
+                        setShowCandleTimingModal(true);
+                      }}
+                    >
+                      <Text style={styles.dropdownText}>{entrySecondCandleTimingBuying}</Text>
+                      <Ionicons name="chevron-down" size={16} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              {/* Candle Time Selection */}
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Select II Candle Time</Text>
                 <View style={styles.dropdownWrapper}>
                   <TouchableOpacity 
                     style={styles.dropdownButton}
                     onPress={() => {
-                      setCurrentDropdownType('firstCandleTiming');
+                      setCurrentDropdownType('entryCandleTimeSelectionBuying');
                       setShowCandleTimingModal(true);
                     }}
                   >
-                    <Text style={styles.dropdownText}>{firstCandleTiming}</Text>
+                    <Text style={styles.dropdownText}>{entryCandleTimeSelectionBuying}</Text>
+                    <Ionicons name="chevron-down" size={16} color="#666" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Time Range */}
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Time Range</Text>
+                <View style={styles.dropdownWrapper}>
+                  <TouchableOpacity 
+                    style={styles.dropdownButton}
+                    onPress={() => {
+                      setCurrentDropdownType('entryTimeRangeBuying');
+                      setShowTimeRangeModal(true);
+                    }}
+                  >
+                    <Text style={styles.dropdownText}>{entryTimeRangeBuying} sec</Text>
                     <Ionicons name="chevron-down" size={16} color="#666" />
                   </TouchableOpacity>
                 </View>
               </View>
             </View>
 
-            {/* Second Candle Selection */}
-            <View style={styles.conditionRow}>
-              <Text style={styles.conditionLabel}>Select Candle II</Text>
-              <View style={styles.conditionControls}>
-                <View style={styles.dropdownWrapper}>
-                  <TouchableOpacity 
-                    style={styles.dropdownButton}
-                    onPress={() => {
-                      setCurrentDropdownType('secondCandleColor');
-                      setShowCandleColorModal(true);
-                    }}
-                  >
-                    <Text style={styles.dropdownText}>{secondCandleColor}</Text>
-                    <Ionicons name="chevron-down" size={16} color="#666" />
-                  </TouchableOpacity>
+            {/* Entry Condition - Selling */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Entry Condition - Selling</Text>
+              
+              {/* First Candle Selection */}
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Select Candle I</Text>
+                <View style={styles.conditionControls}>
+                  <View style={styles.dropdownWrapper}>
+                    <TouchableOpacity 
+                      style={styles.dropdownButton}
+                      onPress={() => {
+                        setCurrentDropdownType('entryFirstCandleColorSelling');
+                        setShowCandleColorModal(true);
+                      }}
+                    >
+                      <Text style={styles.dropdownText}>{entryFirstCandleColorSelling}</Text>
+                      <Ionicons name="chevron-down" size={16} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.dropdownWrapper}>
+                    <TouchableOpacity 
+                      style={styles.dropdownButton}
+                      onPress={() => {
+                        setCurrentDropdownType('entryFirstCandleTimingSelling');
+                        setShowCandleTimingModal(true);
+                      }}
+                    >
+                      <Text style={styles.dropdownText}>{entryFirstCandleTimingSelling}</Text>
+                      <Ionicons name="chevron-down" size={16} color="#666" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
+              </View>
+
+              {/* Second Candle Selection */}
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Select Candle II</Text>
+                <View style={styles.conditionControls}>
+                  <View style={styles.dropdownWrapper}>
+                    <TouchableOpacity 
+                      style={styles.dropdownButton}
+                      onPress={() => {
+                        setCurrentDropdownType('entrySecondCandleColorSelling');
+                        setShowCandleColorModal(true);
+                      }}
+                    >
+                      <Text style={styles.dropdownText}>{entrySecondCandleColorSelling}</Text>
+                      <Ionicons name="chevron-down" size={16} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.dropdownWrapper}>
+                    <TouchableOpacity 
+                      style={styles.dropdownButton}
+                      onPress={() => {
+                        setCurrentDropdownType('entrySecondCandleTimingSelling');
+                        setShowCandleTimingModal(true);
+                      }}
+                    >
+                      <Text style={styles.dropdownText}>{entrySecondCandleTimingSelling}</Text>
+                      <Ionicons name="chevron-down" size={16} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              {/* Candle Time Selection */}
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Select II Candle Time</Text>
                 <View style={styles.dropdownWrapper}>
                   <TouchableOpacity 
                     style={styles.dropdownButton}
                     onPress={() => {
-                      setCurrentDropdownType('secondCandleTiming');
+                      setCurrentDropdownType('entryCandleTimeSelectionSelling');
                       setShowCandleTimingModal(true);
                     }}
                   >
-                    <Text style={styles.dropdownText}>{secondCandleTiming}</Text>
+                    <Text style={styles.dropdownText}>{entryCandleTimeSelectionSelling}</Text>
+                    <Ionicons name="chevron-down" size={16} color="#666" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Time Range */}
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Time Range</Text>
+                <View style={styles.dropdownWrapper}>
+                  <TouchableOpacity 
+                    style={styles.dropdownButton}
+                    onPress={() => {
+                      setCurrentDropdownType('entryTimeRangeSelling');
+                      setShowTimeRangeModal(true);
+                    }}
+                  >
+                    <Text style={styles.dropdownText}>{entryTimeRangeSelling} sec</Text>
                     <Ionicons name="chevron-down" size={16} color="#666" />
                   </TouchableOpacity>
                 </View>
               </View>
             </View>
-
-            {/* Candle Time Selection */}
-            <View style={styles.conditionRow}>
-              <Text style={styles.conditionLabel}>Select II Candle Time</Text>
-              <View style={styles.dropdownWrapper}>
-                <TouchableOpacity 
-                  style={styles.dropdownButton}
-                  onPress={() => {
-                    setCurrentDropdownType('candleTimeSelection');
-                    setShowCandleTimingModal(true);
-                  }}
-                >
-                  <Text style={styles.dropdownText}>{candleTimeSelection}</Text>
-                  <Ionicons name="chevron-down" size={16} color="#666" />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Time Range */}
-            <View style={styles.conditionRow}>
-              <Text style={styles.conditionLabel}>Time Range</Text>
-              <View style={styles.dropdownWrapper}>
-                <TouchableOpacity 
-                  style={styles.dropdownButton}
-                  onPress={() => {
-                    setCurrentDropdownType('timeRange');
-                    setShowTimeRangeModal(true);
-                  }}
-                >
-                  <Text style={styles.dropdownText}>{timeRange} sec</Text>
-                  <Ionicons name="chevron-down" size={16} color="#666" />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
+          </>
         )}
 
         {/* Enhanced Order Leg Section for Candle Based */}
@@ -1980,6 +2153,15 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                     const calculatedQuantity = lots * lotSize;
                     
                     // Create order leg with all Entry Condition + Order Leg data
+                    // Use appropriate entry condition based on Buy/Sell action
+                    const isBuy = selectedOrderAction === 'Buy';
+                    const entryFirstCandleColor = isBuy ? entryFirstCandleColorBuying : entryFirstCandleColorSelling;
+                    const entryFirstCandleTiming = isBuy ? entryFirstCandleTimingBuying : entryFirstCandleTimingSelling;
+                    const entrySecondCandleColor = isBuy ? entrySecondCandleColorBuying : entrySecondCandleColorSelling;
+                    const entrySecondCandleTiming = isBuy ? entrySecondCandleTimingBuying : entrySecondCandleTimingSelling;
+                    const entryCandleTimeSelection = isBuy ? entryCandleTimeSelectionBuying : entryCandleTimeSelectionSelling;
+                    const entryTimeRange = isBuy ? entryTimeRangeBuying : entryTimeRangeSelling;
+                    
                     const newLeg: OrderLeg = {
                       id: Date.now().toString(),
                       action: selectedOrderAction as 'Buy' | 'Sell',
@@ -1989,9 +2171,9 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                       lotSize: lotSize,
                       numberOfLots: numberOfLots || '1',
                       entryCondition: {
-                        candleType: `${firstCandleColor}/${secondCandleColor}`,
-                        candleColor: `${firstCandleColor}, ${secondCandleColor}`,
-                        candleTime: `${firstCandleTiming}, ${secondCandleTiming}, ${candleTimeSelection}, ${timeRange}`
+                        candleType: `${entryFirstCandleColor}/${entrySecondCandleColor}`,
+                        candleColor: `${entryFirstCandleColor}, ${entrySecondCandleColor}`,
+                        candleTime: `${entryFirstCandleTiming}, ${entrySecondCandleTiming}, ${entryCandleTimeSelection}, ${entryTimeRange}`
                       },
                       exitCondition: {
                         candleType: 'N/A',
@@ -2000,12 +2182,12 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                         stopLoss: '0'
                       },
                       // Store additional fields
-                      firstCandleColor: firstCandleColor,
-                      firstCandleTiming: firstCandleTiming,
-                      secondCandleColor: secondCandleColor,
-                      secondCandleTiming: secondCandleTiming,
-                      candleTimeSelection: candleTimeSelection,
-                      timeRange: timeRange,
+                      firstCandleColor: entryFirstCandleColor,
+                      firstCandleTiming: entryFirstCandleTiming,
+                      secondCandleColor: entrySecondCandleColor,
+                      secondCandleTiming: entrySecondCandleTiming,
+                      candleTimeSelection: entryCandleTimeSelection,
+                      timeRange: entryTimeRange,
                       optionType: optionType,
                       expiryType: expiryType,
                       moneynessType: moneynessType,
@@ -2334,6 +2516,477 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
             </View>
           ))}
         </View>
+
+        {/* Enhanced Entry Conditions for Candle Based */}
+        {selectedStrategyType === 'Candle Based' && (
+          <>
+            {/* Entry Condition - Buying */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Entry Condition - Buying</Text>
+              
+              {/* First Candle Selection */}
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Select Candle I</Text>
+                <View style={styles.conditionControls}>
+                  <View style={styles.dropdownWrapper}>
+                    <TouchableOpacity 
+                      style={styles.dropdownButton}
+                      onPress={() => {
+                        setCurrentDropdownType('entryFirstCandleColorBuying');
+                        setShowCandleColorModal(true);
+                      }}
+                    >
+                      <Text style={styles.dropdownText}>{entryFirstCandleColorBuying}</Text>
+                      <Ionicons name="chevron-down" size={16} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.dropdownWrapper}>
+                    <TouchableOpacity 
+                      style={styles.dropdownButton}
+                      onPress={() => {
+                        setCurrentDropdownType('entryFirstCandleTimingBuying');
+                        setShowCandleTimingModal(true);
+                      }}
+                    >
+                      <Text style={styles.dropdownText}>{entryFirstCandleTimingBuying}</Text>
+                      <Ionicons name="chevron-down" size={16} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              {/* Second Candle Selection */}
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Select Candle II</Text>
+                <View style={styles.conditionControls}>
+                  <View style={styles.dropdownWrapper}>
+                    <TouchableOpacity 
+                      style={styles.dropdownButton}
+                      onPress={() => {
+                        setCurrentDropdownType('entrySecondCandleColorBuying');
+                        setShowCandleColorModal(true);
+                      }}
+                    >
+                      <Text style={styles.dropdownText}>{entrySecondCandleColorBuying}</Text>
+                      <Ionicons name="chevron-down" size={16} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.dropdownWrapper}>
+                    <TouchableOpacity 
+                      style={styles.dropdownButton}
+                      onPress={() => {
+                        setCurrentDropdownType('entrySecondCandleTimingBuying');
+                        setShowCandleTimingModal(true);
+                      }}
+                    >
+                      <Text style={styles.dropdownText}>{entrySecondCandleTimingBuying}</Text>
+                      <Ionicons name="chevron-down" size={16} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              {/* Candle Time Selection */}
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Select II Candle Time</Text>
+                <View style={styles.dropdownWrapper}>
+                  <TouchableOpacity 
+                    style={styles.dropdownButton}
+                    onPress={() => {
+                      setCurrentDropdownType('entryCandleTimeSelectionBuying');
+                      setShowCandleTimingModal(true);
+                    }}
+                  >
+                    <Text style={styles.dropdownText}>{entryCandleTimeSelectionBuying}</Text>
+                    <Ionicons name="chevron-down" size={16} color="#666" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Time Range */}
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Time Range</Text>
+                <View style={styles.dropdownWrapper}>
+                  <TouchableOpacity 
+                    style={styles.dropdownButton}
+                    onPress={() => {
+                      setCurrentDropdownType('entryTimeRangeBuying');
+                      setShowTimeRangeModal(true);
+                    }}
+                  >
+                    <Text style={styles.dropdownText}>{entryTimeRangeBuying} sec</Text>
+                    <Ionicons name="chevron-down" size={16} color="#666" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            {/* Entry Condition - Selling */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Entry Condition - Selling</Text>
+              
+              {/* First Candle Selection */}
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Select Candle I</Text>
+                <View style={styles.conditionControls}>
+                  <View style={styles.dropdownWrapper}>
+                    <TouchableOpacity 
+                      style={styles.dropdownButton}
+                      onPress={() => {
+                        setCurrentDropdownType('entryFirstCandleColorSelling');
+                        setShowCandleColorModal(true);
+                      }}
+                    >
+                      <Text style={styles.dropdownText}>{entryFirstCandleColorSelling}</Text>
+                      <Ionicons name="chevron-down" size={16} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.dropdownWrapper}>
+                    <TouchableOpacity 
+                      style={styles.dropdownButton}
+                      onPress={() => {
+                        setCurrentDropdownType('entryFirstCandleTimingSelling');
+                        setShowCandleTimingModal(true);
+                      }}
+                    >
+                      <Text style={styles.dropdownText}>{entryFirstCandleTimingSelling}</Text>
+                      <Ionicons name="chevron-down" size={16} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              {/* Second Candle Selection */}
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Select Candle II</Text>
+                <View style={styles.conditionControls}>
+                  <View style={styles.dropdownWrapper}>
+                    <TouchableOpacity 
+                      style={styles.dropdownButton}
+                      onPress={() => {
+                        setCurrentDropdownType('entrySecondCandleColorSelling');
+                        setShowCandleColorModal(true);
+                      }}
+                    >
+                      <Text style={styles.dropdownText}>{entrySecondCandleColorSelling}</Text>
+                      <Ionicons name="chevron-down" size={16} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.dropdownWrapper}>
+                    <TouchableOpacity 
+                      style={styles.dropdownButton}
+                      onPress={() => {
+                        setCurrentDropdownType('entrySecondCandleTimingSelling');
+                        setShowCandleTimingModal(true);
+                      }}
+                    >
+                      <Text style={styles.dropdownText}>{entrySecondCandleTimingSelling}</Text>
+                      <Ionicons name="chevron-down" size={16} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              {/* Candle Time Selection */}
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Select II Candle Time</Text>
+                <View style={styles.dropdownWrapper}>
+                  <TouchableOpacity 
+                    style={styles.dropdownButton}
+                    onPress={() => {
+                      setCurrentDropdownType('entryCandleTimeSelectionSelling');
+                      setShowCandleTimingModal(true);
+                    }}
+                  >
+                    <Text style={styles.dropdownText}>{entryCandleTimeSelectionSelling}</Text>
+                    <Ionicons name="chevron-down" size={16} color="#666" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Time Range */}
+              <View style={styles.conditionRow}>
+                <Text style={styles.conditionLabel}>Time Range</Text>
+                <View style={styles.dropdownWrapper}>
+                  <TouchableOpacity 
+                    style={styles.dropdownButton}
+                    onPress={() => {
+                      setCurrentDropdownType('entryTimeRangeSelling');
+                      setShowTimeRangeModal(true);
+                    }}
+                  >
+                    <Text style={styles.dropdownText}>{entryTimeRangeSelling} sec</Text>
+                    <Ionicons name="chevron-down" size={16} color="#666" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </>
+        )}
+
+        {/* Enhanced Order Leg Section for Candle Based - Below Entry Conditions */}
+        {selectedStrategyType === 'Candle Based' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Order Leg</Text>
+            
+            {/* Buy/Sell Selection */}
+            <View style={styles.conditionRow}>
+              <Text style={styles.conditionLabel}>Buy/Sell</Text>
+              <View style={styles.radioContainer}>
+                {['Buy', 'Sell'].map((action) => (
+                  <TouchableOpacity
+                    key={action}
+                    style={styles.radioOption}
+                    onPress={() => setSelectedOrderAction(action)}
+                  >
+                    <View style={styles.radioButton}>
+                      {selectedOrderAction === action && <View style={styles.radioButtonInner} />}
+                    </View>
+                    <Text style={styles.radioText}>{action}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Lot Size - Input with calculated quantity */}
+            <View style={styles.conditionRow}>
+              <Text style={styles.conditionLabel}>Lot</Text>
+              <View style={styles.dropdownWrapper}>
+                {selectedInstruments.length > 0 ? (
+                  <View style={styles.lotSizeInputContainer}>
+                    <View style={styles.lotSizeInputRow}>
+                      <TextInput
+                        style={styles.lotSizeInput}
+                        value={numberOfLots}
+                        onChangeText={(value) => {
+                          // Only allow numeric input, allow empty for clearing
+                          const numericValue = value.replace(/[^0-9]/g, '');
+                          setNumberOfLots(numericValue);
+                        }}
+                        keyboardType="numeric"
+                        placeholder="1"
+                        placeholderTextColor="#999"
+                      />
+                      <Text style={styles.lotSizeLabel}>Lots</Text>
+                    </View>
+                    <Text style={styles.lotSizeText}>
+                      {numberOfLots ? (
+                        <>
+                          = {parseInt(numberOfLots) * getLotSizeForInstrument(selectedInstruments[0])} Quantity
+                          {' '}(1 Lot = {getLotSizeForInstrument(selectedInstruments[0])} Qty)
+                        </>
+                      ) : (
+                        <>Enter number of lots</>
+                      )}
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.lotSizeDisplay}>
+                    <Text style={styles.lotSizeText}>
+                      Select instrument to see lot size
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* CE/PE Selection */}
+            <View style={styles.conditionRow}>
+              <Text style={styles.conditionLabel}>CE/PE</Text>
+              <View style={styles.radioContainer}>
+                {['CE', 'PE'].map((type) => (
+                  <TouchableOpacity
+                    key={type}
+                    style={styles.radioOption}
+                    onPress={() => setOptionType(type)}
+                  >
+                    <View style={styles.radioButton}>
+                      {optionType === type && <View style={styles.radioButtonInner} />}
+                    </View>
+                    <Text style={styles.radioText}>{type}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Weekly/Monthly */}
+            <View style={styles.conditionRow}>
+              <Text style={styles.conditionLabel}>Weekly/Monthly</Text>
+              <View style={styles.radioContainer}>
+                {['Weekly', 'Monthly'].map((type) => (
+                  <TouchableOpacity
+                    key={type}
+                    style={styles.radioOption}
+                    onPress={() => setExpiryType(type)}
+                  >
+                    <View style={styles.radioButton}>
+                      {expiryType === type && <View style={styles.radioButtonInner} />}
+                    </View>
+                    <Text style={styles.radioText}>{type}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* ATM/ITM/OTM */}
+            <View style={styles.conditionRow}>
+              <Text style={styles.conditionLabel}>ATM/ITM/OTM</Text>
+              <View style={styles.dropdownWrapper}>
+                <TouchableOpacity 
+                  style={styles.dropdownButton}
+                  onPress={() => {
+                    setCurrentDropdownType('moneynessType');
+                    setShowMoneynessModal(true);
+                  }}
+                >
+                  <Text style={styles.dropdownText}>{moneynessType}</Text>
+                  <Ionicons name="chevron-down" size={16} color="#666" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Entry Price */}
+            <View style={styles.conditionRow}>
+              <Text style={styles.conditionLabel}>Entry - ON Market price</Text>
+              <View style={styles.radioContainer}>
+                {['Market', 'Limit'].map((type) => (
+                  <TouchableOpacity
+                    key={type}
+                    style={styles.radioOption}
+                    onPress={() => setEntryPriceType(type)}
+                  >
+                    <View style={styles.radioButton}>
+                      {entryPriceType === type && <View style={styles.radioButtonInner} />}
+                    </View>
+                    <Text style={styles.radioText}>{type}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* ATM Options */}
+
+            <View style={styles.conditionRow}>
+              <Text style={styles.conditionLabel}>SAME Candle</Text>
+              <View style={styles.conditionControls}>
+                <View style={styles.dropdownWrapper}>
+                  <TouchableOpacity 
+                    style={styles.dropdownButton}
+                    onPress={() => {
+                      setCurrentDropdownType('sameCandle');
+                      setShowSameCandleModal(true);
+                    }}
+                  >
+                    <Text style={styles.dropdownText}>{sameCandleSelection}</Text>
+                    <Ionicons name="chevron-down" size={16} color="#666" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            {/* SL Trail */}
+            <View style={styles.conditionRow}>
+              <Text style={styles.conditionLabel}>SL Trail</Text>
+              <View style={styles.dropdownWrapper}>
+                <TouchableOpacity 
+                  style={styles.dropdownButton}
+                  onPress={() => {
+                    setCurrentDropdownType('slTrailType');
+                    setShowSlTrailModal(true);
+                  }}
+                >
+                  <Text style={styles.dropdownText}>{slTrailType}</Text>
+                  <Ionicons name="chevron-down" size={16} color="#666" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.conditionRow}>
+              <Text style={styles.conditionLabel}>THEN Previous-1</Text>
+              <View style={styles.conditionControls}>
+                <View style={styles.dropdownWrapper}>
+                  <TouchableOpacity 
+                    style={styles.dropdownButton}
+                    onPress={() => {
+                      setCurrentDropdownType('previousMinusOne');
+                      setShowPreviousMinusOneModal(true);
+                    }}
+                  >
+                    <Text style={styles.dropdownText}>{previousMinusOneSelection}</Text>
+                    <Ionicons name="chevron-down" size={16} color="#666" />
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity 
+                  style={styles.okButton}
+                  onPress={() => {
+                    // Capture all Entry Condition + Order Leg data and create configured leg
+                    const instrument = selectedInstruments[0] || '';
+                    if (!instrument) {
+                      Alert.alert('Error', 'Please select an instrument first');
+                      return;
+                    }
+                    
+                    const lotSize = getLotSizeForInstrument(instrument);
+                    const lots = parseInt(numberOfLots || '1') || 1;
+                    const calculatedQuantity = lots * lotSize;
+                    
+                    // Create order leg with all Entry Condition + Order Leg data
+                    // Use appropriate entry condition based on Buy/Sell action
+                    const isBuy = selectedOrderAction === 'Buy';
+                    const entryFirstCandleColor = isBuy ? entryFirstCandleColorBuying : entryFirstCandleColorSelling;
+                    const entryFirstCandleTiming = isBuy ? entryFirstCandleTimingBuying : entryFirstCandleTimingSelling;
+                    const entrySecondCandleColor = isBuy ? entrySecondCandleColorBuying : entrySecondCandleColorSelling;
+                    const entrySecondCandleTiming = isBuy ? entrySecondCandleTimingBuying : entrySecondCandleTimingSelling;
+                    const entryCandleTimeSelection = isBuy ? entryCandleTimeSelectionBuying : entryCandleTimeSelectionSelling;
+                    const entryTimeRange = isBuy ? entryTimeRangeBuying : entryTimeRangeSelling;
+                    
+                    const newLeg: OrderLeg = {
+                      id: Date.now().toString(),
+                      action: selectedOrderAction as 'Buy' | 'Sell',
+                      orderType: entryPriceType === 'Market' ? 'Market' : 'Limit',
+                      quantity: calculatedQuantity.toString(),
+                      instrument: instrument,
+                      lotSize: lotSize,
+                      numberOfLots: numberOfLots || '1',
+                      entryCondition: {
+                        candleType: `${entryFirstCandleColor}/${entrySecondCandleColor}`,
+                        candleColor: `${entryFirstCandleColor}, ${entrySecondCandleColor}`,
+                        candleTime: `${entryFirstCandleTiming}, ${entrySecondCandleTiming}, ${entryCandleTimeSelection}, ${entryTimeRange}`
+                      },
+                      exitCondition: {
+                        candleType: 'N/A',
+                        candleColor: 'N/A',
+                        profitTarget: '0',
+                        stopLoss: '0'
+                      },
+                      // Store additional fields
+                      firstCandleColor: entryFirstCandleColor,
+                      firstCandleTiming: entryFirstCandleTiming,
+                      secondCandleColor: entrySecondCandleColor,
+                      secondCandleTiming: entrySecondCandleTiming,
+                      candleTimeSelection: entryCandleTimeSelection,
+                      timeRange: entryTimeRange,
+                      optionType: optionType,
+                      expiryType: expiryType,
+                      moneynessType: moneynessType,
+                      sameCandleSelection: sameCandleSelection,
+                      previousMinusOneSelection: previousMinusOneSelection,
+                      slTrailType: slTrailType
+                    } as any;
+                    
+                    // Add leg directly to configured legs list
+                    setOrderLegs(prev => [...prev, newLeg]);
+                    
+                    // Show success message
+                    Alert.alert('Success', 'Order leg configured successfully!');
+                  }}
+                >
+                  <Text style={styles.okButtonText}>OK</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* Exit Conditions for Candle Based */}
         {selectedStrategyType === 'Candle Based' && (
