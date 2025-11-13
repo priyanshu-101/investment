@@ -2728,23 +2728,6 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
           </>
         )}
 
-        {/* Button to show additional entry conditions */}
-        {selectedStrategyType === 'Candle Based' && (
-          <View style={styles.section}>
-            <TouchableOpacity 
-              style={[
-                styles.addLegButton,
-                showAdditionalEntryConditions && styles.disabledButton
-              ]} 
-              onPress={() => !showAdditionalEntryConditions && setShowAdditionalEntryConditions(true)}
-              disabled={showAdditionalEntryConditions}
-            >
-              <Ionicons name="add" size={16} color="#fff" />
-              <Text style={styles.addLegText}>+ ADD ENTRY CONDITIONS & ORDER LEGS</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
         {/* Enhanced Order Leg Section for Candle Based - Below Entry Conditions */}
         {selectedStrategyType === 'Candle Based' && showAdditionalEntryConditions && (
           <View style={styles.section}>
@@ -3333,6 +3316,23 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
               )}
             </View>
           ))}
+          </View>
+        )}
+
+        {/* Button to show additional entry conditions */}
+        {selectedStrategyType === 'Candle Based' && (
+          <View style={styles.section}>
+            <TouchableOpacity 
+              style={[
+                styles.addLegButton,
+                showAdditionalEntryConditions && styles.disabledButton
+              ]} 
+              onPress={() => !showAdditionalEntryConditions && setShowAdditionalEntryConditions(true)}
+              disabled={showAdditionalEntryConditions}
+            >
+              <Ionicons name="add" size={16} color="#fff" />
+              <Text style={styles.addLegText}>+ ADD ENTRY CONDITIONS & ORDER LEGS</Text>
+            </TouchableOpacity>
           </View>
         )}
 
