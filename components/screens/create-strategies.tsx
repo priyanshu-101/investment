@@ -161,6 +161,8 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   const [exitConditionModalType, setExitConditionModalType] = useState<'buying' | 'selling'>('buying');
   // Show additional exit conditions (last two)
   const [showAdditionalExitConditions, setShowAdditionalExitConditions] = useState(false);
+  // Show additional entry conditions (last two)
+  const [showAdditionalEntryConditions, setShowAdditionalEntryConditions] = useState(false);
   // Separate state for modal form fields
   const [modalExitOptionType, setModalExitOptionType] = useState('CE');
   const [modalExitCandleTiming, setModalExitCandleTiming] = useState('Start');
@@ -2520,7 +2522,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
         </View>
 
         {/* Enhanced Entry Conditions for Candle Based */}
-        {selectedStrategyType === 'Candle Based' && (
+        {selectedStrategyType === 'Candle Based' && showAdditionalEntryConditions && (
           <>
             {/* Entry Condition - Buying */}
             <View style={styles.section}>
@@ -2726,8 +2728,25 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
           </>
         )}
 
-        {/* Enhanced Order Leg Section for Candle Based - Below Entry Conditions */}
+        {/* Button to show additional entry conditions */}
         {selectedStrategyType === 'Candle Based' && (
+          <View style={styles.section}>
+            <TouchableOpacity 
+              style={[
+                styles.addLegButton,
+                showAdditionalEntryConditions && styles.disabledButton
+              ]} 
+              onPress={() => !showAdditionalEntryConditions && setShowAdditionalEntryConditions(true)}
+              disabled={showAdditionalEntryConditions}
+            >
+              <Ionicons name="add" size={16} color="#fff" />
+              <Text style={styles.addLegText}>+ ADD ENTRY CONDITIONS & ORDER LEGS</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Enhanced Order Leg Section for Candle Based - Below Entry Conditions */}
+        {selectedStrategyType === 'Candle Based' && showAdditionalEntryConditions && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Order Leg</Text>
             
@@ -2991,12 +3010,13 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
         )}
 
         {/* Order Legs Section - Below Order Leg */}
-        <View style={styles.section}>
-          <View style={styles.orderLegsHeader}>
-            <Text style={styles.orderLegsTitle}>
-              {selectedStrategyType === 'Candle Based' ? 'Configured Order Legs' : 'Order Legs'}
-            </Text>
-          </View>
+        {showAdditionalEntryConditions && (
+          <View style={styles.section}>
+            <View style={styles.orderLegsHeader}>
+              <Text style={styles.orderLegsTitle}>
+                {selectedStrategyType === 'Candle Based' ? 'Configured Order Legs' : 'Order Legs'}
+              </Text>
+            </View>
 
           {/* Add Leg Button - Above configured order legs */}
           <TouchableOpacity style={styles.addLegButton} onPress={addOrderLeg}>
@@ -3313,7 +3333,8 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
               )}
             </View>
           ))}
-        </View>
+          </View>
+        )}
 
         {/* Exit Conditions for Candle Based - Below Order Leg */}
         {selectedStrategyType === 'Candle Based' && (
