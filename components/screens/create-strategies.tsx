@@ -159,6 +159,8 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   // Exit Condition Modal (for the form shown in image)
   const [showExitConditionModal, setShowExitConditionModal] = useState(false);
   const [exitConditionModalType, setExitConditionModalType] = useState<'buying' | 'selling'>('buying');
+  // Show additional exit conditions (last two)
+  const [showAdditionalExitConditions, setShowAdditionalExitConditions] = useState(false);
   // Separate state for modal form fields
   const [modalExitOptionType, setModalExitOptionType] = useState('CE');
   const [modalExitCandleTiming, setModalExitCandleTiming] = useState('Start');
@@ -3549,7 +3551,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
         )}
 
         {/* Exit Conditions for Candle Based */}
-        {selectedStrategyType === 'Candle Based' && (
+        {selectedStrategyType === 'Candle Based' && showAdditionalExitConditions && (
           <>
             {/* Exit Condition - Buying */}
             <View style={styles.section}>
@@ -3781,6 +3783,23 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
               </View>
             </View>
           </>
+        )}
+
+        {/* Button to show additional exit conditions */}
+        {selectedStrategyType === 'Candle Based' && (
+          <View style={styles.section}>
+            <TouchableOpacity 
+              style={[
+                styles.addLegButton,
+                showAdditionalExitConditions && styles.disabledButton
+              ]} 
+              onPress={() => !showAdditionalExitConditions && setShowAdditionalExitConditions(true)}
+              disabled={showAdditionalExitConditions}
+            >
+              <Ionicons name="add" size={16} color="#fff" />
+              <Text style={styles.addLegText}>+ ADD EXIT CONDITIONS</Text>
+            </TouchableOpacity>
+          </View>
         )}
 
         {/* Enhanced Risk Management */}
@@ -5001,6 +5020,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     gap: 4,
     marginBottom: 16,
+  },
+  disabledButton: {
+    opacity: 0.5,
   },
   addLegText: {
     color: '#fff',
