@@ -100,6 +100,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   // Enhanced candle-based strategy state
   const [selectedInterval, setSelectedInterval] = useState('1M');
   const [orderLegs, setOrderLegs] = useState<OrderLeg[]>([]);
+  const [orderLegsSelling, setOrderLegsSelling] = useState<OrderLeg[]>([]);
   const [showOrderLegModal, setShowOrderLegModal] = useState(false);
   const [currentEditingLeg, setCurrentEditingLeg] = useState<OrderLeg | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -161,8 +162,10 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   const [exitConditionModalType, setExitConditionModalType] = useState<'buying' | 'selling'>('buying');
   // Show additional exit conditions (last two)
   const [showAdditionalExitConditions, setShowAdditionalExitConditions] = useState(false);
-  // Show additional entry conditions (last two)
-  const [showAdditionalEntryConditions, setShowAdditionalEntryConditions] = useState(false);
+  // Show additional entry conditions (last two) - Buying shows automatically
+  const [showAdditionalEntryConditions, setShowAdditionalEntryConditions] = useState(true);
+  // Show Entry Condition - Selling
+  const [showEntryConditionSelling, setShowEntryConditionSelling] = useState(false);
   // Separate state for modal form fields
   const [modalExitOptionType, setModalExitOptionType] = useState('CE');
   const [modalExitCandleTiming, setModalExitCandleTiming] = useState('Start');
@@ -259,6 +262,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
     setActiveEditingStrategy(null);
     setSelectedInterval('1M');
     setOrderLegs([]);
+    setOrderLegsSelling([]);
     setShowOrderLegModal(false);
     setCurrentEditingLeg(null);
     setRiskRewardRatio('1:3');
@@ -410,6 +414,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
       setSelectedInterval(data.selectedInterval || '1M');
       setSelectedInstruments(Array.isArray(data.instruments) ? data.instruments : []);
       setOrderLegs(Array.isArray(data.orderLegs) ? data.orderLegs : []);
+      setOrderLegsSelling(Array.isArray(data.orderLegsSelling) ? data.orderLegsSelling : []);
       // Load Entry Conditions - Buying
       setEntryFirstCandleColorBuying(entryConditions.entryFirstCandleColorBuying || 'Green');
       setEntryFirstCandleTimingBuying(entryConditions.entryFirstCandleTimingBuying || 'Start');
@@ -1045,26 +1050,52 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
   };
 
   const updateOrderLeg = (id: string, updates: Partial<OrderLeg>) => {
-    setOrderLegs(prev => prev.map(leg => 
-      leg.id === id ? { ...leg, ...updates } : leg
-    ));
+    // Check if leg exists in buying order legs
+    const existsInBuying = orderLegs.some(leg => leg.id === id);
+    if (existsInBuying) {
+      setOrderLegs(prev => prev.map(leg => 
+        leg.id === id ? { ...leg, ...updates } : leg
+      ));
+    } else {
+      // Update in selling order legs
+      setOrderLegsSelling(prev => prev.map(leg => 
+        leg.id === id ? { ...leg, ...updates } : leg
+      ));
+    }
   };
 
   const saveOrderLeg = (leg: OrderLeg) => {
-    const existingIndex = orderLegs.findIndex(l => l.id === leg.id);
-    if (existingIndex >= 0) {
+    // Check if leg exists in buying order legs
+    const existingIndexBuying = orderLegs.findIndex(l => l.id === leg.id);
+    if (existingIndexBuying >= 0) {
       const updatedLegs = [...orderLegs];
-      updatedLegs[existingIndex] = leg;
+      updatedLegs[existingIndexBuying] = leg;
       setOrderLegs(updatedLegs);
     } else {
-      setOrderLegs(prev => [...prev, leg]);
+      // Check if leg exists in selling order legs
+      const existingIndexSelling = orderLegsSelling.findIndex(l => l.id === leg.id);
+      if (existingIndexSelling >= 0) {
+        const updatedLegs = [...orderLegsSelling];
+        updatedLegs[existingIndexSelling] = leg;
+        setOrderLegsSelling(updatedLegs);
+      } else {
+        // If not found in either, add to buying by default (or could add to selling based on context)
+        setOrderLegs(prev => [...prev, leg]);
+      }
     }
     setShowOrderLegModal(false);
     setCurrentEditingLeg(null);
   };
 
   const deleteOrderLeg = (id: string) => {
-    setOrderLegs(prev => prev.filter(leg => leg.id !== id));
+    // Check if leg exists in buying order legs
+    const existsInBuying = orderLegs.some(leg => leg.id === id);
+    if (existsInBuying) {
+      setOrderLegs(prev => prev.filter(leg => leg.id !== id));
+    } else {
+      // Delete from selling order legs
+      setOrderLegsSelling(prev => prev.filter(leg => leg.id !== id));
+    }
   };
 
   const addExitLeg = (type: 'index' | 'selling') => {
@@ -1287,7 +1318,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
       return;
     }
 
-    if (selectedStrategyType === 'Candle Based' && orderLegs.length === 0) {
+    if (selectedStrategyType === 'Candle Based' && orderLegs.length === 0 && orderLegsSelling.length === 0) {
       Alert.alert('Error', 'Please add at least one order leg for candle-based strategy');
       return;
     }
@@ -1304,6 +1335,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
       selectedInterval,
       instruments: selectedInstruments,
       orderLegs,
+      orderLegsSelling,
       entryConditions: {
         // Entry Conditions - Buying
         entryFirstCandleColorBuying,
@@ -2144,679 +2176,463 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
             </View>
           )}
 
-            {/* Entry Condition - Selling */}
+          {/* Button to show Entry Condition - Selling */}
+          {selectedStrategyType === 'Candle Based' && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Entry Condition - Selling</Text>
-              
-              {/* First Candle Selection */}
-              <View style={styles.conditionRow}>
-                <Text style={styles.conditionLabel}>Select Candle I</Text>
-                <View style={styles.conditionControls}>
-                  <View style={styles.dropdownWrapper}>
-                    <TouchableOpacity 
-                      style={styles.dropdownButton}
-                      onPress={() => {
-                        setCurrentDropdownType('entryFirstCandleColorSelling');
-                        setShowCandleColorModal(true);
-                      }}
-                    >
-                      <Text style={styles.dropdownText}>{entryFirstCandleColorSelling}</Text>
-                      <Ionicons name="chevron-down" size={16} color="#666" />
-                    </TouchableOpacity>
-                  </View>
-                  <View style={styles.dropdownWrapper}>
-                    <TouchableOpacity 
-                      style={styles.dropdownButton}
-                      onPress={() => {
-                        setCurrentDropdownType('entryFirstCandleTimingSelling');
-                        setShowCandleTimingModal(true);
-                      }}
-                    >
-                      <Text style={styles.dropdownText}>{entryFirstCandleTimingSelling}</Text>
-                      <Ionicons name="chevron-down" size={16} color="#666" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-
-              {/* Second Candle Selection */}
-              <View style={styles.conditionRow}>
-                <Text style={styles.conditionLabel}>Select Candle II</Text>
-                <View style={styles.conditionControls}>
-                  <View style={styles.dropdownWrapper}>
-                    <TouchableOpacity 
-                      style={styles.dropdownButton}
-                      onPress={() => {
-                        setCurrentDropdownType('entrySecondCandleColorSelling');
-                        setShowCandleColorModal(true);
-                      }}
-                    >
-                      <Text style={styles.dropdownText}>{entrySecondCandleColorSelling}</Text>
-                      <Ionicons name="chevron-down" size={16} color="#666" />
-                    </TouchableOpacity>
-                  </View>
-                  <View style={styles.dropdownWrapper}>
-                    <TouchableOpacity 
-                      style={styles.dropdownButton}
-                      onPress={() => {
-                        setCurrentDropdownType('entrySecondCandleTimingSelling');
-                        setShowCandleTimingModal(true);
-                      }}
-                    >
-                      <Text style={styles.dropdownText}>{entrySecondCandleTimingSelling}</Text>
-                      <Ionicons name="chevron-down" size={16} color="#666" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-
-              {/* Candle Time Selection */}
-              <View style={styles.conditionRow}>
-                <Text style={styles.conditionLabel}>Select II Candle Time</Text>
-                <View style={styles.dropdownWrapper}>
-                  <TouchableOpacity 
-                    style={styles.dropdownButton}
-                    onPress={() => {
-                      setCurrentDropdownType('entryCandleTimeSelectionSelling');
-                      setShowCandleTimingModal(true);
-                    }}
-                  >
-                    <Text style={styles.dropdownText}>{entryCandleTimeSelectionSelling}</Text>
-                    <Ionicons name="chevron-down" size={16} color="#666" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Time Range */}
-              <View style={styles.conditionRow}>
-                <Text style={styles.conditionLabel}>Time Range</Text>
-                <View style={styles.dropdownWrapper}>
-                  <TouchableOpacity 
-                    style={styles.dropdownButton}
-                    onPress={() => {
-                      setCurrentDropdownType('entryTimeRangeSelling');
-                      setShowTimeRangeModal(true);
-                    }}
-                  >
-                    <Text style={styles.dropdownText}>{entryTimeRangeSelling} sec</Text>
-                    <Ionicons name="chevron-down" size={16} color="#666" />
-                  </TouchableOpacity>
-                </View>
-              </View>
+              <TouchableOpacity 
+                style={[
+                  styles.addLegButton,
+                  showEntryConditionSelling && styles.disabledButton
+                ]} 
+                onPress={() => !showEntryConditionSelling && setShowEntryConditionSelling(true)}
+                disabled={showEntryConditionSelling}
+              >
+                <Ionicons name="add" size={16} color="#fff" />
+                <Text style={styles.addLegText}>+ ADD ENTRY CONDITION - SELLING</Text>
+              </TouchableOpacity>
             </View>
+          )}
+
+            {/* Entry Condition - Selling */}
+            {selectedStrategyType === 'Candle Based' && showEntryConditionSelling && (
+              <>
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Entry Condition - Selling</Text>
+                  
+                  {/* First Candle Selection */}
+                  <View style={styles.conditionRow}>
+                    <Text style={styles.conditionLabel}>Select Candle I</Text>
+                    <View style={styles.conditionControls}>
+                      <View style={styles.dropdownWrapper}>
+                        <TouchableOpacity 
+                          style={styles.dropdownButton}
+                          onPress={() => {
+                            setCurrentDropdownType('entryFirstCandleColorSelling');
+                            setShowCandleColorModal(true);
+                          }}
+                        >
+                          <Text style={styles.dropdownText}>{entryFirstCandleColorSelling}</Text>
+                          <Ionicons name="chevron-down" size={16} color="#666" />
+                        </TouchableOpacity>
+                      </View>
+                      <View style={styles.dropdownWrapper}>
+                        <TouchableOpacity 
+                          style={styles.dropdownButton}
+                          onPress={() => {
+                            setCurrentDropdownType('entryFirstCandleTimingSelling');
+                            setShowCandleTimingModal(true);
+                          }}
+                        >
+                          <Text style={styles.dropdownText}>{entryFirstCandleTimingSelling}</Text>
+                          <Ionicons name="chevron-down" size={16} color="#666" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Second Candle Selection */}
+                  <View style={styles.conditionRow}>
+                    <Text style={styles.conditionLabel}>Select Candle II</Text>
+                    <View style={styles.conditionControls}>
+                      <View style={styles.dropdownWrapper}>
+                        <TouchableOpacity 
+                          style={styles.dropdownButton}
+                          onPress={() => {
+                            setCurrentDropdownType('entrySecondCandleColorSelling');
+                            setShowCandleColorModal(true);
+                          }}
+                        >
+                          <Text style={styles.dropdownText}>{entrySecondCandleColorSelling}</Text>
+                          <Ionicons name="chevron-down" size={16} color="#666" />
+                        </TouchableOpacity>
+                      </View>
+                      <View style={styles.dropdownWrapper}>
+                        <TouchableOpacity 
+                          style={styles.dropdownButton}
+                          onPress={() => {
+                            setCurrentDropdownType('entrySecondCandleTimingSelling');
+                            setShowCandleTimingModal(true);
+                          }}
+                        >
+                          <Text style={styles.dropdownText}>{entrySecondCandleTimingSelling}</Text>
+                          <Ionicons name="chevron-down" size={16} color="#666" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Candle Time Selection */}
+                  <View style={styles.conditionRow}>
+                    <Text style={styles.conditionLabel}>Select II Candle Time</Text>
+                    <View style={styles.dropdownWrapper}>
+                      <TouchableOpacity 
+                        style={styles.dropdownButton}
+                        onPress={() => {
+                          setCurrentDropdownType('entryCandleTimeSelectionSelling');
+                          setShowCandleTimingModal(true);
+                        }}
+                      >
+                        <Text style={styles.dropdownText}>{entryCandleTimeSelectionSelling}</Text>
+                        <Ionicons name="chevron-down" size={16} color="#666" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* Time Range */}
+                  <View style={styles.conditionRow}>
+                    <Text style={styles.conditionLabel}>Time Range</Text>
+                    <View style={styles.dropdownWrapper}>
+                      <TouchableOpacity 
+                        style={styles.dropdownButton}
+                        onPress={() => {
+                          setCurrentDropdownType('entryTimeRangeSelling');
+                          setShowTimeRangeModal(true);
+                        }}
+                      >
+                        <Text style={styles.dropdownText}>{entryTimeRangeSelling} sec</Text>
+                        <Ionicons name="chevron-down" size={16} color="#666" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Order Leg Section for Entry Condition - Selling */}
+                <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Order Leg</Text>
+                
+                {/* Buy/Sell Selection */}
+                <View style={styles.conditionRow}>
+                  <Text style={styles.conditionLabel}>Buy/Sell</Text>
+                  <View style={styles.radioContainer}>
+                    {['Buy', 'Sell'].map((action) => (
+                      <TouchableOpacity
+                        key={action}
+                        style={styles.radioOption}
+                        onPress={() => setSelectedOrderAction(action)}
+                      >
+                        <View style={styles.radioButton}>
+                          {selectedOrderAction === action && <View style={styles.radioButtonInner} />}
+                        </View>
+                        <Text style={styles.radioText}>{action}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                {/* Lot Size - Input with calculated quantity */}
+                <View style={styles.conditionRow}>
+                  <Text style={styles.conditionLabel}>Lot</Text>
+                  <View style={styles.dropdownWrapper}>
+                    {selectedInstruments.length > 0 ? (
+                      <View style={styles.lotSizeInputContainer}>
+                        <View style={styles.lotSizeInputRow}>
+                          <TextInput
+                            style={styles.lotSizeInput}
+                            value={numberOfLots}
+                            onChangeText={(value) => {
+                              const numericValue = value.replace(/[^0-9]/g, '');
+                              setNumberOfLots(numericValue);
+                            }}
+                            keyboardType="numeric"
+                            placeholder="1"
+                            placeholderTextColor="#999"
+                          />
+                          <Text style={styles.lotSizeLabel}>Lots</Text>
+                        </View>
+                        <Text style={styles.lotSizeText}>
+                          {numberOfLots ? (
+                            <>
+                              = {parseInt(numberOfLots) * getLotSizeForInstrument(selectedInstruments[0])} Quantity
+                              {' '}(1 Lot = {getLotSizeForInstrument(selectedInstruments[0])} Qty)
+                            </>
+                          ) : (
+                            <>Enter number of lots</>
+                          )}
+                        </Text>
+                      </View>
+                    ) : (
+                      <View style={styles.lotSizeDisplay}>
+                        <Text style={styles.lotSizeText}>
+                          Select instrument to see lot size
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+
+                {/* CE/PE Selection */}
+                <View style={styles.conditionRow}>
+                  <Text style={styles.conditionLabel}>CE/PE</Text>
+                  <View style={styles.radioContainer}>
+                    {['CE', 'PE'].map((type) => (
+                      <TouchableOpacity
+                        key={type}
+                        style={styles.radioOption}
+                        onPress={() => setOptionType(type)}
+                      >
+                        <View style={styles.radioButton}>
+                          {optionType === type && <View style={styles.radioButtonInner} />}
+                        </View>
+                        <Text style={styles.radioText}>{type}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                {/* Weekly/Monthly */}
+                <View style={styles.conditionRow}>
+                  <Text style={styles.conditionLabel}>Weekly/Monthly</Text>
+                  <View style={styles.radioContainer}>
+                    {['Weekly', 'Monthly'].map((type) => (
+                      <TouchableOpacity
+                        key={type}
+                        style={styles.radioOption}
+                        onPress={() => setExpiryType(type)}
+                      >
+                        <View style={styles.radioButton}>
+                          {expiryType === type && <View style={styles.radioButtonInner} />}
+                        </View>
+                        <Text style={styles.radioText}>{type}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                {/* ATM/ITM/OTM */}
+                <View style={styles.conditionRow}>
+                  <Text style={styles.conditionLabel}>ATM/ITM/OTM</Text>
+                  <View style={styles.dropdownWrapper}>
+                    <TouchableOpacity 
+                      style={styles.dropdownButton}
+                      onPress={() => {
+                        setCurrentDropdownType('moneynessType');
+                        setShowMoneynessModal(true);
+                      }}
+                    >
+                      <Text style={styles.dropdownText}>{moneynessType}</Text>
+                      <Ionicons name="chevron-down" size={16} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Entry Price */}
+                <View style={styles.conditionRow}>
+                  <Text style={styles.conditionLabel}>Entry - ON Market price</Text>
+                  <View style={styles.radioContainer}>
+                    {['Market', 'Limit'].map((type) => (
+                      <TouchableOpacity
+                        key={type}
+                        style={styles.radioOption}
+                        onPress={() => setEntryPriceType(type)}
+                      >
+                        <View style={styles.radioButton}>
+                          {entryPriceType === type && <View style={styles.radioButtonInner} />}
+                        </View>
+                        <Text style={styles.radioText}>{type}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                {/* SAME Candle */}
+                <View style={styles.conditionRow}>
+                  <Text style={styles.conditionLabel}>SAME Candle</Text>
+                  <View style={styles.conditionControls}>
+                    <View style={styles.dropdownWrapper}>
+                      <TouchableOpacity 
+                        style={styles.dropdownButton}
+                        onPress={() => {
+                          setCurrentDropdownType('sameCandle');
+                          setShowSameCandleModal(true);
+                        }}
+                      >
+                        <Text style={styles.dropdownText}>{sameCandleSelection}</Text>
+                        <Ionicons name="chevron-down" size={16} color="#666" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+
+                {/* SL Trail */}
+                <View style={styles.conditionRow}>
+                  <Text style={styles.conditionLabel}>SL Trail</Text>
+                  <View style={styles.dropdownWrapper}>
+                    <TouchableOpacity 
+                      style={styles.dropdownButton}
+                      onPress={() => {
+                        setCurrentDropdownType('slTrailType');
+                        setShowSlTrailModal(true);
+                      }}
+                    >
+                      <Text style={styles.dropdownText}>{slTrailType}</Text>
+                      <Ionicons name="chevron-down" size={16} color="#666" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* THEN Previous-1 */}
+                <View style={styles.conditionRow}>
+                  <Text style={styles.conditionLabel}>THEN Previous-1</Text>
+                  <View style={styles.conditionControls}>
+                    <View style={styles.dropdownWrapper}>
+                      <TouchableOpacity 
+                        style={styles.dropdownButton}
+                        onPress={() => {
+                          setCurrentDropdownType('previousMinusOne');
+                          setShowPreviousMinusOneModal(true);
+                        }}
+                      >
+                        <Text style={styles.dropdownText}>{previousMinusOneSelection}</Text>
+                        <Ionicons name="chevron-down" size={16} color="#666" />
+                      </TouchableOpacity>
+                    </View>
+                    <TouchableOpacity 
+                      style={styles.okButton}
+                      onPress={() => {
+                        const instrument = selectedInstruments[0] || '';
+                        if (!instrument) {
+                          Alert.alert('Error', 'Please select an instrument first');
+                          return;
+                        }
+                        
+                        const lotSize = getLotSizeForInstrument(instrument);
+                        const lots = parseInt(numberOfLots || '1') || 1;
+                        const calculatedQuantity = lots * lotSize;
+                        
+                        // Always use selling entry conditions for selling order leg
+                        const newLeg: OrderLeg = {
+                          id: Date.now().toString(),
+                          action: selectedOrderAction as 'Buy' | 'Sell',
+                          orderType: entryPriceType === 'Market' ? 'Market' : 'Limit',
+                          quantity: calculatedQuantity.toString(),
+                          instrument: instrument,
+                          lotSize: lotSize,
+                          numberOfLots: numberOfLots || '1',
+                          optionType: optionType,
+                          expiryType: expiryType,
+                          moneynessType: moneynessType,
+                          entryCondition: {
+                            candleType: `${entryFirstCandleColorSelling}/${entrySecondCandleColorSelling}`,
+                            candleColor: `${entryFirstCandleColorSelling}, ${entrySecondCandleColorSelling}`,
+                            candleTime: `${entryFirstCandleTimingSelling}, ${entrySecondCandleTimingSelling}, ${entryCandleTimeSelectionSelling}, ${entryTimeRangeSelling}`
+                          },
+                          exitCondition: {
+                            candleType: 'N/A',
+                            candleColor: 'N/A',
+                            profitTarget: '0',
+                            stopLoss: '0'
+                          },
+                          firstCandleColor: entryFirstCandleColorSelling,
+                          firstCandleTiming: entryFirstCandleTimingSelling,
+                          secondCandleColor: entrySecondCandleColorSelling,
+                          secondCandleTiming: entrySecondCandleTimingSelling,
+                          candleTimeSelection: entryCandleTimeSelectionSelling,
+                          timeRange: entryTimeRangeSelling,
+                          sameCandleSelection: sameCandleSelection,
+                          previousMinusOneSelection: previousMinusOneSelection,
+                          slTrailType: slTrailType
+                        } as any;
+                        
+                        setOrderLegsSelling(prev => [...prev, newLeg]);
+                        Alert.alert('Success', 'Order leg configured successfully!');
+                      }}
+                    >
+                      <Text style={styles.okButtonText}>OK</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              {/* Configured Order Legs Section for Entry Condition - Selling */}
+              <View style={styles.section}>
+                <View style={styles.orderLegsHeader}>
+                  <Text style={styles.orderLegsTitle}>Configured Order Legs</Text>
+                </View>
+
+                <TouchableOpacity style={styles.addLegButton} onPress={() => {
+                  // Add a new leg to selling order legs
+                  const instrument = selectedInstruments[0] || '';
+                  if (!instrument) {
+                    Alert.alert('Error', 'Please select an instrument first');
+                    return;
+                  }
+                  
+                  const lotSize = getLotSizeForInstrument(instrument);
+                  const lots = parseInt(numberOfLots || '1') || 1;
+                  const calculatedQuantity = lots * lotSize;
+                  
+                  const newLeg: OrderLeg = {
+                    id: Date.now().toString(),
+                    action: selectedOrderAction as 'Buy' | 'Sell',
+                    orderType: entryPriceType === 'Market' ? 'Market' : 'Limit',
+                    quantity: calculatedQuantity.toString(),
+                    instrument: instrument,
+                    lotSize: lotSize,
+                    numberOfLots: numberOfLots || '1',
+                    optionType: optionType,
+                    expiryType: expiryType,
+                    moneynessType: moneynessType,
+                    entryCondition: {
+                      candleType: `${entryFirstCandleColorSelling}/${entrySecondCandleColorSelling}`,
+                      candleColor: `${entryFirstCandleColorSelling}, ${entrySecondCandleColorSelling}`,
+                      candleTime: `${entryFirstCandleTimingSelling}, ${entrySecondCandleTimingSelling}, ${entryCandleTimeSelectionSelling}, ${entryTimeRangeSelling}`
+                    },
+                    exitCondition: {
+                      candleType: 'N/A',
+                      candleColor: 'N/A',
+                      profitTarget: '0',
+                      stopLoss: '0'
+                    },
+                    firstCandleColor: entryFirstCandleColorSelling,
+                    firstCandleTiming: entryFirstCandleTimingSelling,
+                    secondCandleColor: entrySecondCandleColorSelling,
+                    secondCandleTiming: entrySecondCandleTimingSelling,
+                    candleTimeSelection: entryCandleTimeSelectionSelling,
+                    timeRange: entryTimeRangeSelling,
+                    sameCandleSelection: sameCandleSelection,
+                    previousMinusOneSelection: previousMinusOneSelection,
+                    slTrailType: slTrailType
+                  } as any;
+                  
+                  setOrderLegsSelling(prev => [...prev, newLeg]);
+                }}>
+                  <Ionicons name="add" size={16} color="#fff" />
+                  <Text style={styles.addLegText}>+ ADD LEG</Text>
+                </TouchableOpacity>
+
+                {orderLegsSelling.map((leg) => (
+                  <View key={leg.id} style={styles.orderLegCard}>
+                    <View style={styles.orderLegHeader}>
+                      <Text style={styles.orderLegTitle}>
+                        {leg.action} {leg.instrument} - {leg.quantity} Qty
+                      </Text>
+                      <View style={styles.orderLegActions}>
+                        <TouchableOpacity 
+                          onPress={() => {
+                            setCurrentEditingLeg(leg);
+                            setShowOrderLegModal(true);
+                          }}
+                          style={styles.editButton}
+                        >
+                          <Ionicons name="pencil" size={16} color="#1976d2" />
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          onPress={() => {
+                            setOrderLegsSelling(prev => prev.filter(l => l.id !== leg.id));
+                          }}
+                          style={styles.deleteButton}
+                        >
+                          <Ionicons name="trash" size={16} color="#f44336" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </View>
+              </>
+            )}
           </>
         )}
-
-        {/* Enhanced Order Leg Section for Candle Based */}
-        {selectedStrategyType === 'Candle Based' && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Order Leg</Text>
-            
-            {/* Buy/Sell Selection */}
-            <View style={styles.conditionRow}>
-              <Text style={styles.conditionLabel}>Buy/Sell</Text>
-              <View style={styles.radioContainer}>
-                {['Buy', 'Sell'].map((action) => (
-                  <TouchableOpacity
-                    key={action}
-                    style={styles.radioOption}
-                    onPress={() => setSelectedOrderAction(action)}
-                  >
-                    <View style={styles.radioButton}>
-                      {selectedOrderAction === action && <View style={styles.radioButtonInner} />}
-                    </View>
-                    <Text style={styles.radioText}>{action}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Lot Size - Input with calculated quantity */}
-            <View style={styles.conditionRow}>
-              <Text style={styles.conditionLabel}>Lot</Text>
-              <View style={styles.dropdownWrapper}>
-                {selectedInstruments.length > 0 ? (
-                  <View style={styles.lotSizeInputContainer}>
-                    <View style={styles.lotSizeInputRow}>
-                      <TextInput
-                        style={styles.lotSizeInput}
-                        value={numberOfLots}
-                        onChangeText={(value) => {
-                          // Only allow numeric input, allow empty for clearing
-                          const numericValue = value.replace(/[^0-9]/g, '');
-                          setNumberOfLots(numericValue);
-                        }}
-                        keyboardType="numeric"
-                        placeholder="1"
-                        placeholderTextColor="#999"
-                      />
-                      <Text style={styles.lotSizeLabel}>Lots</Text>
-                    </View>
-                    <Text style={styles.lotSizeText}>
-                      {numberOfLots ? (
-                        <>
-                          = {parseInt(numberOfLots) * getLotSizeForInstrument(selectedInstruments[0])} Quantity
-                          {' '}(1 Lot = {getLotSizeForInstrument(selectedInstruments[0])} Qty)
-                        </>
-                      ) : (
-                        <>Enter number of lots</>
-                      )}
-                    </Text>
-                  </View>
-                ) : (
-                  <View style={styles.lotSizeDisplay}>
-                    <Text style={styles.lotSizeText}>
-                      Select instrument to see lot size
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </View>
-
-            {/* CE/PE Selection */}
-            <View style={styles.conditionRow}>
-              <Text style={styles.conditionLabel}>CE/PE</Text>
-              <View style={styles.radioContainer}>
-                {['CE', 'PE'].map((type) => (
-                  <TouchableOpacity
-                    key={type}
-                    style={styles.radioOption}
-                    onPress={() => setOptionType(type)}
-                  >
-                    <View style={styles.radioButton}>
-                      {optionType === type && <View style={styles.radioButtonInner} />}
-                    </View>
-                    <Text style={styles.radioText}>{type}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Weekly/Monthly */}
-            <View style={styles.conditionRow}>
-              <Text style={styles.conditionLabel}>Weekly/Monthly</Text>
-              <View style={styles.radioContainer}>
-                {['Weekly', 'Monthly'].map((type) => (
-                  <TouchableOpacity
-                    key={type}
-                    style={styles.radioOption}
-                    onPress={() => setExpiryType(type)}
-                  >
-                    <View style={styles.radioButton}>
-                      {expiryType === type && <View style={styles.radioButtonInner} />}
-                    </View>
-                    <Text style={styles.radioText}>{type}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* ATM/ITM/OTM */}
-            <View style={styles.conditionRow}>
-              <Text style={styles.conditionLabel}>ATM/ITM/OTM</Text>
-              <View style={styles.dropdownWrapper}>
-                <TouchableOpacity 
-                  style={styles.dropdownButton}
-                  onPress={() => {
-                    setCurrentDropdownType('moneynessType');
-                    setShowMoneynessModal(true);
-                  }}
-                >
-                  <Text style={styles.dropdownText}>{moneynessType}</Text>
-                  <Ionicons name="chevron-down" size={16} color="#666" />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Entry Price */}
-            <View style={styles.conditionRow}>
-              <Text style={styles.conditionLabel}>Entry - ON Market price</Text>
-              <View style={styles.radioContainer}>
-                {['Market', 'Limit'].map((type) => (
-                  <TouchableOpacity
-                    key={type}
-                    style={styles.radioOption}
-                    onPress={() => setEntryPriceType(type)}
-                  >
-                    <View style={styles.radioButton}>
-                      {entryPriceType === type && <View style={styles.radioButtonInner} />}
-                    </View>
-                    <Text style={styles.radioText}>{type}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* ATM Options */}
-
-            <View style={styles.conditionRow}>
-              <Text style={styles.conditionLabel}>SAME Candle</Text>
-              <View style={styles.conditionControls}>
-                <View style={styles.dropdownWrapper}>
-                  <TouchableOpacity 
-                    style={styles.dropdownButton}
-                    onPress={() => {
-                      setCurrentDropdownType('sameCandle');
-                      setShowSameCandleModal(true);
-                    }}
-                  >
-                    <Text style={styles.dropdownText}>{sameCandleSelection}</Text>
-                    <Ionicons name="chevron-down" size={16} color="#666" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-
-            {/* SL Trail */}
-            <View style={styles.conditionRow}>
-              <Text style={styles.conditionLabel}>SL Trail</Text>
-              <View style={styles.dropdownWrapper}>
-                <TouchableOpacity 
-                  style={styles.dropdownButton}
-                  onPress={() => {
-                    setCurrentDropdownType('slTrailType');
-                    setShowSlTrailModal(true);
-                  }}
-                >
-                  <Text style={styles.dropdownText}>{slTrailType}</Text>
-                  <Ionicons name="chevron-down" size={16} color="#666" />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.conditionRow}>
-              <Text style={styles.conditionLabel}>THEN Previous-1</Text>
-              <View style={styles.conditionControls}>
-                <View style={styles.dropdownWrapper}>
-                  <TouchableOpacity 
-                    style={styles.dropdownButton}
-                    onPress={() => {
-                      setCurrentDropdownType('previousMinusOne');
-                      setShowPreviousMinusOneModal(true);
-                    }}
-                  >
-                    <Text style={styles.dropdownText}>{previousMinusOneSelection}</Text>
-                    <Ionicons name="chevron-down" size={16} color="#666" />
-                  </TouchableOpacity>
-                </View>
-                <TouchableOpacity 
-                  style={styles.okButton}
-                  onPress={() => {
-                    // Capture all Entry Condition + Order Leg data and create configured leg
-                    const instrument = selectedInstruments[0] || '';
-                    if (!instrument) {
-                      Alert.alert('Error', 'Please select an instrument first');
-                      return;
-                    }
-                    
-                    const lotSize = getLotSizeForInstrument(instrument);
-                    const lots = parseInt(numberOfLots || '1') || 1;
-                    const calculatedQuantity = lots * lotSize;
-                    
-                    // Create order leg with all Entry Condition + Order Leg data
-                    // Use appropriate entry condition based on Buy/Sell action
-                    const isBuy = selectedOrderAction === 'Buy';
-                    const entryFirstCandleColor = isBuy ? entryFirstCandleColorBuying : entryFirstCandleColorSelling;
-                    const entryFirstCandleTiming = isBuy ? entryFirstCandleTimingBuying : entryFirstCandleTimingSelling;
-                    const entrySecondCandleColor = isBuy ? entrySecondCandleColorBuying : entrySecondCandleColorSelling;
-                    const entrySecondCandleTiming = isBuy ? entrySecondCandleTimingBuying : entrySecondCandleTimingSelling;
-                    const entryCandleTimeSelection = isBuy ? entryCandleTimeSelectionBuying : entryCandleTimeSelectionSelling;
-                    const entryTimeRange = isBuy ? entryTimeRangeBuying : entryTimeRangeSelling;
-                    
-                    const newLeg: OrderLeg = {
-                      id: Date.now().toString(),
-                      action: selectedOrderAction as 'Buy' | 'Sell',
-                      orderType: entryPriceType === 'Market' ? 'Market' : 'Limit',
-                      quantity: calculatedQuantity.toString(),
-                      instrument: instrument,
-                      lotSize: lotSize,
-                      numberOfLots: numberOfLots || '1',
-                      entryCondition: {
-                        candleType: `${entryFirstCandleColor}/${entrySecondCandleColor}`,
-                        candleColor: `${entryFirstCandleColor}, ${entrySecondCandleColor}`,
-                        candleTime: `${entryFirstCandleTiming}, ${entrySecondCandleTiming}, ${entryCandleTimeSelection}, ${entryTimeRange}`
-                      },
-                      exitCondition: {
-                        candleType: 'N/A',
-                        candleColor: 'N/A',
-                        profitTarget: '0',
-                        stopLoss: '0'
-                      },
-                      // Store additional fields
-                      firstCandleColor: entryFirstCandleColor,
-                      firstCandleTiming: entryFirstCandleTiming,
-                      secondCandleColor: entrySecondCandleColor,
-                      secondCandleTiming: entrySecondCandleTiming,
-                      candleTimeSelection: entryCandleTimeSelection,
-                      timeRange: entryTimeRange,
-                      optionType: optionType,
-                      expiryType: expiryType,
-                      moneynessType: moneynessType,
-                      sameCandleSelection: sameCandleSelection,
-                      previousMinusOneSelection: previousMinusOneSelection,
-                      slTrailType: slTrailType
-                    } as any;
-                    
-                    // Add leg directly to configured legs list
-                    setOrderLegs(prev => [...prev, newLeg]);
-                    
-                    // Show success message
-                    Alert.alert('Success', 'Order leg configured successfully!');
-                  }}
-                >
-                  <Text style={styles.okButtonText}>OK</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* Order Legs Section */}
-        <View style={styles.section}>
-          <View style={styles.orderLegsHeader}>
-            <Text style={styles.orderLegsTitle}>
-              {selectedStrategyType === 'Candle Based' ? 'Configured Order Legs' : 'Order Legs'}
-            </Text>
-          </View>
-
-          {/* Add Leg Button - Above configured order legs */}
-          <TouchableOpacity style={styles.addLegButton} onPress={addOrderLeg}>
-            <Ionicons name="add" size={16} color="#fff" />
-            <Text style={styles.addLegText}>+ ADD LEG</Text>
-          </TouchableOpacity>
-
-          {orderLegs.map((leg) => (
-            <View key={leg.id} style={styles.orderLegCard}>
-              {/* Row 1: Action, Quantity/Lots, Option Type, Menu */}
-              <View style={styles.legRow}>
-                <View style={styles.legRowLeft}>
-                  {/* Action Button */}
-                  <TouchableOpacity
-                    style={[
-                      styles.actionButton,
-                      leg.action === 'Sell' ? styles.actionButtonSell : styles.actionButtonBuy
-                    ]}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      updateOrderLeg(leg.id, { 
-                        action: leg.action === 'Buy' ? 'Sell' : 'Buy' 
-                      });
-                    }}
-                  >
-                    <Text style={styles.actionButtonText}>
-                      {leg.action.toUpperCase()} X
-                    </Text>
-                  </TouchableOpacity>
-                  
-                  {/* Quantity/Lots Input */}
-                  <View style={styles.quantityInputContainer} onStartShouldSetResponder={() => true}>
-                    <Text style={styles.quantityLabel}>Qty</Text>
-                    <TextInput
-                      style={styles.quantityInput}
-                      value={(leg as any).numberOfLots || Math.floor(parseInt(leg.quantity || '0') / (leg.lotSize || 1)) || numberOfLots || '1'}
-                      onChangeText={(value) => {
-                        // Only allow numeric input
-                        const numericValue = value.replace(/[^0-9]/g, '');
-                        const lots = parseInt(numericValue || '1');
-                        if (leg.instrument && leg.lotSize) {
-                          const calculatedQuantity = lots * leg.lotSize;
-                          updateOrderLeg(leg.id, { 
-                            quantity: calculatedQuantity.toString(),
-                            numberOfLots: numericValue
-                          } as any);
-                          // Update the global numberOfLots state
-                          setNumberOfLots(numericValue);
-                        } else {
-                          updateOrderLeg(leg.id, { 
-                            numberOfLots: numericValue
-                          } as any);
-                          setNumberOfLots(numericValue);
-                        }
-                      }}
-                      keyboardType="numeric"
-                      placeholder="75"
-                      onFocus={(e) => e.stopPropagation()}
-                    />
-                    <Text style={styles.lotLabel}>LOT</Text>
-                  </View>
-                  
-                  {/* Option Type Button */}
-                  <TouchableOpacity
-                    style={styles.optionTypeButton}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      updateOrderLeg(leg.id, { 
-                        optionType: leg.optionType === 'CE' ? 'PE' : 'CE'
-                      });
-                    }}
-                  >
-                    <Text style={styles.optionTypeText}>
-                      {(leg.optionType || 'CE').toUpperCase()} X
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-                
-                {/* Menu Icon */}
-                <View style={styles.menuContainer}>
-                  <TouchableOpacity
-                    style={styles.menuButton}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      setOpenMenuId(openMenuId === leg.id ? null : leg.id);
-                    }}
-                  >
-                    <Ionicons name="ellipsis-vertical" size={20} color="#666" />
-                  </TouchableOpacity>
-                  {openMenuId === leg.id && (
-                    <View style={styles.menuDropdown} onStartShouldSetResponder={() => true}>
-                      <TouchableOpacity
-                        style={styles.menuItem}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          duplicateOrderLeg(leg);
-                          setOpenMenuId(null);
-                        }}
-                      >
-                        <Text style={styles.menuItemText}>Duplicate</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.menuItem, styles.menuItemLast]}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          deleteOrderLeg(leg.id);
-                          setOpenMenuId(null);
-                        }}
-                      >
-                        <Text style={[styles.menuItemText, styles.menuItemDelete]}>Delete</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </View>
-              </View>
-
-              {/* Row 2: Expiry, Moneyness, ATM */}
-              <View style={styles.legRow}>
-                <View style={styles.dropdownWrapper} onStartShouldSetResponder={() => true}>
-                  <Text style={styles.dropdownLabel}>Weekly X</Text>
-                  <TouchableOpacity
-                    style={styles.dropdownButton}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      setOpenLegDropdown(openLegDropdown?.legId === leg.id && openLegDropdown?.type === 'expiry' ? null : { legId: leg.id, type: 'expiry' });
-                    }}
-                  >
-                    <Text style={styles.dropdownText}>{leg.expiryType || 'Weekly'}</Text>
-                    <Ionicons name="chevron-down" size={16} color="#666" />
-                  </TouchableOpacity>
-                </View>
-                
-                <View style={styles.dropdownWrapper} onStartShouldSetResponder={() => true}>
-                  <Text style={styles.dropdownLabel}>ATM pt</Text>
-                  <TouchableOpacity
-                    style={styles.dropdownButton}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      setOpenLegDropdown(openLegDropdown?.legId === leg.id && openLegDropdown?.type === 'moneyness' ? null : { legId: leg.id, type: 'moneyness' });
-                    }}
-                  >
-                    <Text style={styles.dropdownText}>{leg.moneynessType || 'ATM'}</Text>
-                    <Ionicons name="chevron-down" size={16} color="#666" />
-                  </TouchableOpacity>
-                </View>
-                
-                <View style={styles.atmInputContainer}>
-                  <Text style={styles.atmLabel}>ATM</Text>
-                  <TextInput
-                    style={styles.atmInput}
-                    value={leg.moneynessType || 'ATM'}
-                    editable={false}
-                    placeholder="ATM"
-                  />
-                </View>
-              </View>
-
-              {/* Row 3: SL % */}
-              <View style={styles.legRow}>
-                <View style={styles.dropdownWrapper} onStartShouldSetResponder={() => true}>
-                  <Text style={styles.dropdownLabel}>SL %</Text>
-                  <TouchableOpacity 
-                    style={styles.dropdownButton}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      setOpenLegDropdown(openLegDropdown?.legId === leg.id && openLegDropdown?.type === 'sl' ? null : { legId: leg.id, type: 'sl' });
-                    }}
-                  >
-                    <Text style={styles.dropdownText}>SL %</Text>
-                    <Ionicons name="chevron-down" size={16} color="#666" />
-                  </TouchableOpacity>
-                </View>
-                
-                <View style={styles.percentageInputContainer} onStartShouldSetResponder={() => true}>
-                  <TextInput
-                    style={styles.percentageInput}
-                    value={leg.slPercentage || '30'}
-                    onChangeText={(value) => {
-                      const numericValue = value.replace(/[^0-9]/g, '');
-                      updateOrderLeg(leg.id, { slPercentage: numericValue });
-                    }}
-                    keyboardType="numeric"
-                    placeholder="30"
-                    onFocus={(e) => e.stopPropagation()}
-                  />
-                </View>
-                
-                <View style={styles.onPriceLabel}>
-                  <Text style={styles.onPriceText}>On Price</Text>
-                </View>
-              </View>
-
-              {/* Row 4: TP % */}
-              <View style={styles.legRow}>
-                <View style={styles.dropdownWrapper} onStartShouldSetResponder={() => true}>
-                  <Text style={styles.dropdownLabel}>TP %</Text>
-                  <TouchableOpacity 
-                    style={styles.dropdownButton}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      setOpenLegDropdown(openLegDropdown?.legId === leg.id && openLegDropdown?.type === 'tp' ? null : { legId: leg.id, type: 'tp' });
-                    }}
-                  >
-                    <Text style={styles.dropdownText}>TP %</Text>
-                    <Ionicons name="chevron-down" size={16} color="#666" />
-                  </TouchableOpacity>
-                </View>
-                
-                <View style={styles.percentageInputContainer} onStartShouldSetResponder={() => true}>
-                  <TextInput
-                    style={styles.percentageInput}
-                    value={leg.tpPercentage || ''}
-                    onChangeText={(value) => {
-                      const numericValue = value.replace(/[^0-9]/g, '');
-                      updateOrderLeg(leg.id, { tpPercentage: numericValue });
-                    }}
-                    keyboardType="numeric"
-                    placeholder="0"
-                    onFocus={(e) => e.stopPropagation()}
-                  />
-                </View>
-                
-                <View style={styles.onPriceLabel}>
-                  <Text style={styles.onPriceText}>On Price</Text>
-                </View>
-              </View>
-              
-              {/* Dropdown Menu for this leg */}
-              {openLegDropdown?.legId === leg.id && (
-                <View style={styles.legDropdownMenuContainer} onStartShouldSetResponder={() => true}>
-                  <View style={styles.legDropdownMenu}>
-                    {openLegDropdown.type === 'expiry' && (
-                      <>
-                        {['Weekly', 'Monthly'].map((option, index) => (
-                          <TouchableOpacity
-                            key={option}
-                            style={[
-                              styles.legDropdownOption,
-                              index === ['Weekly', 'Monthly'].length - 1 && styles.legDropdownOptionLast
-                            ]}
-                            onPress={(e) => {
-                              e.stopPropagation();
-                              updateOrderLeg(leg.id, { expiryType: option as 'Weekly' | 'Monthly' });
-                              setOpenLegDropdown(null);
-                            }}
-                          >
-                            <Text style={styles.legDropdownOptionText}>{option}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </>
-                    )}
-                    {openLegDropdown.type === 'moneyness' && (
-                      <>
-                        {['ATM', 'ITM', 'OTM'].map((option, index) => (
-                          <TouchableOpacity
-                            key={option}
-                            style={[
-                              styles.legDropdownOption,
-                              index === ['ATM', 'ITM', 'OTM'].length - 1 && styles.legDropdownOptionLast
-                            ]}
-                            onPress={(e) => {
-                              e.stopPropagation();
-                              updateOrderLeg(leg.id, { moneynessType: option as 'ATM' | 'ITM' | 'OTM' });
-                              setOpenLegDropdown(null);
-                            }}
-                          >
-                            <Text style={styles.legDropdownOptionText}>{option}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </>
-                    )}
-                    {openLegDropdown.type === 'sl' && (
-                      <TouchableOpacity
-                        style={[styles.legDropdownOption, styles.legDropdownOptionLast]}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          setOpenLegDropdown(null);
-                        }}
-                      >
-                        <Text style={styles.legDropdownOptionText}>SL %</Text>
-                      </TouchableOpacity>
-                    )}
-                    {openLegDropdown.type === 'tp' && (
-                      <TouchableOpacity
-                        style={[styles.legDropdownOption, styles.legDropdownOptionLast]}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          setOpenLegDropdown(null);
-                        }}
-                      >
-                        <Text style={styles.legDropdownOptionText}>TP %</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
-              )}
-            </View>
-          ))}
-        </View>
 
         {/* Enhanced Entry Conditions for Candle Based */}
         {selectedStrategyType === 'Candle Based' && showAdditionalEntryConditions && (
@@ -3219,7 +3035,25 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
               </View>
             )}
 
+            {/* Button to show Entry Condition - Selling */}
+            {selectedStrategyType === 'Candle Based' && showAdditionalEntryConditions && (
+              <View style={styles.section}>
+                <TouchableOpacity 
+                  style={[
+                    styles.addLegButton,
+                    showEntryConditionSelling && styles.disabledButton
+                  ]} 
+                  onPress={() => !showEntryConditionSelling && setShowEntryConditionSelling(true)}
+                  disabled={showEntryConditionSelling}
+                >
+                  <Ionicons name="add" size={16} color="#fff" />
+                  <Text style={styles.addLegText}>+ ADD ENTRY CONDITION - SELLING</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* Entry Condition - Selling */}
+            {selectedStrategyType === 'Candle Based' && showAdditionalEntryConditions && showEntryConditionSelling && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Entry Condition - Selling</Text>
               
@@ -3319,6 +3153,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
                 </View>
               </View>
             </View>
+            )}
           </>
         )}
 
@@ -3913,22 +3748,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
           </View>
         )}
 
-        {/* Button to show additional entry conditions */}
-        {selectedStrategyType === 'Candle Based' && (
-          <View style={styles.section}>
-            <TouchableOpacity 
-              style={[
-                styles.addLegButton,
-                showAdditionalEntryConditions && styles.disabledButton
-              ]} 
-              onPress={() => !showAdditionalEntryConditions && setShowAdditionalEntryConditions(true)}
-              disabled={showAdditionalEntryConditions}
-            >
-              <Ionicons name="add" size={16} color="#fff" />
-              <Text style={styles.addLegText}>+ ADD ENTRY CONDITIONS & ORDER LEGS</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        {/* Button to show additional entry conditions - Removed: Buying entry condition shows automatically */}
 
         {/* Exit Conditions for Candle Based - Below Order Leg */}
         {selectedStrategyType === 'Candle Based' && (
