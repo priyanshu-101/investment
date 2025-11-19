@@ -2599,31 +2599,6 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
             </View>
           )}
 
-          {/* Second Button to show Entry Condition - Selling */}
-          {selectedStrategyType === 'Candle Based' && showAdditionalEntryConditions && (
-            <View style={styles.section}>
-              <TouchableOpacity 
-                style={[
-                  styles.addLegButton,
-                  showEntryConditionSellingSecond && styles.disabledButton
-                ]} 
-                onPress={() => {
-                  if (!showEntryConditionSellingSecond) {
-                    setShowEntryConditionSellingSecond(true);
-                    // Show the sections when second button is clicked
-                    if (!showEntryConditionSelling) {
-                      setShowEntryConditionSelling(true);
-                    }
-                  }
-                }}
-                disabled={showEntryConditionSellingSecond}
-              >
-                <Ionicons name="add" size={16} color="#fff" />
-                <Text style={styles.addLegText}>+ ADD ENTRY CONDITION - SELLING</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
             {/* Entry Condition - Selling */}
             {selectedStrategyType === 'Candle Based' && showEntryConditionSelling && (
               <>
@@ -3062,6 +3037,31 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
               </View>
               </>
             )}
+
+          {/* Second Button to show Entry Condition - Selling */}
+          {selectedStrategyType === 'Candle Based' && showAdditionalEntryConditions && (
+            <View style={styles.section}>
+              <TouchableOpacity 
+                style={[
+                  styles.addLegButton,
+                  showEntryConditionSellingSecond && styles.disabledButton
+                ]} 
+                onPress={() => {
+                  if (!showEntryConditionSellingSecond) {
+                    setShowEntryConditionSellingSecond(true);
+                    // Show the sections when second button is clicked
+                    if (!showEntryConditionSelling) {
+                      setShowEntryConditionSelling(true);
+                    }
+                  }
+                }}
+                disabled={showEntryConditionSellingSecond}
+              >
+                <Ionicons name="add" size={16} color="#fff" />
+                <Text style={styles.addLegText}>+ ADD ENTRY CONDITION - SELLING</Text>
+              </TouchableOpacity>
+            </View>
+          )}
           </>
         )}
 
