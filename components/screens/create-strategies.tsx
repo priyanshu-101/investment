@@ -3191,7 +3191,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
 
             {/* Exit Condition - Selling */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Exit Condition - Selling</Text>
+              <Text style={styles.sectionTitle}>Exit Condition - Buying</Text>
 
               <View style={styles.conditionRow}>
                 <Text style={styles.conditionLabel}>Exit CE/PE</Text>
@@ -3311,7 +3311,7 @@ const TradingStrategy = ({ onStrategyCreated, onStrategyUpdated, onEditComplete,
           <>
             {/* Exit Condition - Buying */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Exit Condition - Buying</Text>
+              <Text style={styles.sectionTitle}>Exit Condition - Selling</Text>
               
               <View style={styles.conditionRow}>
                 <Text style={styles.conditionLabel}>Exit CE/PE</Text>
